@@ -53,7 +53,7 @@
 ## 🎯 다음 주 계획
 - EC2에 Docker 기반 인프라 직접 구성 및 서비스 배포 테스트
 - IoT 장치와의 데이터 연동 테스트 준비
-- 감성 데이터 저장 및 시각화 기본 기능 구현
+- CI/CD 파이프라인 구성하기기
 - 팀원들과 중간 점검 및 역할 조율
 
 ---
@@ -63,7 +63,7 @@
 - Infra: Docker, AWS EC2
 - Database: MySQL
 - IoT 연동: MQTT
-- Data Visualization: Chart.js (예정)
+
 
 ---
 
