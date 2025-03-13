@@ -25,3 +25,56 @@ colcon build --packages-select [패키지 이름]
 # 예시: sub1 패키지만 빌드하려면
 colcon build --packages-select sub1
 ```
+
+## 🏃‍♂️ 작성한 코드 실행
+
+### 1️⃣ ROS2 실행 환경 설정
+
+ROS2 패키지를 실행하기 전에, **ROS2 환경을 설정하는 명령어**를 실행해야 합니다.
+**개발자의 환경에 따라 경로가 다를 수 있으므로, 본인의 환경에 맞게 수정해야 합니다.**
+
+```bash
+# ROS2 실행을 위한 환경 변수 설정
+call C:\dev\ros2_eloquent\setup.bat
+
+# 워크스페이스에서 설치된 패키지를 사용하도록 설정
+call C:\Users\SSAFY\Desktop\temp\S12P21E102\sim\ros2_ws\install\local_setup.bat
+```
+
+**💡 주의**<br>
+위의 환경 변수 설정은 **새로운 터미널을 열 때마다 실행해야 합니다.**
+
+### 2️⃣ 워크스페이스 내 특정 패키지 실행하기
+
+ROS2 패키지에서 작성된 노드를 실행하려면 아래 명령어를 사용합니다.
+
+```bash
+# 특정 패키지의 노드 실행
+ros2 run [패키지 이름] [노드 이름]
+```
+
+**✅ 예시**
+
+- `sub1` 패키지의 `publisher` 노드를 실행
+
+```bash
+ros2 run sub1 publisher
+```
+
+- `sub1` 패키지의 `subscriber` 노드를 실행
+
+```bash
+ros2 run sub1 subscriber
+```
+
+### 3️⃣ RQT를 통해 토픽 데이터 확인하기
+
+ROS2에서는 `rqt`를 사용하여 **토픽 데이터를 시각적으로 모니터링**할 수 있습니다.
+
+```bash
+# RQT 실행
+rqt
+```
+
+실행 후, `rqt`에서 `Plugins → Topics → Topic Monitor`를 선택하면
+현재 실행 중인 **토픽 데이터를 실시간으로 확인**할 수 있습니다.
