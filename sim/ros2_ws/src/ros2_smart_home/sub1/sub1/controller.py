@@ -32,7 +32,7 @@ class Controller(Node):
         self.app_status_sub = self.create_subscription(Int8MultiArray,'/app_status',self.app_callback,10)
         
         ## 타이머 생성
-        self.timer = self.create_timer(0.033, self.timer_callback)
+        self.timer = self.create_timer(1, self.timer_callback)
 
         ## 제어 메시지 변수 생성 -> 타입 설정
         ### 터틀봇의 이동 명령을 담는 메시지 객체
@@ -75,7 +75,6 @@ class Controller(Node):
 
     ## 모든 가전제품을 켬
     def app_all_on(self):
-        print("on")
         for i in range(17):
             self.app_control_msg.data[i]=1
         self.app_control_pub.publish(self.app_control_msg)
@@ -85,14 +84,14 @@ class Controller(Node):
             self.app_control_msg.data[i]=2
         self.app_control_pub.publish(self.app_control_msg)
     ## 특정 가전제품을 켬
-    def app_on_select(self,num):
+    def app_select_on(self,num):
         if 0 <= num < 17:
             self.app_control_msg.data[num] = 1 # 가전제품[num] on
             self.app_control_pub.publish(self.app_control_msg)
         else:
             self.get_logger().warn(f"Invalid appliance number: {num}")
     ## 특정 가전제품을 끔
-    def app_off_select(self,num):
+    def app_select_off(self,num):
         if 0 <= num < 17:
             self.app_control_msg.data[num] = 2 # 가전제품[num] off
             self.app_control_pub.publish(self.app_control_msg)
@@ -126,14 +125,14 @@ class Controller(Node):
             self.get_logger().info(
                 f"current_linear_vel : {self.turtlebot_status_msg.twist.linear.x}, "
                 f"current_angular_vel : {self.turtlebot_status_msg.twist.angular.z}, "
-                f"battery : {self.turtlebot_status_msg.battery}, "
-                f"Charging: {self.turtlebot_status_msg.charging}"
+                f"battery : {self.turtlebot_status_msg.battery_percentage}, "
+                f"Charging: {self.turtlebot_status_msg.power_supply_status}"
             )
         ## 환경 상태 출력
         if self.is_envir_status:
             self.get_logger().info(
-                f"date : {self.envir_status_msg.date}, "
-                f"time : {self.envir_status_msg.time}, "
+                f"date : {self.envir_status_msg.month}/{self.envir_status_msg.day} {self.envir_status_msg.hour}:{self.envir_status_msg.minute}, "
+                f"time : {self.envir_status_msg.hour}:{self.envir_status_msg.minute}, "
                 f"temp : {self.envir_status_msg.temperature}, "
                 f"weather : {self.envir_status_msg.weather}"
             )
@@ -146,7 +145,7 @@ class Controller(Node):
         # self.app_all_on()
         # self.app_all_off()
         # self.app_select_on(12)
-        # self.app_select_off(12)
+        # self.app_select_off(16)
 
 
         ## 터틀봇 제어 함수
