@@ -37,7 +37,7 @@ public enum BaseResponseStatus {
     POST_USERS_EMPTY_PHONENUMBER(false, 2023,"휴대전화 번호를 입력해 주세요."),
     POST_USERS_EXISTS_PHONENUMBER(false, 2041,"이미 존재하는 전화번호 입니다"),
     POST_USERS_EMPTY_VERIFYNUMBER(false,2024,"인증번호를 입력해 주세요."),
-    POST_USERS_EXISTS_BOOKMARK(false,2027,"이미 존재하는 북마크 입니다"),
+    POST_USERS_EXISTS_BOOKMARK(false,2045,"이미 존재하는 북마크 입니다"),
     POST_USERS_EXISTS_NON_EXIST_RECIPE(false,2033," 존재하지 않는 레시피 입니다"),
     POST_USERS_EXISTS_REPORT(false,2034,"이미 신고한 게시물 입니다"),
     POST_USERS_EXISTS_PHONENUMBER_AND_EMAIL(false, 2040,"이미 존재하는 이메일과 휴대번호입니다."),
