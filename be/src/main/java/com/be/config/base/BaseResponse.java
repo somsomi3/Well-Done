@@ -6,8 +6,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import static com.be.config.base.BaseResponseStatus.SUCCESS;
-
+import static com.ssafy.ssafytrip.config.BaseResponseStatus.SUCCESS;
 
 @Getter
 @AllArgsConstructor
@@ -18,6 +17,7 @@ public class BaseResponse<T> {
     private final String message;
     private final int code;
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    //null 인 필드 json 응답에서 제외되도록 설정
     private T result;
 
     // 요청에 성공한 경우
@@ -29,10 +29,10 @@ public class BaseResponse<T> {
     }
 
     // 요청에 실패한 경우
-    public BaseResponse(BaseResponseStatus status) {
+    public BaseResponse(com.ssafy.ssafytrip.config.BaseResponseStatus status) {
         this.isSuccess = status.isSuccess();
         this.message = status.getMessage();
         this.code = status.getCode();
+        this.result = null; // 명시적으로 null로 설정
     }
 }
-
