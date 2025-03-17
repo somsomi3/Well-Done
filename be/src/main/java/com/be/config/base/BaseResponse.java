@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import static com.ssafy.ssafytrip.config.BaseResponseStatus.SUCCESS;
+import static com.be.config.base.BaseResponseStatus.SUCCESS;
 
 @Getter
 @AllArgsConstructor
@@ -29,7 +29,7 @@ public class BaseResponse<T> {
     }
 
     // 요청에 실패한 경우
-    public BaseResponse(com.ssafy.ssafytrip.config.BaseResponseStatus status) {
+    public BaseResponse(com.be.config.base.BaseResponseStatus status) {
         this.isSuccess = status.isSuccess();
         this.message = status.getMessage();
         this.code = status.getCode();
