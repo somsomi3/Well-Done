@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.annotation.MessagingGateway;
+import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
 import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
@@ -38,11 +39,12 @@ public class MqttConfig {
 	}
 
 	@Bean
-	public MessageHandler mqttOutbound() {
+	@ServiceActivator(inputChannel = "mqttOutboundChannel")
+	public MqttPahoMessageHandler mqttOutbound() {
 		MqttPahoMessageHandler messageHandler = new MqttPahoMessageHandler(clientId, mqttClientFactory());
 		messageHandler.setAsync(true);
 		messageHandler.setDefaultTopic(topic);
-		return (MessageHandler)messageHandler;
+		return messageHandler;
 	}
 
 	@Bean
@@ -55,4 +57,5 @@ public class MqttConfig {
 		void sendToMqtt(String data);
 	}
 }
+
 
