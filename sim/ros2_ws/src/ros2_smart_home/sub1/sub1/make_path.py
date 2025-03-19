@@ -29,26 +29,22 @@ class makePath(Node):
         super().__init__('make_path')
 
 
-        # 로직 1. 노드에 필요한 publisher, subscriber 생성      
+        # ✅ Publisher & Subscriber 생성  
         self.path_pub = self.create_publisher(Path, 'global_path', 10)
         self.subscription = self.create_subscription(Odometry,'/odom',self.listener_callback,10)
 
 
-        '''
-        로직 2. 저장할 경로 및 텍스트파일 이름을 정하고, 쓰기 모드로 열기
-        full_path=
-        self.f=
-        '''
+        # ✅ 경로 저장할 파일 설정
+        full_path = os.path.join(os.getcwd(), "path.txt")  # 현재 작업 디렉토리에 path.txt 저장
+        self.f = open(full_path, 'w')  # 쓰기 모드로 파일 열기
         
-        self.is_odom=True
-        #이전 위치를 저장할 변수입니다.
-        self.prev_x=0.0
-        self.prev_y=0.0
+        self.is_odom = False # 처음 Odometry 데이터를 받았는지 여부
+        self.prev_x = 0.0  # 이전 위치 X 좌표
+        self.prev_y = 0.0  # 이전 위치 Y 좌표
 
-        self.path_msg=Path()
-        self.path_msg.header.frame_id='map'
-
-
+        # Path 메시지 설정 (RViz에서 시각화 가능)
+        self.path_msg = Path()
+        self.path_msg.header.frame_id = 'map'  # 'map' 좌표계 기준으로 경로 저장
 
     def listener_callback(self,msg):
         print('x : {} , y : {} '.format(msg.pose.pose.position.x,msg.pose.pose.position.y))
