@@ -11,8 +11,8 @@ import tf2_ros
 import geometry_msgs.msg
 import time
 
-# odom 노드는 로봇의 속도(/turtlebot_status), Imu센서(/imu) 메시지를 받아서 로봇의 위치를 추정하는 노드입니다.
-# sub1_odom은 imu로 부터 받은 Quaternion을 사용하거나 각속도, 가속도 데이터를 이용해서 로봇의 포즈를 추정 할 것입니다.
+"""💡 로봇의 속도를 이용해 odom 프레임 기준의 상대 위치를 추정하고, 
+이를 다른 노드들이 사용할 수 있도록 Odometry 메시지와 TF를 브로드캐스트하는 역할을 한다."""
 
 class odom(Node):
 
@@ -56,6 +56,8 @@ class odom(Node):
         self.laser_transform.header.frame_id = "base_link"
         self.laser_transform.child_frame_id = "laser"
 
+        # transform.translation은 이동 변환(x,y,z로 표현)
+        # transform.rotation은 회전 변환:쿼터니언(x,y,z,w로 표현)
         self.laser_transform.transform.translation.x = 0.0  # LiDAR 위치 조정 가능
         self.laser_transform.transform.translation.y = 0.0
         self.laser_transform.transform.translation.z = 0.15  # LiDAR 높이 설정
