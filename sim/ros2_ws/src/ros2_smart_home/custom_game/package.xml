@@ -9,7 +9,7 @@
 
   <buildtool_depend>ament_python</buildtool_depend>
 
-  <depend>rcply</depend>
+  <depend>rclpy</depend>
   <depend>ssafy_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
@@ -19,5 +19,8 @@
 
   <export>
     <build_type>ament_python</build_type>
+    <!-- ✅ Windows 지원 추가 -->
+    <os>osx</os>
+    <os>windows</os>
   </export>
 </package>
