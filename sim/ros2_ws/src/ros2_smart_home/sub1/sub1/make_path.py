@@ -8,19 +8,14 @@ import os
 from math import sqrt
 import sub2
 
-# make_path 노드 설명
-# 로봇의 위치(Odometry)를 받아서 매 0.1m 간격으로 x,y 좌표를 텍스트 파일에 기록하고, Path 메시지를 Publish 합니다.
-# rviz에서 Path 메시지를 볼 수 있습니다. 경로가 잘 만들어지는지 rviz를 통해 확인해주세요.
-# 기록을 해서 만드는 방법은 주행할 경로를 만드는 가장 쉬운 방법입니다. 생성된 텍스트 파일은 추 후에 텍스트 파일을 읽어서 Path 메시지를 publish 하는 노드(path_pub)에서 사용하고, 경로 추종알고리즘에서 사용 됩니다.
-# $ ros2 run sub1 make_path 실행 시 Terminal 경로를 catkin_ws\src\ros2_smart_home\sub1\sub1로 세팅 후 실행해야합니다.
-
-# 노드 로직 순서
-# 1. 노드에 필요한 publisher, subscriber 생성
-# 2. 저장할 경로 및 텍스트파일 이름을 정하고, 쓰기 모드로 열기
-# 3. 콜백함수에서 처음 메시지가 들어오면 초기 위치를 저장
-# 4. 콜백함수에서 이전 위치와 현재 위치의 거리 계산
-# 5. 이전 위치보다 0.1m 이상일 때 위치를 path_msg.poses에 추가하고 publish
-# 6. x,y 를 문자열로 바꾸고 x와 y 사이의 문자열은 /t 로 구분
+# 🛤️ make_path 노드 설명
+# - 로봇의 위치(Odometry)를 받아 **0.1m 간격**으로 (x, y) 좌표를 기록합니다.
+# - 기록된 경로는 **Path 메시지**로 Publish되며, RViz에서 시각화할 수 있습니다.
+# - 생성된 텍스트 파일(`path.txt`)은 추후 경로 추종 노드(`path_pub`)에서 사용됩니다.
+# 
+# 📌 실행 방법:
+# $ ros2 run sub1 make_path
+# ※ 실행 시 터미널 경로를 `catkin_ws/src/ros2_smart_home/sub1/sub1`로 설정해야 합니다.
 
 
 class makePath(Node):
@@ -28,81 +23,69 @@ class makePath(Node):
     def __init__(self):
         super().__init__('make_path')
 
-
         # ✅ Publisher & Subscriber 생성  
         self.path_pub = self.create_publisher(Path, 'global_path', 10)
-        self.subscription = self.create_subscription(Odometry,'/odom',self.listener_callback,10)
-
+        self.subscription = self.create_subscription(Odometry, '/odom', self.listener_callback, 10)
 
         # ✅ 경로 저장할 파일 설정
-        full_path = os.path.join(os.getcwd(), "path.txt")  # 현재 작업 디렉토리에 path.txt 저장
-        self.f = open(full_path, 'w')  # 쓰기 모드로 파일 열기
-        
-        self.is_odom = False # 처음 Odometry 데이터를 받았는지 여부
-        self.prev_x = 0.0  # 이전 위치 X 좌표
-        self.prev_y = 0.0  # 이전 위치 Y 좌표
+        full_path = os.path.join(os.getcwd(), "path.txt")  
+        self.f = open(full_path, 'w')  
 
-        # Path 메시지 설정 (RViz에서 시각화 가능)
+        self.is_odom = False  
+        self.prev_x = 0.0  
+        self.prev_y = 0.0  
+
+        # ✅ Path 메시지 설정
         self.path_msg = Path()
-        self.path_msg.header.frame_id = 'map'  # 'map' 좌표계 기준으로 경로 저장
+        self.path_msg.header.frame_id = 'map'  
 
-    def listener_callback(self,msg):
-        print('x : {} , y : {} '.format(msg.pose.pose.position.x,msg.pose.pose.position.y))
-        if self.is_odom ==False :   
-            pass
-            '''
-            로직 3. 콜백함수에서 처음 메시지가 들어오면 초기 위치를 저장해줍니다. 
-            self.is_odom = 
-            self.prev_x = 
-            self.prev_y = 
-            '''
+    def listener_callback(self, msg):
+        """ Odometry 데이터를 받아와 경로를 기록하는 콜백 함수 """
+        print(f"x: {msg.pose.pose.position.x}, y: {msg.pose.pose.position.y}")
 
-        else :            
-            waypint_pose=PoseStamped()
-            #x,y 는 odom 메시지에서 받은 로봇의 현재 위치를 나타내는 변수입니다.
-            x=msg.pose.pose.position.x
-            y=msg.pose.pose.position.y
-   
-            '''
-            로직 4. 콜백함수에서 이전 위치와 현재 위치의 거리 계산
-            (테스트) 유클리디안 거리를 구하는 부분으로 x=2, y=2 이고, self.prev_x=0, self.prev_y=0 이라면 distance=2.82가 나와야합니다.
+        if not self.is_odom:
+            self.is_odom = True
+            self.prev_x = msg.pose.pose.position.x
+            self.prev_y = msg.pose.pose.position.y
+            return
 
-            distance = 
-            '''
-            
-            
-            '''
-            if distance > 0.1 :
-                로직 5. 거리차이가 위치보다 0.1m 이상일 때 위치를 path_msg.poses에 추가하고 publish
-                waypint_pose.pose.position.x=
-                waypint_pose.pose.position.y=
-                waypint_pose.pose.orientation.w=1.0
-                self.path_msg.poses.append(waypint_pose)
-                self.path_pub.publish(self.path_msg)                
-            '''
-                
-            '''
-                로직 6. x,y 를 문자열로 바꾸고 x와 y 사이의 문자열은 /t 로 구분
-                data=
-                self.f
-                self.prev_x=x
-                self.prev_y=y
-            '''
+        # ✅ 현재 위치 및 거리 계산
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        distance = sqrt((x - self.prev_x) ** 2 + (y - self.prev_y) ** 2)  
 
-            
-            
-        
+        # ✅ 0.1m 이상 이동 시 경로 업데이트
+        if distance > 0.1:
+            waypint_pose = PoseStamped()
+            waypint_pose.pose.position.x = x
+            waypint_pose.pose.position.y = y
+            waypint_pose.pose.orientation.w = 1.0  
+
+            # 경로 메시지 업데이트 및 전송
+            self.path_msg.poses.append(waypint_pose)
+            self.path_pub.publish(self.path_msg)
+
+            # 경로 데이터를 파일에 저장
+            self.f.write(f"{x}\t{y}\n")
+            # self.f.flush()  # ✅ 즉시 디스크에 저장
+
+            # 이전 위치 업데이트
+            self.prev_x = x
+            self.prev_y = y
+
 def main(args=None):
+    """ 노드 실행 함수 """
     rclpy.init(args=args)
-
     odom_based_make_path = makePath()
-
-    rclpy.spin(odom_based_make_path)
-
-    odom_based_make_path.f.close()
-    odom_based_make_path.destroy_node()
-    rclpy.shutdown()
-
+    try:
+        rclpy.spin(odom_based_make_path)  # 실행 중
+    except KeyboardInterrupt:
+        print("🛑 노드 종료 중...")
+    finally:
+        # ✅ 종료 시 파일 닫기
+        odom_based_make_path.f.close()
+        odom_based_make_path.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
