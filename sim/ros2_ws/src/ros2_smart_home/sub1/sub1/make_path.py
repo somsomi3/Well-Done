@@ -15,7 +15,7 @@ import sub2
 # 
 # 📌 실행 방법:
 # $ ros2 run sub1 make_path
-# ※ 실행 시 터미널 경로를 `catkin_ws/src/ros2_smart_home/sub1/sub1`로 설정해야 합니다.
+# ※ 실행 시 터미널 경로를 `C:\Users\SSAFY\Desktop\temp\S12P21E102\sim\ros2_ws\src\ros2_smart_home/sub1/sub1`로 설정해야 합니다.
 
 
 class makePath(Node):
@@ -56,6 +56,7 @@ class makePath(Node):
 
         # ✅ 0.1m 이상 이동 시 경로 업데이트
         if distance > 0.1:
+            print("🟢 0.1m 이상 이동 감지됨! 경로 저장 중...")
             waypint_pose = PoseStamped()
             waypint_pose.pose.position.x = x
             waypint_pose.pose.position.y = y
