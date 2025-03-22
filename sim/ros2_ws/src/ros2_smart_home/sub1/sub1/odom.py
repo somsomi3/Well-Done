@@ -11,150 +11,155 @@ import tf2_ros
 import geometry_msgs.msg
 import time
 
-# odom 노드는 로봇의 속도(/turtlebot_status), Imu센서(/imu) 메시지를 받아서 로봇의 위치를 추정하는 노드입니다.
-# sub1_odom은 imu로 부터 받은 Quaternion을 사용하거나 각속도, 가속도 데이터를 이용해서 로봇의 포즈를 추정 할 것입니다.
-
-# 노드 로직 순서
-# 1. publisher, subscriber, broadcaster 만들기
-# 2. publish, broadcast 할 메시지 설정
-# 3. imu 에서 받은 quaternion을 euler angle로 변환해서 사용
-# 4. 로봇 위치 추정
-# 5. 추정한 로봇 위치를 메시지에 담아 publish, broadcast
-
+"""
+📌 odom 노드 설명
+- IMU로부터 회전값을 받아 상대적인 위치를 추정하고,
+  선속도와 각속도를 이용해 odom 프레임 기준 위치를 계산함.
+- odom → base_link, base_link → laser, map → odom 변환을 브로드캐스트하여
+  RViz에서 전체 로봇과 경로를 함께 확인 가능하게 함.
+"""
 
 class odom(Node):
 
     def __init__(self):
         super().__init__('odom')
         
-        # 로직 1. publisher, subscriber, broadcaster 만들기
+        # 🔌 Subscriber & Publisher 설정
         self.subscription = self.create_subscription(TurtlebotStatus,'/turtlebot_status',self.listener_callback,10)
         self.imu_sub = self.create_subscription(Imu,'/imu',self.imu_callback,10)
         self.odom_publisher = self.create_publisher(Odometry, 'odom', 10)
-        self.broadcaster = tf2_ros.StaticTransformBroadcaster(self)
 
+        # 🔄 TF Broadcaster 설정
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
-        # 로봇의 pose를 저장해 publish 할 메시지 변수 입니다.
-        self.odom_msg=Odometry()
-        # Map -> base_link 좌표계에 대한 정보를 가지고 있는 변수 입니다.
-        self.base_link_transform=geometry_msgs.msg.TransformStamped()
-        # base_link -> laser 좌표계에 대한 정보를 가지고 있는 변수 입니다.
-        self.laser_transform=geometry_msgs.msg.TransformStamped()
-        self.is_status=False
-        self.is_imu=False
+        # 🧭 상태 변수 초기화
+        self.is_status = False
+        self.is_imu = False
         self.is_calc_theta=False
-        # x,y,theta는 추정한 로봇의 위치를 저장할 변수 입니다.
-        self.x=0.0
-        self.y=0.0
-                
-        self.theta=0.0
-        # imu_offset은 초기 로봇의 orientation을 저장할 변수 입니다.
-        self.imu_offset=0
-        self.prev_time=0
 
-        '''
-        로직 2. publish, broadcast 할 메시지 설정
+        # 📍 로봇 상태 초기화
+        self.x = 0.0
+        self.y = 0.0
+        self.theta = 0.0
+        self.imu_offset = 0.0
+        self.prev_time = 0
 
-        self.odom_msg.header.frame_id=
-        self.odom_msg.child_frame_id=
+        # 📤 Odometry 메시지 초기화
+        self.odom_msg = Odometry()
+        self.odom_msg.header.frame_id = "odom"
+        self.odom_msg.child_frame_id = "base_link"
 
-        self.base_link_transform.header.frame_id = 
-        self.base_link_transform.child_frame_id = 
+        # 🔀 TF: base_link → odom
+        self.base_link_transform = geometry_msgs.msg.TransformStamped()
+        self.base_link_transform.header.frame_id = "odom"
+        self.base_link_transform.child_frame_id = "base_link"
 
-        self.laser_transform.header.frame_id = 
-        self.laser_transform.child_frame_id =      
-        self.laser_transform.transform.translation.x = 
-        self.laser_transform.transform.translation.y = 
-        self.laser_transform.transform.translation.z = 
-        self.laser_transform.transform.rotation.w = 
+        # 🔀 TF: base_link → laser
+        self.laser_transform = geometry_msgs.msg.TransformStamped()
+        self.laser_transform.header.frame_id = "base_link"
+        self.laser_transform.child_frame_id = "laser"
+        """ 
+        transform.translation은 이동 변환(x,y,z로 표현)
+        transform.rotation은 회전 변환:쿼터니언(x,y,z,w로 표현)
+        """
+        self.laser_transform.transform.translation.x = 0.0  # LiDAR 위치 조정 가능
+        self.laser_transform.transform.translation.y = 0.0
+        self.laser_transform.transform.translation.z = 0.15  # LiDAR 높이 설정
+        self.laser_transform.transform.rotation.w = 1.0  # 기본 회전 값  
 
-        '''
-                      
+        # 🔀 TF: map → odom
+        self.map_to_odom_transform = geometry_msgs.msg.TransformStamped()
+        self.map_to_odom_transform.header.frame_id = "map"
+        self.map_to_odom_transform.child_frame_id = "odom"
+        self.map_to_odom_transform.transform.translation.x = 0.0
+        self.map_to_odom_transform.transform.translation.y = 0.0
+        self.map_to_odom_transform.transform.translation.z = 0.0
+        self.map_to_odom_transform.transform.rotation.w = 1.0
+
+        # ✅ 주기적으로 map → odom TF broadcast
+        self.map_tf_timer = self.create_timer(1.0, self.broadcast_map_to_odom_tf)
+
+    def broadcast_map_to_odom_tf(self):
+        self.map_to_odom_transform.header.stamp = self.get_clock().now().to_msg()
+        self.tf_broadcaster.sendTransform(self.map_to_odom_transform)
 
     def imu_callback(self,msg):
-        pass
-        '''
-        로직 3. IMU 에서 받은 quaternion을 euler angle로 변환해서 사용
-
-        if self.is_imu ==False :    
-            self.is_imu=True
-            imu_q= 
-            self.imu_offset=
-
-        else :
-            imu_q= 
-            self.theta=
-
-        '''
-
+        """ IMU 데이터를 이용해 로봇의 방향(theta) 추정 """
+        imu_q = Quaternion(msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z)
+        euler = imu_q.to_euler(degrees=False)  # 라디안 단위
+        
+        if not self.is_imu:
+            self.is_imu = True
+            self.imu_offset = euler[2]  # Yaw 값 저장
+        else:
+            self.theta = euler[2] - self.imu_offset  # 초기 yaw 기준 보정
 
     def listener_callback(self, msg):
-        print('linear_vel : {}  angular_vel : {}'.format(msg.twist.linear.x,-msg.twist.angular.z))
-        if self.is_imu ==True:
-            if self.is_status == False :
-                self.is_status=True
-                self.prev_time=rclpy.clock.Clock().now()
+        """ 로봇의 속도 데이터를 이용해 위치 추정 및 TF/Odom 메시지 퍼블리시 """
+        print(f'linear_vel : {msg.twist.linear.x},  angular_vel : {-msg.twist.angular.z}')
+        
+        if self.is_imu:
+            if not self.is_status:
+                self.is_status = True
+                # self.prev_time = rclpy.clock.Clock().now()
+                self.prev_time = self.get_clock().now() # ROS 자체와 동기화된 시간 (권장)
             else :
+                # self.current_time=rclpy.clock.Clock().now()
+                current_time = self.get_clock().now()
+                self.period=(current_time - self.prev_time).nanoseconds / 1e9 # 초 단위 변환
+
+                # 속도 추출
+                linear_x = msg.twist.linear.x
+                angular_z = -msg.twist.angular.z  # 방향 보정 필요
                 
-                self.current_time=rclpy.clock.Clock().now()
-                # 계산 주기를 저장한 변수 입니다. 단위는 초(s)
-                self.period=(self.current_time-self.prev_time).nanoseconds/1000000000
-                # 로봇의 선속도, 각속도를 저장하는 변수, 시뮬레이터에서 주는 각 속도는 방향이 반대이므로 (-)를 붙여줍니다.
-                linear_x=msg.twist.linear.x
-                angular_z=-msg.twist.angular.z
-                '''
-                로직 4. 로봇 위치 추정
-                (테스트) linear_x = 1, self.theta = 1.5707(rad), self.period = 1 일 때
-                self.x=0, self.y=1 이 나와야 합니다. 로봇의 헤딩이 90도 돌아가 있는
-                상태에서 선속도를 가진다는 것은 x축방향이 아니라 y축방향으로 이동한다는 뜻입니다. 
+                # 위치 계산
+                self.x += linear_x * cos(self.theta) * self.period
+                self.y += linear_x * sin(self.theta) * self.period
+                self.theta += angular_z * self.period
 
-                self.x+=
-                self.y+=
-                self.theta+=
+                # 쿼터니언 변환
+                q = Quaternion.from_euler(0, 0, self.theta)
 
-                '''
+                # TF: base_link → odom
+                self.base_link_transform.header.stamp = current_time.to_msg()
+                self.base_link_transform.transform.translation.x = self.x
+                self.base_link_transform.transform.translation.y = self.y
+                self.base_link_transform.transform.translation.z = 0.0
+                self.base_link_transform.transform.rotation.x = q.x
+                self.base_link_transform.transform.rotation.y = q.y
+                self.base_link_transform.transform.rotation.z = q.z
+                self.base_link_transform.transform.rotation.w = q.w
 
-                self.base_link_transform.header.stamp =rclpy.clock.Clock().now().to_msg()
-                self.laser_transform.header.stamp =rclpy.clock.Clock().now().to_msg()
+                # TF: base_link → laser
+                self.laser_transform.header.stamp = current_time.to_msg()
+
+                # Odometry 메시지 설정
+                self.odom_msg.header.stamp = current_time.to_msg()
+                self.odom_msg.pose.pose.position.x = self.x
+                self.odom_msg.pose.pose.position.y = self.y
+                self.odom_msg.pose.pose.position.z = 0.0
+                self.odom_msg.pose.pose.orientation.x = q.x
+                self.odom_msg.pose.pose.orientation.y = q.y
+                self.odom_msg.pose.pose.orientation.z = q.z
+                self.odom_msg.pose.pose.orientation.w = q.w
+                self.odom_msg.twist.twist.linear.x = linear_x
+                self.odom_msg.twist.twist.angular.z = angular_z
                 
-                '''
-                로직 5. 추정한 로봇 위치를 메시지에 담아 publish, broadcast
-
-                q =
-                
-                self.base_link_transform.transform.translation.x = 
-                self.base_link_transform.transform.translation.y = 
-                self.base_link_transform.transform.rotation.x = 
-                self.base_link_transform.transform.rotation.y = 
-                self.base_link_transform.transform.rotation.z = 
-                self.base_link_transform.transform.rotation.w = 
-                
-                self.odom_msg.pose.pose.position.x=
-                self.odom_msg.pose.pose.position.y=
-                self.odom_msg.pose.pose.orientation.x=
-                self.odom_msg.pose.pose.orientation.y=
-                self.odom_msg.pose.pose.orientation.z=
-                self.odom_msg.pose.pose.orientation.w=
-                self.odom_msg.twist.twist.linear.x=
-                self.odom_msg.twist.twist.angular.z=
-
-                '''
-
-                self.broadcaster.sendTransform(self.base_link_transform)
-                self.broadcaster.sendTransform(self.laser_transform)
+                # TF 및 Odometry 전송
+                self.tf_broadcaster.sendTransform(self.base_link_transform)
+                self.tf_broadcaster.sendTransform(self.laser_transform)
                 self.odom_publisher.publish(self.odom_msg)
-                self.prev_time=self.current_time
+
+                # 이전 시간 업데이트
+                self.prev_time = current_time
 
         
 def main(args=None):
     rclpy.init(args=args)
+    odom_node = odom()
+    rclpy.spin(odom_node)
 
-    sub1_odom = odom()
-
-    rclpy.spin(sub1_odom)
-
-
-    sub1_odom.destroy_node()
+    odom_node.destroy_node()
     rclpy.shutdown()
 
 
