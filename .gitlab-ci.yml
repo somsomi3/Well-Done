@@ -39,8 +39,9 @@ push:
 deploy:
   stage: deploy
   script:
-    - echo "SSH_PRIVATE_KEY length: ${#SSH_PRIVATE_KEY}"
-    - echo "$SSH_PRIVATE_KEY" | base64 -d | od -c
+    - |
+      echo "SSH_PRIVATE_KEY length: ${#SSH_PRIVATE_KEY}"
+      echo "$SSH_PRIVATE_KEY" | base64 -d | od -c
   only:
     - develop
     - feature/be-infra
