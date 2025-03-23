@@ -34,4 +34,3 @@ push:
     - feature/be-infra
   tags:
     - ssafy-second-infra
-    ###
