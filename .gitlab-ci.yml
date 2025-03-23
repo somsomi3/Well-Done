@@ -1,6 +1,7 @@
 stages:
   - build
   - push
+  - deploy
 
 variables:
   DOCKER_DRIVER: overlay2
@@ -28,7 +29,21 @@ push:
   stage: push
   script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
-    - docker push busankim/ssafy-second-infra:backend
+    - docker push busankim/ssafyproject:backend
+  only:
+    - develop
+    - feature/be-infra
+  tags:
+    - ssafy-second-infra
+
+deploy:
+  stage: deploy
+  script:
+    - ssh -i "$SSH_PRIVATE_KEY" ubuntu@j12e102.p.ssafy.io "
+        cd ~/project &&
+        docker pull busankim/ssafyproject:backend &&
+        docker-compose up -d backend
+      "
   only:
     - develop
     - feature/be-infra
