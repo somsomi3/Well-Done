@@ -17,7 +17,7 @@ default:
 build:
   stage: build
   script:
-    - docker build -t busankim/ssafy-second-infra:backend ./be
+    - docker build -t busankim/ssafyproject:backend ./be
   only:
     - develop
     - feature/be-infra
