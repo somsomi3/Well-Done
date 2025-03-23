@@ -50,6 +50,7 @@ deploy:
     - echo "$SSH_PRIVATE_KEY" > $PEM_FILE
     - chmod 400 $PEM_FILE
     - mkdir -p ~/.ssh
+    - mkdir project
     - chmod 700 ~/.ssh
     - ssh-keyscan $SERVER_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
