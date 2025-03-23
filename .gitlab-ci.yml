@@ -41,15 +41,7 @@ deploy:
   script:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
-    - ssh-keygen -p -m PEM -f ~/.ssh/id_rsa  # PEM 형식으로 변환 시도
-    - ssh-keyscan j12e102.p.ssafy.io >> ~/.ssh/known_hosts
-    - ssh -v -i ~/.ssh/id_rsa ubuntu@j12e102.p.ssafy.io "
-        cd ~/project &&
-        docker pull busankim/ssafyproject:backend &&
-        docker-compose up -d backend
-      "
+    - echo "$SSH_PRIVATE_KEY" | base64 -d | head -n 5  # 키의 처음 5줄 출력
   only:
     - develop
     - feature/be-infra
