@@ -43,7 +43,7 @@ deploy:
     - apk add --no-cache openssh-client bash
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" > id_rsa
-    - chmod 400 id_rsa
+    - chmod 600 id_rsa
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - ssh-keyscan j12e102.p.ssafy.io >> ~/.ssh/known_hosts
