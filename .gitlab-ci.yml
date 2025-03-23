@@ -37,22 +37,21 @@ push:
    - ssafy-second-infra
 
 deploy:
- stage: deploy
- script:
-   - mkdir -p ~/.ssh
-   - chmod 700 ~/.ssh
-   - echo "-----BEGIN RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
-   - echo "$SSH_PRIVATE_KEY" | base64 -d >> ~/.ssh/id_rsa
-   - echo "-----END RSA PRIVATE KEY-----" >> ~/.ssh/id_rsa
-   - chmod 600 ~/.ssh/id_rsa
-   - ssh-keyscan j12e102.p.ssafy.io >> ~/.ssh/known_hosts
-   - ssh -i ~/.ssh/id_rsa ubuntu@j12e102.p.ssafy.io "
-       cd ~/project &&
-       docker pull busankim/ssafyproject:backend &&
-       docker-compose up -d backend
-     "
- only:
-   - develop
-   - feature/be-infra
- tags:
-   - ssafy-second-infra
+  stage: deploy
+  script:
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keygen -p -m PEM -f ~/.ssh/id_rsa  # PEM 형식으로 변환 시도
+    - ssh-keyscan j12e102.p.ssafy.io >> ~/.ssh/known_hosts
+    - ssh -v -i ~/.ssh/id_rsa ubuntu@j12e102.p.ssafy.io "
+        cd ~/project &&
+        docker pull busankim/ssafyproject:backend &&
+        docker-compose up -d backend
+      "
+  only:
+    - develop
+    - feature/be-infra
+  tags:
+    - ssafy-second-infra
