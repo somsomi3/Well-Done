@@ -42,13 +42,15 @@ deploy:
   before_script:
     - apk add --no-cache openssh-client bash
     - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" > id_rsa
+    # SSH 키의 개행 문자를 올바르게 처리하기 위한 코드
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > id_rsa
     - chmod 400 id_rsa
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - ssh-keyscan j12e102.p.ssafy.io >> ~/.ssh/known_hosts
   script:
-    - ssh -i id_rsa ubuntu@j12e102.p.ssafy.io "
+    # 디버깅을 위해 -v 옵션 추가하고, 호스트 키 검사 무시 옵션 추가
+    - ssh -v -o StrictHostKeyChecking=no -i id_rsa ubuntu@j12e102.p.ssafy.io "
         cd ~/project &&
         docker pull busankim/ssafyproject:backend &&
         docker-compose up -d backend
