@@ -1,0 +1,34 @@
+stages:
+  - build
+  - push
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+services:
+  - docker:dind
+
+default:
+  image: docker:latest
+  before_script:
+    - docker info
+
+build:
+  stage: build
+  script:
+    - docker build -t busankim/ssafy-second-infra:backend ./backend
+  only:
+    - develop
+  tags:
+    - ssafy-second-infra
+
+push:
+  stage: push
+  script:
+    - docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
+    - docker push busankim/ssafy-second-infra:backend
+  only:
+    - develop
+  tags:
+    - ssafy-second-infra
