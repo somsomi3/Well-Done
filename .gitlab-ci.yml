@@ -1,51 +1,58 @@
 stages:
-  - build
-  - push
-  - deploy
+ - build
+ - push
+ - deploy
 
 variables:
-  DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: ""
+ DOCKER_DRIVER: overlay2
+ DOCKER_TLS_CERTDIR: ""
 
 services:
-  - docker:dind
+ - docker:dind
 
 default:
-  image: docker:latest
-  before_script:
-    - docker info
+ image: docker:latest
+ before_script:
+   - docker info
 
 build:
-  stage: build
-  script:
-    - docker build -t busankim/ssafyproject:backend ./be
-  only:
-    - develop
-    - feature/be-infra
-  tags:
-    - ssafy-second-infra
+ stage: build
+ script:
+   - docker build -t busankim/ssafyproject:backend ./be
+ only:
+   - develop
+   - feature/be-infra
+ tags:
+   - ssafy-second-infra
 
 push:
-  stage: push
-  script:
-    - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
-    - docker push busankim/ssafyproject:backend
-  only:
-    - develop
-    - feature/be-infra
-  tags:
-    - ssafy-second-infra
+ stage: push
+ script:
+   - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+   - docker push busankim/ssafyproject:backend
+ only:
+   - develop
+   - feature/be-infra
+ tags:
+   - ssafy-second-infra
 
 deploy:
-  stage: deploy
-  script:
-    - ssh -i "$SSH_PRIVATE_KEY" ubuntu@j12e102.p.ssafy.io "
-        cd ~/project &&
-        docker pull busankim/ssafyproject:backend &&
-        docker-compose up -d backend
-      "
-  only:
-    - develop
-    - feature/be-infra
-  tags:
-    - ssafy-second-infra
+ stage: deploy
+ script:
+   - mkdir -p ~/.ssh
+   - chmod 700 ~/.ssh
+   - echo "-----BEGIN RSA PRIVATE KEY-----" > ~/.ssh/id_rsa
+   - echo "$SSH_PRIVATE_KEY" | base64 -d >> ~/.ssh/id_rsa
+   - echo "-----END RSA PRIVATE KEY-----" >> ~/.ssh/id_rsa
+   - chmod 600 ~/.ssh/id_rsa
+   - ssh-keyscan j12e102.p.ssafy.io >> ~/.ssh/known_hosts
+   - ssh -i ~/.ssh/id_rsa ubuntu@j12e102.p.ssafy.io "
+       cd ~/project &&
+       docker pull busankim/ssafyproject:backend &&
+       docker-compose up -d backend
+     "
+ only:
+   - develop
+   - feature/be-infra
+ tags:
+   - ssafy-second-infra
