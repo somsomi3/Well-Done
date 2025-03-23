@@ -20,17 +20,17 @@ build:
     - docker build -t busankim/ssafy-second-infra:backend ./be
   only:
     - develop
-    - feature/be-infra  # 현재 브랜치 추가
+    - feature/be-infra
   tags:
     - ssafy-second-infra
 
 push:
   stage: push
   script:
-    - docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
+    - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push busankim/ssafy-second-infra:backend
   only:
     - develop
-    - feature/be-infra  # 현재 브랜치 추가
+    - feature/be-infra
   tags:
     - ssafy-second-infra
