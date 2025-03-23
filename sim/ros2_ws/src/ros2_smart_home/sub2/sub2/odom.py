@@ -12,8 +12,8 @@ import time
 
 class odom(Node):
     """
-    sub2 odom 노드는 IMU 없이, /turtlebot_status 토픽의 선속도와 각속도를 이용해
-    로봇의 위치를 추정하고 odom 메시지 및 TF를 퍼블리시합니다.
+    sub2 odom 노드는 /turtlebot_status에서 제공하는 절대 위치(x, y)를 기반으로
+    odom 메시지 및 TF를 퍼블리시합니다. 방향(heading)은 IMU의 orientation을 이용해 절대값을 사용합니다.
     """
 
     def __init__(self):
@@ -21,6 +21,7 @@ class odom(Node):
         
         # Publisher & Subscriber
         self.subscription = self.create_subscription(TurtlebotStatus,'/turtlebot_status',self.listener_callback,10)
+        self.imu_sub = self.create_subscription(Imu, '/imu', self.imu_callback, 10)
         self.odom_publisher = self.create_publisher(Odometry, 'odom', 10)
 
         # TF Broadcaster (base_link & laser)
@@ -31,11 +32,11 @@ class odom(Node):
         self.map_tf_timer = self.create_timer(1.0, self.broadcast_map_to_odom_tf)
 
         # 상태 변수
-        self.is_first = False
-        self.x = 0.0
-        self.y = 0.0
+        # self.is_first = False
+        # self.x = 0.0
+        # self.y = 0.0
         self.theta = 0.0
-        self.prev_time = 0.0
+        # self.prev_time = 0.0
 
         # 메시지 초기화
         self.odom_msg=Odometry()
@@ -67,34 +68,49 @@ class odom(Node):
         self.map_to_odom.header.stamp = self.get_clock().now().to_msg()
         self.static_broadcaster.sendTransform(self.map_to_odom)
 
+    def imu_callback(self, msg):
+        q = Quaternion(msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z)
+        _, _, yaw = q.to_euler()
+        self.theta = yaw
+
     def listener_callback(self, msg):
         print('linear_vel : {}  angular_vel : {}'.format(msg.twist.linear.x,-msg.twist.angular.z))
         current_time = self.get_clock().now()
 
-        if not self.is_first:
-            self.prev_time = current_time
-            self.is_first = True
-            return
+        # if not self.is_first:
+        #     # ✅ 초기 위치를 절대 좌표로 설정
+        #     self.x = msg.twist.angular.x
+        #     self.y = msg.twist.angular.y
+        #     self.prev_time = current_time
+        #     self.is_first = True
+        #     print(f'초기 위치 설정됨: x={self.x:.2f}, y={self.y:.2f}')
+        #     return
         
         # 주기 계산
-        period = (current_time - self.prev_time).nanoseconds / 1e9
-        self.prev_time = current_time
+        # period = (current_time - self.prev_time).nanoseconds / 1e9
+        # self.prev_time = current_time
+
+        # 절대 위치로부터 x, y 추정
+        x = msg.twist.angular.x
+        y = msg.twist.angular.y
 
         # 속도 정보
         linear_x = msg.twist.linear.x
         angular_z = -msg.twist.angular.z  # 시뮬레이터 기준 방향 보정
 
         # 위치 추정 (상대 이동 누적)
-        self.x += linear_x * cos(self.theta) * period
-        self.y += linear_x * sin(self.theta) * period
-        self.theta += angular_z * period
-        
+        # self.x += linear_x * cos(self.theta) * period
+        # self.y += linear_x * sin(self.theta) * period
+        # self.theta += angular_z * period
+
         q = Quaternion.from_euler(0, 0, self.theta)
         
         # odom 메시지 구성
         self.odom_msg.header.stamp = current_time.to_msg()
-        self.odom_msg.pose.pose.position.x = self.x
-        self.odom_msg.pose.pose.position.y = self.y
+        # self.odom_msg.pose.pose.position.x = self.x
+        # self.odom_msg.pose.pose.position.y = self.y
+        self.odom_msg.pose.pose.position.x = x
+        self.odom_msg.pose.pose.position.y = y
         self.odom_msg.pose.pose.orientation.x = q.x
         self.odom_msg.pose.pose.orientation.y = q.y
         self.odom_msg.pose.pose.orientation.z = q.z
@@ -104,8 +120,10 @@ class odom(Node):
 
         # TF: base_link -> odom
         self.base_link_tf.header.stamp = current_time.to_msg()
-        self.base_link_tf.transform.translation.x = self.x
-        self.base_link_tf.transform.translation.y = self.y
+        # self.base_link_tf.transform.translation.x = self.x
+        # self.base_link_tf.transform.translation.y = self.y
+        self.base_link_tf.transform.translation.x = x
+        self.base_link_tf.transform.translation.y = y
         self.base_link_tf.transform.translation.z = 0.0
         self.base_link_tf.transform.rotation.x = q.x
         self.base_link_tf.transform.rotation.y = q.y
