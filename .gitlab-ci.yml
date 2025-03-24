@@ -60,5 +60,5 @@ deploy:
     - ssh -i $PEM_FILE ubuntu@$SERVER_HOST "
       cd ~/project &&
       docker pull $IMAGE_NAME &&
-      docker-compose up -d frontend
+      sudo docker-compose up -d frontend
       "
