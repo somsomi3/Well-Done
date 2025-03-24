@@ -55,8 +55,8 @@ class loadMap(Node):
         for y in range(350):
             for x in range(350):
                 if grid[x][y]==100 :
-                    for dy in range(-2, 3):
-                        for dx in range(-2, 3):
+                    for dy in range(-3, 4):
+                        for dx in range(-3, 4):
                             nx, ny = x + dx, y + dy
                             if 0 <= nx < 350 and 0 <= ny < 350:
                                 if grid[nx][ny] != 100:  # 이미 장애물은 제외
