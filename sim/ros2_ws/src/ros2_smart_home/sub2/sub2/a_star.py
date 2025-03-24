@@ -4,36 +4,28 @@ from rclpy.node import Node
 import os
 from geometry_msgs.msg import Pose,PoseStamped
 from squaternion import Quaternion
-from nav_msgs.msg import Odometry,OccupancyGrid,MapMetaData,Path
-from math import pi,cos,sin
+from nav_msgs.msg import Odometry,OccupancyGrid, MapMetaData, Path
 from collections import deque
-
-# a_star 노드는  OccupancyGrid map을 받아 grid map 기반 최단경로 탐색 알고리즘을 통해 로봇이 목적지까지 가는 경로를 생성하는 노드입니다.
-# 로봇의 위치(/pose), 맵(/map), 목표 위치(/goal_pose)를 받아서 전역경로(/global_path)를 만들어 줍니다. 
-# goal_pose는 rviz2에서 2D Goal Pose 버튼을 누르고 위치를 찍으면 메시지가 publish 됩니다. 
-# 주의할 점 : odom을 받아서 사용하는데 기존 odom 노드는 시작했을 때 로봇의 초기 위치가 x,y,heading(0,0,0) 입니다. 로봇의 초기위치를 맵 상에서 로봇의 위치와 맞춰줘야 합니다. 
-# 따라서 sub2의 odom 노드를 수정해줍니다. turtlebot_status 안에는 정답데이터(절대 위치)가 있는데 그 정보를 사용해서 맵과 로봇의 좌표를 맞춰 줍니다.
 
 class a_star(Node):
 
     def __init__(self):
         super().__init__('a_Star')
 
-        # Publisher & Subscriber
+        # Publisher & Subscriber 생성
         self.map_sub = self.create_subscription(OccupancyGrid,'map',self.map_callback,1)
         self.odom_sub = self.create_subscription(Odometry,'odom',self.odom_callback,1)
         self.goal_sub = self.create_subscription(PoseStamped,'goal_pose',self.goal_callback,1)
         self.a_star_pub= self.create_publisher(Path, 'global_path', 1)
         
         # 메시지 저장
-        self.map_msg=OccupancyGrid()
-        self.odom_msg=Odometry()
+        self.map_msg = OccupancyGrid()
+        self.odom_msg = Odometry()
 
-        self.is_map=False
-        self.is_odom=False
-        self.is_found_path=False
-        self.is_grid_update=False
-
+        self.is_map = False
+        self.is_odom = False
+        self.is_found_path = False
+        self.is_grid_update = False
 
         # 맵 파라미터
         self.goal = [184,224] 
@@ -44,7 +36,7 @@ class a_star(Node):
         self.map_offset_y=-4-8.75
         self.GRIDSIZE=350 
 
-        # 8방향 이동
+        # 8방향 이동 (상, 우, 좌, 하, 대각선)
         self.dx = [-1, 0, 0, 1, -1, -1, 1, 1]
         self.dy = [0, 1, -1, 0, -1, 1, -1, 1]
         self.dCost = [1, 1, 1, 1, 1.414, 1.414, 1.414, 1.414]
@@ -52,7 +44,8 @@ class a_star(Node):
     def grid_update(self):
         self.is_grid_update = True
         map_to_grid = np.array(self.map_msg.data)
-        self.grid = np.reshape(map_to_grid, (self.GRIDSIZE, self.GRIDSIZE))
+        # a_star 노드는 x,y 순서로 사용하기 위해 전치(T)를 적용
+        self.grid = np.reshape(map_to_grid, (self.GRIDSIZE, self.GRIDSIZE)).T
 
     def pose_to_grid_cell(self,x,y):
         map_point_x = int((x - self.map_offset_x) / self.map_resolution)
@@ -77,16 +70,13 @@ class a_star(Node):
         if msg.header.frame_id=='map':
             goal_x = msg.pose.position.x
             goal_y = msg.pose.position.y
-            self.goal = self.pose_to_grid_cell(goal_x, goal_y)
-            # ⚠️ grid가 아직 없으면 먼저 생성
+            goal_cell = self.pose_to_grid_cell(goal_x, goal_y)
+
             if not self.is_grid_update:
                 self.grid_update()
 
-            # ✅ 이제 접근 가능
-            self.get_logger().info(f"goal: {self.goal}")
-            self.get_logger().info(f"grid value at goal: {self.grid[self.goal[0]][self.goal[1]]}")
-
-            # print(msg)
+            self.goal = goal_cell
+            # self.get_logger().info(f"Goal grid cell: {self.goal} (from ({goal_x:.2f}, {goal_y:.2f}))")
             
             if self.is_map and self.is_odom:
                 if not self.is_grid_update:
@@ -107,9 +97,9 @@ class a_star(Node):
                 self.global_path_msg.header.frame_id='map'
                 for grid_cell in reversed(self.final_path) :
                     tmp_pose=PoseStamped()
-                    x, y = self.grid_cell_to_pose(grid_cell)
-                    tmp_pose.pose.position.x = x
-                    tmp_pose.pose.position.y = y
+                    waypoint_x, waypoint_y = self.grid_cell_to_pose(grid_cell)
+                    tmp_pose.pose.position.x = waypoint_x
+                    tmp_pose.pose.position.y = waypoint_y
                     tmp_pose.pose.orientation.w = 1.0
                     self.global_path_msg.poses.append(tmp_pose)
             
@@ -117,7 +107,7 @@ class a_star(Node):
                     self.a_star_pub.publish(self.global_path_msg)
 
     def dijkstra(self,start):
-        self.get_logger().info("Path planning started")
+        # self.get_logger().info("Path planning started")
         Q = deque()
         Q.append(start)
         self.cost[start[0]][start[1]] = 0
@@ -148,7 +138,7 @@ class a_star(Node):
             self.final_path.append(node)
             node = self.path[node[0]][node[1]]
         self.final_path.append(start)
-        self.get_logger().info("Path planning complete")
+        # self.get_logger().info("Path planning complete")
         
 def main(args=None):
     rclpy.init(args=args)
