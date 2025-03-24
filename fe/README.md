@@ -11,6 +11,6 @@ cd fe
 ### 1. Tailwind CSS와 Vite 플러그인 설치
 npm install tailwindcss @tailwindcss/vite
 
-### 2. 공식 사이트 참고해서 설정
+### 2. 공식 문서 참고해서 설정
 https://tailwindcss.com/docs/installation/using-vite
 
