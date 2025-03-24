@@ -1,10 +1,13 @@
 stages:
   - build
   - push
+  - deploy
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
+  SERVER_HOST: j12e102.p.ssafy.io
+  PEM_FILE: J12E102T.pem
 
 services:
   - docker:dind
@@ -17,18 +20,48 @@ default:
 build:
   stage: build
   script:
-    - docker build -t busankim/ssafy-second-infra:backend ./backend
+    - docker build -t busankim/ssafyproject:backend ./be
   only:
     - develop
+    - feature/be-infra
   tags:
     - ssafy-second-infra
 
 push:
   stage: push
   script:
-    - docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
-    - docker push busankim/ssafy-second-infra:backend
+    - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+    - docker push busankim/ssafyproject:backend
   only:
     - develop
+    - feature/be-infra
+  tags:
+    - ssafy-second-infra
+
+deploy:
+  stage: deploy
+  image: alpine:latest
+  variables:
+    SERVER_HOST: j12e102.p.ssafy.io
+    PEM_FILE: J12E102T.pem
+  before_script:
+    - apk add --no-cache openssh-client bash
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" > $PEM_FILE
+    - chmod 400 $PEM_FILE
+    - mkdir -p ~/.ssh
+    - mkdir project
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SERVER_HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - ssh -i $PEM_FILE ubuntu@$SERVER_HOST "
+        cd ~/project &&
+        sudo docker pull busankim/ssafyproject:backend &&
+        sudo docker-compose up -d backend
+      "
+  only:
+    - develop
+    - feature/be-infra
   tags:
     - ssafy-second-infra
