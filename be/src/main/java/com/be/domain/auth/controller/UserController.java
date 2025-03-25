@@ -1,7 +1,6 @@
 package com.be.domain.auth.controller;
 
 import com.be.common.model.response.BaseResponseBody;
-import com.be.config.CustomUserDetails;
 import com.be.db.entity.User;
 import com.be.db.repository.UserRepository;
 import com.be.domain.auth.dto.UserDto;
@@ -9,7 +8,6 @@ import com.be.domain.auth.request.UpdateUserRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
