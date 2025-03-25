@@ -1,7 +1,7 @@
 package com.be.domain.auth.controller;
 
 import com.be.common.model.response.BaseResponseBody;
-import com.be.config.CustomLogoutHandler;
+import com.be.config.security.CustomLogoutHandler;
 import com.be.domain.auth.request.LoginRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,7 +19,6 @@ import com.be.domain.auth.request.RegisterRequest;
 import com.be.domain.auth.response.RegisterResponse;
 import com.be.domain.auth.utils.TokenUtils;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -33,10 +32,16 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final CustomLogoutHandler customLogoutHandler;
 
-    // ✉️ 1. 회원가입
+    // 1. 회원가입
     @PostMapping("/register")
     public ResponseEntity<BaseResponseBody<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
         log.info("회원가입 요청: {}", request.getEmail());
+
+        // username 중복 검사
+        if (userRepository.existsByUsername(request.getUsername())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(BaseResponseBody.error(400, "이미 사용 중인 사용자 이름입니다."));
+        }
 
         if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -58,7 +63,7 @@ public class AuthController {
                 new RegisterResponse(user.getId(), user.getEmail(), user.getUsername()), "회원가입 완료"));
     }
 
-    // ✉️ 2. 로그인
+    // 2. 로그인
     @PostMapping("/test-login")
     public ResponseEntity<String> testLogin(@RequestBody LoginRequest loginRequest) {
         log.info("테스트 로그인 요청 수신: {}", loginRequest.getUsername());
@@ -69,15 +74,15 @@ public class AuthController {
 //        return ResponseEntity.ok("테스트용 로그인 요청 수신: " + loginRequest.getUsername());
 //    }
 
-    // ✉️ 3. 로그아웃
-    @PostMapping("/logout")
-    public ResponseEntity<BaseResponseBody<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
-        log.info("[+] 로그아웃 요청");
-        customLogoutHandler.logout(request, response, null);
-        return ResponseEntity.ok(BaseResponseBody.success(null, "로그아웃 완료"));
-    }
+    //  3. 로그아웃 => CustomLogoutHandler에서 바로 처리
+//    @PostMapping("/logout")
+//    public ResponseEntity<BaseResponseBody<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
+//        log.info("[+] 로그아웃 요청");
+//        customLogoutHandler.logout(request, response, null);
+//        return ResponseEntity.ok(BaseResponseBody.success(null, "로그아웃 완료"));
+//    }
 
-    // ✉️ 4. 토큰 갱신
+    // 4. 토큰 갱신
     @PostMapping("/refresh")
     public ResponseEntity<BaseResponseBody<String>> refreshToken(
             @CookieValue(value = "refreshToken", required = false) String refreshToken) {
