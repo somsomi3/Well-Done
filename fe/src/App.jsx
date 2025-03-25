@@ -1,7 +1,7 @@
 function App() {
   return (
     <div className="app">
-      <h1>새 프로젝트 시작하기</h1>
+      <h1>CICD 테스트 중입니다.</h1>
     </div>
   );
 }
