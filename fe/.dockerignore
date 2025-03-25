@@ -1,0 +1,27 @@
+# Node.js 관련 (node_modules는 Docker 컨테이너에서 npm install로 설치)
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+
+# 빌드 결과물 제외 (Docker에서 새롭게 빌드되므로 제외)
+build
+dist
+
+# 환경 변수 파일 (보안 중요)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Git 관련 파일 제외
+.git
+.gitignore
+
+# IDE/Editor 관련 파일 제외
+.vscode
+.idea
+.DS_Store
+*.swp
