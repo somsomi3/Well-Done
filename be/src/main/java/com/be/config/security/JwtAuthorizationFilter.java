@@ -47,6 +47,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     private static final String ACCESS_TOKEN_HEADER_KEY = "Authorization";
     private static final String REFRESH_TOKEN_HEADER_KEY = "x-refresh-token";
     private static final List<String> WHITELIST_PREFIXES = List.of(
+            "/",
             "/swagger-ui/index.html",
             "/auth/login",
             "/auth/register",
