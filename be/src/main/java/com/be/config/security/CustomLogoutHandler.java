@@ -1,4 +1,4 @@
-package com.be.config;
+package com.be.config.security;
 
 import com.be.domain.auth.service.TokenBlackListService;
 import com.be.domain.auth.utils.TokenUtils;

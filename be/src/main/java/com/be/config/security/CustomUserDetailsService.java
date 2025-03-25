@@ -1,4 +1,4 @@
-package com.be.config;
+package com.be.config.security;
 
 
 import com.be.db.entity.User;

@@ -1,4 +1,4 @@
-package com.be.config;
+package com.be.config.security;
 
 import com.be.domain.auth.dto.UserDto;
 import com.be.domain.auth.utils.TokenUtils;
