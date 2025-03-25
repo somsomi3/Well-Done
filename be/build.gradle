@@ -57,6 +57,9 @@ dependencies {
 	//mqtt libarary
 	implementation 'org.springframework.boot:spring-boot-starter-integration'
 	implementation 'org.springframework.integration:spring-integration-mqtt:5.5.14'
+
+	//redis
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 tasks.named('test') {

@@ -1,4 +1,4 @@
-package com.be.config;
+package com.be.config.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,8 +13,8 @@ public class CustomAuthFailureHandler implements AuthenticationFailureHandler {
                                         HttpServletResponse response,
                                         AuthenticationException exception) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setCharacterEncoding("UTF-8"); // ✅ 한글 깨짐 방지
-        response.setContentType("application/json;charset=UTF-8"); // ✅ 한글 깨짐 방지
+        response.setCharacterEncoding("UTF-8"); // 한글 깨짐 방지
+        response.setContentType("application/json;charset=UTF-8"); // 한글 깨짐 방지
         response.getWriter().write("{\"message\": \"로그인 실패: " + exception.getMessage() + "\"}");
     }
 }
