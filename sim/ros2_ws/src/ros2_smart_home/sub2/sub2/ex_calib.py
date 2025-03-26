@@ -13,7 +13,7 @@ params_lidar = {
     "Block_SIZE": int(1206),
     "X": 0, # meter
     "Y": 0,
-    "Z": 0.30,
+    "Z": 0.10,
     "YAW": 0, # deg
     "PITCH": 0,
     "ROLL": 0
@@ -21,15 +21,15 @@ params_lidar = {
 
 
 params_cam = {
-    "WIDTH": 640, # image width
-    "HEIGHT": 480, # image height
+    "WIDTH": 320, # image width
+    "HEIGHT": 240, # image height
     "FOV": 60, # Field of view
     "localIP": "127.0.0.1",
     "localPort": 1232,
     "Block_SIZE": int(65000),
     "X": 0, # meter
     "Y": 0,
-    "Z": 0.50,
+    "Z": 0.19,
     "YAW": 0, # deg
     "PITCH": 0,
     "ROLL": 0
