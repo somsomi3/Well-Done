@@ -28,7 +28,7 @@ class astarLocalpath(Node):
         self.odom_msg=Odometry()
         self.is_odom=False
         self.is_path=False
-       
+
         self.global_path_msg=Path()
 
 
@@ -45,14 +45,8 @@ class astarLocalpath(Node):
 
 
     def path_callback(self,msg):
-        pass
-        '''
-        로직 2. global_path 데이터 수신 후 저장
-
-        self.is_path=
-        self.global_path_msg=
-        
-        '''
+        self.is_path = True
+        self.global_path_msg = msg
 
         
     def timer_callback(self):
@@ -65,47 +59,31 @@ class astarLocalpath(Node):
             y=self.odom_msg.pose.pose.position.y
             current_waypoint=-1
             
-            '''
-            로직 4. global_path 중 로봇과 가장 가까운 포인트 계산
-            
-            min_dis=
-            for i,waypoint in enumerate(self.global_path_msg.poses) : 
-                distance=
-                if distance < min_dis :
-                    min_dis=
-                    current_waypoint=
-
-            '''           
-            
-            
-            '''
-            로직 5. local_path 예외 처리
+            min_dis = float('inf')
+            for i, waypoint in enumerate(self.global_path_msg.poses):
+                dx = x - waypoint.pose.position.x
+                dy = y - waypoint.pose.position.y
+                distance = sqrt(dx*dx + dy*dy)
+                if distance < min_dis:
+                    min_dis = distance
+                    current_waypoint = i          
 
             if current_waypoint != -1 : 
                 if current_waypoint + self.local_path_size < len(self.global_path_msg.poses):
-                    
-                    
-                
+                    selected_poses = self.global_path_msg.poses[current_waypoint:current_waypoint + self.local_path_size]
                 else :
+                    selected_poses = self.global_path_msg.poses[current_waypoint:]
 
-                    
-                              
-            '''           
+                local_path_msg.poses = selected_poses      
 
             self.local_path_pub.publish(local_path_msg)
-        
 
-        
 def main(args=None):
     rclpy.init(args=args)
-
-    a_star_local = astarLocalpath()
-
-    rclpy.spin(a_star_local)
-
-    a_star_local.destroy_node()
+    node = astarLocalpath()
+    rclpy.spin(node)
+    node.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()

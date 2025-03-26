@@ -35,7 +35,7 @@ class IMGPublisher(Node):
 
         self.publisher_ = self.create_publisher(CompressedImage, '/image_jpeg/compressed', 10)
         
-        self.timer_period = 1/20  # seconds
+        self.timer_period = 1/10  # seconds
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
 
         self.img_msg = CompressedImage()

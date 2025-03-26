@@ -10,6 +10,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        # ✅ 여기 추가: map.txt를 함께 설치
+        ('share/' + package_name + '/map', ['map/map.txt']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

@@ -33,7 +33,7 @@ class followTheCarrot(Node):
         self.path_sub = self.create_subscription(Path,'/local_path',self.path_callback,10)
 
         # 로직 1. 제어 주기 및 타이머 설정
-        time_period=0.05 
+        time_period=0.01
         self.timer = self.create_timer(time_period, self.timer_callback)
 
         self.is_odom=False
@@ -48,7 +48,7 @@ class followTheCarrot(Node):
         # 로직 2. 파라미터 설정
         self.lfd=0.1
         self.min_lfd=0.1
-        self.max_lfd=1.0
+        self.max_lfd=2.0
 
 
     def timer_callback(self):
@@ -64,85 +64,72 @@ class followTheCarrot(Node):
                 robot_pose_y=self.odom_msg.pose.pose.position.y
 
                 # 로봇이 경로에서 떨어진 거리를 나타내는 변수
-                lateral_error= sqrt(pow(self.path_msg.poses[0].pose.position.x-robot_pose_x,2)+pow(self.path_msg.poses[0].pose.position.y-robot_pose_y,2))
+                lateral_error= sqrt(
+                    pow(self.path_msg.poses[0].pose.position.x-robot_pose_x,2)+
+                    pow(self.path_msg.poses[0].pose.position.y-robot_pose_y,2)
+                )
+
                 print(robot_pose_x,robot_pose_y,lateral_error)
-                '''
-                로직 4. 로봇이 주어진 경로점과 떨어진 거리(lateral_error)와 로봇의 선속도를 이용해 전방주시거리 설정
                 
-                self.lfd= 
-                
-                if self.lfd < self.min_lfd :
-                    self.lfd=self.min_lfd
-                if self.lfd > self.max_lfd:
-                    self.lfd=self.max_lfd
-
-                '''
-
+                # self.lfd = lateral_error * 1.5  # 예시 비례 상수
+                # if self.lfd < self.min_lfd:
+                #     self.lfd = self.min_lfd
+                # if self.lfd > self.max_lfd:
+                #     self.lfd = self.max_lfd
+                self.lfd = 0.5 # 고정된 전방 주시 거리 사용
                 min_dis=float('inf')
-                '''
-                로직 5. 전방 주시 포인트 설정
-                for num,waypoint in enumerate(self.path_msg.poses) :
 
-                    self.current_point=
-                    dis=
-                    if abs(dis-self.lfd) < min_dis :
-                        min_dis=
-                        self.forward_point=
-                        self.is_look_forward_point=
-
-                '''               
+                for num, waypoint in enumerate(self.path_msg.poses):
+                    self.current_point = waypoint.pose.position
+                    dis = sqrt(
+                        pow(self.current_point.x - robot_pose_x, 2) +
+                        pow(self.current_point.y - robot_pose_y, 2)
+                    )
+                    if abs(dis - self.lfd) < min_dis:
+                        min_dis = abs(dis - self.lfd)
+                        self.forward_point = self.current_point
+                        self.is_look_forward_point = True             
                 
                 if self.is_look_forward_point :
             
                     global_forward_point=[self.forward_point.x ,self.forward_point.y,1]
 
-                    '''
-                    로직 6. 전방 주시 포인트와 로봇 헤딩과의 각도 계산
+                    trans_matrix = np.array([
+                        [cos(self.robot_yaw), -sin(self.robot_yaw), robot_pose_x],
+                        [sin(self.robot_yaw),  cos(self.robot_yaw), robot_pose_y],
+                        [0,                   0,                   1]
+                    ])
+                    det_trans_matrix = np.linalg.inv(trans_matrix)
+                    local_forward_point = det_trans_matrix.dot(np.array(global_forward_point).reshape(3, 1))
 
-                    (테스트) 맵에서 로봇의 위치(robot_pose_x,robot_pose_y)가 (5,5)이고, 헤딩(self.robot_yaw) 1.57 rad 일 때, 선택한 전방포인트(global_forward_point)가 (3,7)일 때
-                    변환행렬을 구해서 전방포인트를 로봇 기준좌표계로 변환을 하면 local_forward_point가 구해지고, atan2를 이용해 선택한 점과의 각도를 구하면
-                    theta는 0.7853 rad 이 나옵니다.
-                    trans_matrix는 로봇좌표계에서 기준좌표계(Map)로 좌표변환을 하기위한 변환 행렬입니다.
-                    det_tran_matrix는 trans_matrix의 역행렬로, 기준좌표계(Map)에서 로봇좌표계로 좌표변환을 하기위한 변환 행렬입니다.  
-                    local_forward_point 는 global_forward_point를 로봇좌표계로 옮겨온 결과를 저장하는 변수입니다.
-                    theta는 로봇과 전방 주시 포인트와의 각도입니다. 
-
-                    trans_matrix=
-                    det_trans_matrix=
-                    local_forward_point=
-                    theta=
+                    theta = -atan2(local_forward_point[1][0], local_forward_point[0][0])
                     
-                    '''
-                    
-                    '''
-                    로직 7. 선속도, 각속도 정하기
-                    out_vel=
-                    out_rad_vel=
+                    out_vel = max(0.0, 1.0 * cos(theta))  # 전진 속도
+                    Kp = 1.5
+                    out_rad_vel = Kp * theta  # 조향 각속도         
 
-                    '''             
+                    # 제한 걸기
+                    out_rad_vel = max(-1.0, min(1.0, out_rad_vel))
 
-                    self.cmd_msg.linear.x=out_vel
-                    self.cmd_msg.angular.z=out_rad_vel                    
-           
+                    self.cmd_msg.linear.x = float(out_vel)
+                    self.cmd_msg.angular.z = float(out_rad_vel)                 
+                else:
+                    print("⚠️ 전방 주시 포인트를 찾을 수 없음")
+                    self.cmd_msg.linear.x = 0.0
+                    self.cmd_msg.angular.z = 0.0
+
             else :
-                print("no found forward point")
+                print("⚠️ 경로가 충분하지 않음")
                 self.cmd_msg.linear.x=0.0
                 self.cmd_msg.angular.z=0.0
-
             
             self.cmd_pub.publish(self.cmd_msg)
-
             
-
     def odom_callback(self, msg):
         self.is_odom=True
         self.odom_msg=msg
-        '''
-        로직 3. Quaternion 을 euler angle 로 변환
-        q=
-        _,_,self.robot_yaw=
-
-        ''' 
+        q = msg.pose.pose.orientation
+        _, _, self.robot_yaw = Quaternion(q.w, q.x, q.y, q.z).to_euler()
 
     
     def path_callback(self, msg):
@@ -158,15 +145,10 @@ class followTheCarrot(Node):
         
 def main(args=None):
     rclpy.init(args=args)
-
-    path_tracker = followTheCarrot()
-
-    rclpy.spin(path_tracker)
-
-
-    path_tracker.destroy_node()
+    node = followTheCarrot()
+    rclpy.spin(node)
+    node.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
