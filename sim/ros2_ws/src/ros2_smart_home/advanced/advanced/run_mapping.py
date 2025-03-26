@@ -15,6 +15,8 @@ import numpy as np
 import cv2
 import time
 
+"""이 노드는 C:\\Users\\SSAFY\\Desktop\\temp\\S12P21E102\\sim\\ros2_ws\\src\\ros2_smart_home\\advanced 에서 실행할 것"""
+
 # mapping node의 전체 로직 순서
 # 1. publisher, subscriber, msg 생성
 # 2. mapping 클래스 생성
@@ -33,101 +35,98 @@ params_map = {
     "MAP_RESOLUTION": 0.05,
     "OCCUPANCY_UP": 0.02,
     "OCCUPANCY_DOWN": 0.01,
-    "MAP_CENTER": (-8.0, -4.0),
+    "MAP_CENTER": (-50.0, -50.0),
     "MAP_SIZE": (17.5, 17.5),
     "MAP_FILENAME": 'test.png',
     "MAPVIS_RESIZE_SCALE": 2.0
 }
 
-
 def createLineIterator(P1, P2, img):
-    """
-    Produces and array that consists of the coordinates and intensities of each pixel in a line between two points
 
-    Parameters:
-        -P1: a numpy array that consists of the coordinate of the first point (x,y)
-        -P2: a numpy array that consists of the coordinate of the second point (x,y)
-        -img: the image being processed
+    # Bresenham's 알고리즘을 이용하여 P1 → P2 직선상의 모든 픽셀 좌표를 구하는 함수
+    imageH = img.shape[0]
+    imageW = img.shape[1]
+    P1Y = P1[1]
+    P1X = P1[0]
+    P2X = P2[0]
+    P2Y = P2[1]
 
-    Returns:
-        -it: a numpy array that consists of the coordinates and intensities of each pixel in the radii (shape: [numPixels, 3], row = [x,y,intensity])
-    """
-    # 로직 순서
-    # 1. 두 점을 있는 백터의 x, y 값과 크기 계산
-    # 2. 직선을 그릴 grid map의 픽셀 좌표를 넣을 numpy array 를 predifine
-    # 3. 직선 방향 체크
-    # 4. 수직선의 픽셀 좌표 계산
-    # 5. 수평선의 픽셀 좌표 계산
-    # 6. 대각선의 픽셀 좌표 계산
-    # 7. 맵 바깥 픽셀 좌표 삭제
-
-   #define local variables for readability
-    imageH = img.shape[0] #height
-    imageW = img.shape[1] #width
-    P1Y = P1[1] #시작점 y 픽셀 좌표
-    P1X = P1[0] #시작점 x 픽셀 좌표
-    P2X = P2[0] #끝점 y 픽셀 좌표
-    P2Y = P2[1] #끝점 x 픽셀 좌표
-
-    #difference and absolute difference between points
-    #used to calculate slope and relative location between points
+    # 로직 1: 두 점 사이의 거리 및 방향 계산
     dX = P2X - P1X
     dY = P2Y - P1Y
     dXa = np.abs(dX)
     dYa = np.abs(dY)
 
-    #predefine numpy array for output based on distance between points
-    itbuffer = np.empty(shape=(np.maximum(dYa,dXa),3),dtype=np.float32)
+    # 로직 2: 직선상 픽셀 좌표를 저장할 버퍼 생성
+    itbuffer = np.empty(shape=(np.maximum(dYa,dXa), 3), dtype=np.float32)
     itbuffer.fill(np.nan)
 
-    #Obtain coordinates along the line using a form of Bresenham's algorithm
+    # 로직 3: 방향 판별 (음수 방향인지 체크)
     negY = P1Y > P2Y
     negX = P1X > P2X
-    if P1X == P2X: #vertical line segment
-        itbuffer[:,0] = P1X
+    
+    # 로직 4: 수직선인 경우
+    if P1X == P2X:
+        itbuffer[:, 0] = P1X
         if negY:
-            itbuffer[:,1] = np.arange(P1Y - 1,P1Y - dYa - 1,-1)
+            itbuffer[:, 1] = np.arange(P1Y - 1, P1Y - dYa - 1, -1)
         else:
-            itbuffer[:,1] = np.arange(P1Y+1,P1Y+dYa+1)
-    elif P1Y == P2Y: #horizontal line segment
-        itbuffer[:,1] = P1Y
+            itbuffer[:, 1] = np.arange(P1Y + 1, P1Y + dYa + 1)
+
+    # 로직 5: 수평선인 경우
+    elif P1Y == P2Y:
+        itbuffer[:, 1] = P1Y
         if negX:
-            itbuffer[:,0] = np.arange(P1X-1,P1X-dXa-1,-1)
+            itbuffer[:, 0] = np.arange(P1X - 1, P1X - dXa - 1, -1)
         else:
-            itbuffer[:,0] = np.arange(P1X+1,P1X+dXa+1)
-    else: #diagonal line segment
+            itbuffer[:, 0] = np.arange(P1X + 1, P1X + dXa + 1)
+
+    # 로직 6: 대각선인 경우
+    else:
         steepSlope = dYa > dXa
-        if steepSlope:
-            slope = dX.astype(np.float32)/dY.astype(np.float32)
+        if steepSlope: # 기울기가 1보다 큰 경우
+            slope = dX.astype(np.float32) / dY.astype(np.float32)
             if negY:
-                itbuffer[:,1] = np.arange(P1Y-1,P1Y-dYa-1,-1)
+                itbuffer[:, 1] = np.arange(P1Y - 1, P1Y - dYa - 1, -1)
             else:
-                itbuffer[:,1] = np.arange(P1Y+1,P1Y+dYa+1)
-            itbuffer[:,0] = (slope*(itbuffer[:,1]-P1Y)).astype(np.int) + P1X
-        else:
-            slope = dY.astype(np.float32)/dX.astype(np.float32)
+                itbuffer[:, 1] = np.arange(P1Y + 1, P1Y + dYa + 1)
+            itbuffer[:, 0] = (slope * (itbuffer[:, 1] - P1Y)).astype(np.int) + P1X
+        else: # 기울기가 1보다 작은 경우
+            slope = dY.astype(np.float32) / dX.astype(np.float32)
             if negX:
-                itbuffer[:,0] = np.arange(P1X-1,P1X-dXa-1,-1)
+                itbuffer[:, 0] = np.arange(P1X - 1, P1X - dXa - 1, -1)
             else:
-                itbuffer[:,0] = np.arange(P1X+1,P1X+dXa+1)
-            itbuffer[:,1] = (slope*(itbuffer[:,0]-P1X)).astype(np.int) + P1Y
+                itbuffer[:, 0] = np.arange(P1X + 1, P1X + dXa + 1)
+            itbuffer[:, 1] = (slope * (itbuffer[:, 0] - P1X)).astype(np.int) + P1Y
 
-    #Remove points outside of image
-    colX = itbuffer[:,0]
-    colY = itbuffer[:,1]
-    itbuffer = itbuffer[(colX >= 0) & (colY >=0) & (colX<imageW) & (colY<imageH)]
+    # 로직 7: 이미지 바깥 좌표 제거
+    colX = itbuffer[:, 0]
+    colY = itbuffer[:, 1]
+    itbuffer = itbuffer[(colX >= 0) & (colY >= 0) & (colX < imageW) & (colY < imageH)]
 
-    #Get intensities from img ndarray
-    itbuffer[:,2] = img[itbuffer[:,1].astype(np.uint),itbuffer[:,0].astype(np.uint)]
+    # 픽셀 강도 저장 (나중에 사용될 가능성에 대비)
+    itbuffer[:, 2] = img[itbuffer[:, 1].astype(np.uint), itbuffer[:, 0].astype(np.uint)]
 
     return itbuffer
 
 
 class Mapping:
-    """
-    Mapping Class
-    """
+
     def __init__(self, params_map):
+        
+        """
+        params_map = {
+            "MAP_RESOLUTION": 0.05,
+            "OCCUPANCY_UP": 0.02,
+            "OCCUPANCY_DOWN": 0.01,
+            "MAP_CENTER": (-8.0, -4.0),
+            "MAP_SIZE": (17.5, 17.5),
+            "MAP_FILENAME": 'test.png',
+            "MAPVIS_RESIZE_SCALE": 2.0
+        }
+        """
+
+        # 로직 3. 맵의 resolution, 중심좌표, occupancy에 대한 threshold 등의 설정들을 받습니다
         self.map_resolution = params_map["MAP_RESOLUTION"]
         self.map_size = np.array(params_map["MAP_SIZE"]) / self.map_resolution
         self.map_center = params_map["MAP_CENTER"]
@@ -141,21 +140,25 @@ class Mapping:
         self.T_r_l = np.array([[0,-1,0],[1,0,0],[0,0,1]])
 
     def update(self, pose, laser):
+
+        # 로직 7. pose 값을 받아서 좌표변환 행렬로 정의
         n_points = laser.shape[1]
         pose_mat = utils.xyh2mat2D(pose)
-        
+
+        # 로직 8. laser scan 데이터 좌표 변환
         pose_mat = np.matmul(pose_mat,self.T_r_l)
         laser_mat = np.ones((3, n_points))
         laser_mat[:2, :] = laser
 
         laser_global = np.matmul(pose_mat, laser_mat)
 
+        # 로직 9. pose와 laser의 grid map index 변환
         pose_x = (pose[0] - self.map_center[0] + (self.map_size[0]*self.map_resolution)/2) / self.map_resolution
         pose_y = (pose[1] - self.map_center[1] + (self.map_size[1]*self.map_resolution)/2) / self.map_resolution
         laser_global_x = (laser_global[0, :] - self.map_center[0] + (self.map_size[0]*self.map_resolution)/2) / self.map_resolution
-        laser_global_y =  (laser_global[1, :] - self.map_center[1] + (self.map_size[1]*self.map_resolution)/2) / self.map_resolution
+        laser_global_y = (laser_global[1, :] - self.map_center[1] + (self.map_size[1]*self.map_resolution)/2) / self.map_resolution
 
-        ### Original Plot
+        # 로직 10. laser scan 공간을 맵에 표시
         for i in range(laser_global.shape[1]):
             p1 = np.array([pose_x, pose_y]).reshape(-1).astype(np.int)
             p2 = np.array([laser_global_x[i], laser_global_y[i]]).astype(np.int)
@@ -168,17 +171,16 @@ class Mapping:
             avail_x = line_iter[:, 0].astype(np.int)
             avail_y = line_iter[:, 1].astype(np.int)
         
-            # Empty
-            self.map[avail_y[:-1], avail_x[:-1]] = self.map[avail_y[:-1], avail_x[:-1]] + self.occu_down
+            # Empty (beam 경로 상의 셀)
+            self.map[avail_y[:-1], avail_x[:-1]] += self.occu_down
         
-            # Occupied
-            self.map[avail_y[-1], avail_x[-1]] = self.map[avail_y[-1], avail_x[-1]] - self.occu_up
+            # Occupied (최종 충돌 지점)
+            self.map[avail_y[-1], avail_x[-1]] -= self.occu_up
 
         # self.show_pose_and_points(pose, laser_global)        
 
     def __del__(self):
         self.save_map(())
-        ㄴ
     def save_map(self):
         map_clone = self.map.copy()
         cv2.imwrite(self.map_filename, map_clone*255)
@@ -215,8 +217,8 @@ class Mapper(Node):
         super().__init__('Mapper')
         
         # 로직 1 : publisher, subscriber, msg 생성
-        self.subscription = self.create_subscription(LaserScan,
-        '/scan',self.scan_callback,10)
+        self.subscription = self.create_subscription(TurtlebotStatus,'/turtlebot_status', self.status_callback, 10)
+        self.subscription = self.create_subscription(LaserScan, '/scan',self.scan_callback,10)
         self.map_pub = self.create_publisher(OccupancyGrid, '/map', 1)
         
         self.map_msg=OccupancyGrid()
@@ -224,52 +226,66 @@ class Mapper(Node):
         self.map_size=int(params_map["MAP_SIZE"][0]\
             /params_map["MAP_RESOLUTION"]*params_map["MAP_SIZE"][1]/params_map["MAP_RESOLUTION"])
         
-
         m = MapMetaData()
         m.resolution = params_map["MAP_RESOLUTION"]
         m.width = int(params_map["MAP_SIZE"][0]/params_map["MAP_RESOLUTION"])
         m.height = int(params_map["MAP_SIZE"][1]/params_map["MAP_RESOLUTION"])
         quat = np.array([0, 0, 0, 1])
         m.origin = Pose()
-        m.origin.position.x = params_map["MAP_CENTER"][0]-8.75
-        m.origin.position.y = params_map["MAP_CENTER"][1]-8.75
+        m.origin.position.x = params_map["MAP_CENTER"][0]
+        m.origin.position.y = params_map["MAP_CENTER"][1]
         self.map_meta_data = m
 
         self.map_msg.info=self.map_meta_data
-
+        self.latest_scan = None
         # 로직 2 : mapping 클래스 생성
         self.mapping = Mapping(params_map)
 
 
-    def scan_callback(self,msg):
+    def status_callback(self,msg):
         
-        pose_x=msg.range_min
-        pose_y=msg.scan_time
-        heading=msg.time_increment
-        Distance=np.array(msg.ranges)
-        x = Distance * np.cos(np.linspace(0, 2 * np.pi, 360))
-        y = Distance * np.sin(np.linspace(0, 2 * np.pi, 360))
+        # 로직 4 : laser scan 메시지 안의 ground truth pose 받기
+        pose_x = msg.twist.angular.x
+        pose_y = msg.twist.angular.y
+        heading = -msg.twist.angular.z  # 시뮬레이터 기준 보정
+
+        # 로직 5: lidar scan 데이터를 별도로 보관하고 있어야 laser 사용 가능
+        if self.latest_scan is None:
+            return
+
+        Distance = np.array(self.latest_scan.ranges)
+        angle = np.linspace(0, 2 * np.pi, len(Distance))
+        x = Distance * np.cos(angle)
+        y = Distance * np.sin(angle)
         laser = np.vstack((x.reshape((1, -1)), y.reshape((1, -1))))
 
-        pose = np.array([[pose_x],[pose_y],[heading]])
+        # 로직 6 : map 업데이트 실행
+        pose = np.array([[pose_x], [pose_y], [heading]])
         self.mapping.update(pose, laser)
 
-        np_map_data=self.mapping.map.reshape(1,self.map_size) 
-        list_map_data=np_map_data.tolist()
-        for i in range(self.map_size):
-            list_map_data[0][i]=100-int(list_map_data[0][i]*100)
-            if list_map_data[0][i] >100 :
-                list_map_data[0][i]=100
- 
-            if list_map_data[0][i] <0 :
-                list_map_data[0][i]=0
-  
+        # OccupancyGrid 메시지 데이터 생성
+        np_map_data = self.mapping.map.reshape(1, self.map_size)
+        list_map_data = np_map_data.tolist()
 
-        self.map_msg.header.stamp =rclpy.clock.Clock().now().to_msg()
-        self.map_msg.data=list_map_data[0]
+        # 0~1 값을 0~100으로 변환 + clamp
+        for i in range(self.map_size):
+            list_map_data[0][i] = 100 - int(list_map_data[0][i] * 100)
+            if list_map_data[0][i] > 100:
+                list_map_data[0][i] = 100
+            if list_map_data[0][i] < 0:
+                list_map_data[0][i] = 0
+
+        # 로직 11 : 업데이트 중인 map publish
+        self.map_msg.header.stamp = self.get_clock().now().to_msg()
+        self.map_msg.data = list_map_data[0]
         self.map_pub.publish(self.map_msg)
 
+    def scan_callback(self, msg):
+        self.latest_scan = msg
+
 def save_map(node,file_path):
+
+    # 로직 12 : 맵 저장
     pkg_path =os.getcwd()
     back_folder='..'
     folder_name='map'
@@ -289,14 +305,13 @@ def main(args=None):
     rclpy.init(args=args)
     
     try :    
-        run_mapping = Mapper()
-        rclpy.spin(run_mapping)
-        run_mapping.destroy_node()
+        node = Mapper()
+        rclpy.spin(node)
+        node.destroy_node()
         rclpy.shutdown()
 
     except :
-        save_map(run_mapping,'map.txt')
-# 
+        save_map(node,'map.txt')
 
 
 if __name__ == '__main__':
