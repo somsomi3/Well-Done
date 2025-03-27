@@ -44,6 +44,9 @@ call C:\dev\ros2_eloquent\setup.bat
 
 # 워크스페이스에서 설치된 패키지를 사용하도록 설정
 call C:\Users\SSAFY\Desktop\temp\S12P21E102\sim\ros2_ws\install\local_setup.bat
+
+# 필수 패키지 설치 attrs 설치 
+pip install attrs
 ```
 
 **💡 주의**<br>
