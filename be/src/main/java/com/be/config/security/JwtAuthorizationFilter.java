@@ -57,7 +57,8 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             "/swagger-resources/**",
             "/webjars/**",
             "/auth/test-login",
-            "/auth/logout"
+            "/auth/logout",
+            "/ws/**"
     );
 
     public JwtAuthorizationFilter(TokenUtils tokenUtils, UserRepository userRepository) {
@@ -73,9 +74,25 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain chain)
             throws IOException, ServletException {
 
+        String requestURI = request.getRequestURI();
+
+        // WebSocket Handshake 요청(/ws/**)은 필터에서 제외
+        if (requestURI.startsWith("/ws/")) {
+            log.info("WebSocket Handshake 요청 - JWT 필터 제외");
+            chain.doFilter(request, response);
+            return;
+        }
+
         System.out.println("JWT Authorization Filter가 호출되었습니다.");
 
         String uri = request.getRequestURI();
+        if (isWhitelisted(uri) || HTTP_METHOD_OPTIONS.equalsIgnoreCase(request.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        System.out.println("JWT Authorization Filter가 호출되었습니다.");
+
         if (isWhitelisted(uri) || HTTP_METHOD_OPTIONS.equalsIgnoreCase(request.getMethod())) {
             chain.doFilter(request, response);
             return;

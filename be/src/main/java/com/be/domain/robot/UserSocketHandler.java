@@ -15,61 +15,55 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class UserSocketHandler extends TextWebSocketHandler {
 
-    private final Map<String, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
+    // 전역적으로 모든 세션 관리
+    private final Set<WebSocketSession> sessions = ConcurrentHashMap.newKeySet();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
+        sessions.add(session);
         log.info("사용자 WebSocket 연결됨: {}", session.getId());
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         JsonNode json = objectMapper.readTree(message.getPayload());
-
         String type = json.has("type") ? json.get("type").asText() : "unknown";
-        String roomId = json.has("roomId") ? json.get("roomId").asText() : null;
-
-        if (roomId == null) {
-            log.warn("roomId가 없어 메시지를 처리할 수 없습니다. sessionId: {}", session.getId());
-            return;
-        }
-
-        rooms.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(session);
 
         switch (type) {
             case "command":
-                broadcast(roomId, message, session);
+            case "offer":
+            case "answer":
+            case "candidate":
+            case "ping":
+                broadcast(message, session);
                 break;
+
             case "join":
-                log.info("사용자 {} 방 {}에 참여", session.getId(), roomId);
+                log.info("사용자 {}가 입장하였습니다.", session.getId());
                 break;
+
             default:
                 log.warn("알 수 없는 메시지 타입: {}", type);
         }
     }
 
-    private void broadcast(String roomId, TextMessage message, WebSocketSession sender) {
-        Set<WebSocketSession> sessions = rooms.get(roomId);
-        if (sessions == null) {
-            log.warn("방 {}는 존재하지 않습니다", roomId);
-            return;
-        }
-
-        for (WebSocketSession session : sessions) {
-            try {
-                if (session.isOpen() && !session.getId().equals(sender.getId())) {
-                    session.sendMessage(message);
-                }
-            } catch (Exception e) {
-                log.error("메시지 전송 실패 - 세션: {}", session.getId(), e);
-            }
-        }
+    private void broadcast(TextMessage message, WebSocketSession sender) {
+        sessions.stream()
+                .filter(session -> session.isOpen() && !session.getId().equals(sender.getId()))
+                .forEach(session -> {
+                    try {
+                        session.sendMessage(message);
+                    } catch (Exception e) {
+                        log.error("메시지 전송 실패 - 세션: {}", session.getId(), e);
+                    }
+                });
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        rooms.values().forEach(set -> set.remove(session));
+        sessions.remove(session);
         log.info("사용자 WebSocket 연결 종료: {}", session.getId());
     }
 }
+
