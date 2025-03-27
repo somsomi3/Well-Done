@@ -59,6 +59,8 @@ public class TokenUtils {
         claims.put("userId", userDto.getUserid());
         if (isAccessToken) {
             claims.put("username", userDto.getUsername());
+        } else {
+            claims.put("username", userDto.getUsername()); // 리프레시 토큰에도 추가!
         }
         return claims;
     }
@@ -165,28 +167,22 @@ public class TokenUtils {
      * 🔹 리프레시 토큰 검증 후 새로운 액세스 토큰 발급
      */
     public String validateAndGenerateNewAccessToken(String refreshToken) {
-        try {
-            Claims claims = getTokenToClaims(refreshToken);
+        Claims claims = getTokenToClaims(refreshToken);
 
-            Long userId = Long.parseLong(claims.get("userId").toString());
-            String username = claims.get("username") != null ? claims.get("username").toString() : null;
+        Long userId = Long.parseLong(claims.get("userId").toString());
+        Object usernameClaim = claims.get("username");
 
-            // 🔹 UserDto 생성
-            UserDto userDto = UserDto.builder()
-                    .userid(userId)
-                    .username(username)
-                    .build();
-
-            // 🔹 UserDto를 User로 바꾸거나 generateJwt(UserDto) 오버로딩 추가 필요
-            return generateJwt(userDto); // 이 메서드를 새로 만들거나 오버로딩 필요
-
-        } catch (ExpiredJwtException e) {
-            throw new RuntimeException("리프레시 토큰이 만료되었습니다.", e);
-        } catch (JwtException e) {
-            throw new RuntimeException("리프레시 토큰이 유효하지 않습니다.", e);
-        } catch (Exception e) {
-            throw new RuntimeException("토큰 검증 중 오류 발생", e);
+        if (usernameClaim == null) {
+            throw new IllegalArgumentException("RefreshToken에서 username이 존재하지 않습니다!");
         }
-    }
 
-}
+        String username = usernameClaim.toString();
+
+        UserDto userDto = UserDto.builder()
+                .userid(userId)
+                .username(username)
+                .build();
+
+        return generateJwt(userDto);
+
+    }}
