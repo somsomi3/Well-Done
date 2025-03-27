@@ -59,6 +59,19 @@ public class CustomLogoutHandler implements LogoutHandler {
 
         response.setStatus(HttpServletResponse.SC_OK);
         log.info("[LOGOUT] 로그아웃 처리 완료");
+        // ✅ 응답 바디 추가
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        Map<String, Object> resultMap = new HashMap<>();
+        resultMap.put("statusCode", 200);
+        resultMap.put("message", "로그아웃 완료");
+
+        try {
+            response.getWriter().write(new ObjectMapper().writeValueAsString(resultMap));
+        } catch (IOException e) {
+            log.error("[LOGOUT] 응답 작성 실패", e);
+        }
     }
 
     private void sendErrorResponse(HttpServletResponse response, String message) {
