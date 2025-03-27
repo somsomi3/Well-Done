@@ -11,7 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -25,7 +25,7 @@ public class UserController {
 
 
 
-    @PutMapping("/update")
+    @PutMapping("/me")
     public ResponseEntity<BaseResponseBody<UserDto>> updateUser(
             Authentication authentication,
             @RequestBody UpdateUserRequest request) {
