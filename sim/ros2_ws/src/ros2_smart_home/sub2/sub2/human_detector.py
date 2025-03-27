@@ -20,13 +20,9 @@ from ssafy_msgs.msg import BBox
 
 def non_maximum_supression(bboxes, threshold=0.5):
 
-    """
-    non maximum supression 로직
-    로직 1 : bounding box 크기 역순으로 sort
-    로직 2 : new_bboxes 리스트 정의 후 첫 bbox save
-    로직 3 : 기존 bbox 리스트에 첫 bbox delete
-    로직 4 : 두 bbox의 겹치는 영역을 구해서, 영역이 안 겹칠때 new_bbox로 save
-    """    
+    
+    # non maximum supression 로직
+        
     # 로직 1 : bounding box 크기 역순으로 sort   
     # bboxes = sorted(bboxes, key=lambda detections: detections[3],
     #         reverse=True)
@@ -43,7 +39,8 @@ def non_maximum_supression(bboxes, threshold=0.5):
     # 로직 3 : 기존 bbox 리스트에 첫 bbox delete
     # bboxes.pop(0)
     # enumerate(bboxes):
-    for _, bbox in bboxes: 
+    # for _, bbox in bboxes: 
+    for bbox in bboxes:
         overlap = False
         for new_bbox in new_bboxes:
             x1_tl = bbox[0]
