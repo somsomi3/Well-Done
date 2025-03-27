@@ -10,35 +10,21 @@ from nav_msgs.msg import Odometry,Path,OccupancyGrid,MapMetaData
 from math import pi,cos,sin,sqrt
 import tf2_ros
 import os
-import sub3.utils as utils
+import advanced.utils as utils
 import numpy as np
 import cv2
 import time
 
 """이 노드는 C:\\Users\\SSAFY\\Desktop\\temp\\S12P21E102\\sim\\ros2_ws\\src\\ros2_smart_home\\advanced 에서 실행할 것"""
 
-# mapping node의 전체 로직 순서
-# 1. publisher, subscriber, msg 생성
-# 2. mapping 클래스 생성
-# 3. 맵의 resolution, 중심좌표, occupancy에 대한 threshold 등의 설정 받기
-# 4. laser scan 메시지 안의 ground truth pose 받기
-# 5. lidar scan 결과 수신
-# 6. map 업데이트 시작
-# 7. pose 값을 받아서 좌표변환 행렬로 정의
-# 8. laser scan 데이터 좌표 변환
-# 9. pose와 laser의 grid map index 변환
-# 10. laser scan 공간을 맵에 표시
-# 11. 업데이트 중인 map publish
-# 12. 맵 저장
-
 params_map = {
-    "MAP_RESOLUTION": 0.05,
-    "OCCUPANCY_UP": 0.02,
-    "OCCUPANCY_DOWN": 0.01,
+    "MAP_RESOLUTION": 0.01,
+    "OCCUPANCY_UP": 1,
+    "OCCUPANCY_DOWN": 0.3,
     "MAP_CENTER": (-50.0, -50.0),
     "MAP_SIZE": (17.5, 17.5),
     "MAP_FILENAME": 'test.png',
-    "MAPVIS_RESIZE_SCALE": 2.0
+    "MAPVIS_RESIZE_SCALE": 1.0
 }
 
 def createLineIterator(P1, P2, img):
@@ -113,18 +99,6 @@ def createLineIterator(P1, P2, img):
 class Mapping:
 
     def __init__(self, params_map):
-        
-        """
-        params_map = {
-            "MAP_RESOLUTION": 0.05,
-            "OCCUPANCY_UP": 0.02,
-            "OCCUPANCY_DOWN": 0.01,
-            "MAP_CENTER": (-8.0, -4.0),
-            "MAP_SIZE": (17.5, 17.5),
-            "MAP_FILENAME": 'test.png',
-            "MAPVIS_RESIZE_SCALE": 2.0
-        }
-        """
 
         # 로직 3. 맵의 resolution, 중심좌표, occupancy에 대한 threshold 등의 설정들을 받습니다
         self.map_resolution = params_map["MAP_RESOLUTION"]
@@ -177,13 +151,10 @@ class Mapping:
             # Occupied (최종 충돌 지점)
             self.map[avail_y[-1], avail_x[-1]] -= self.occu_up
 
-        # self.show_pose_and_points(pose, laser_global)        
-
-    def __del__(self):
-        self.save_map(())
-    def save_map(self):
-        map_clone = self.map.copy()
-        cv2.imwrite(self.map_filename, map_clone*255)
+        # occupancy 값 안정화 (0~1 범위로)
+        self.map = np.clip(self.map, 0.0, 1.0)
+        
+        self.show_pose_and_points(pose, laser_global)
 
     def show_pose_and_points(self, pose, laser_global):
         tmp_map = self.map.astype(np.float32)
@@ -205,8 +176,11 @@ class Mapping:
         cv2.circle(map_bgr, center, 2, (0,0,255), -1)
 
         map_bgr = cv2.resize(map_bgr, dsize=(0, 0), fx=self.map_vis_resize_scale, fy=self.map_vis_resize_scale)
-        # cv2.imshow('Sample Map', map_bgr)
-        # cv2.waitKey(1)
+        
+        cv2.namedWindow("Sample Map", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("Sample Map", 800, 800)  # 원하는 크기로
+        cv2.imshow('Sample Map', map_bgr)
+        cv2.waitKey(1)
 
 
 
@@ -217,7 +191,6 @@ class Mapper(Node):
         super().__init__('Mapper')
         
         # 로직 1 : publisher, subscriber, msg 생성
-        self.subscription = self.create_subscription(TurtlebotStatus,'/turtlebot_status', self.status_callback, 10)
         self.subscription = self.create_subscription(LaserScan, '/scan',self.scan_callback,10)
         self.map_pub = self.create_publisher(OccupancyGrid, '/map', 1)
         
@@ -232,74 +205,70 @@ class Mapper(Node):
         m.height = int(params_map["MAP_SIZE"][1]/params_map["MAP_RESOLUTION"])
         quat = np.array([0, 0, 0, 1])
         m.origin = Pose()
-        m.origin.position.x = params_map["MAP_CENTER"][0]
-        m.origin.position.y = params_map["MAP_CENTER"][1]
+        m.origin.position.x = params_map["MAP_CENTER"][0] - params_map["MAP_SIZE"][0]/2
+        m.origin.position.y = params_map["MAP_CENTER"][1] - params_map["MAP_SIZE"][1]/2
         self.map_meta_data = m
 
         self.map_msg.info=self.map_meta_data
-        self.latest_scan = None
         # 로직 2 : mapping 클래스 생성
         self.mapping = Mapping(params_map)
 
 
-    def status_callback(self,msg):
+    def scan_callback(self,msg):
         
-        # 로직 4 : laser scan 메시지 안의 ground truth pose 받기
-        pose_x = msg.twist.angular.x
-        pose_y = msg.twist.angular.y
-        heading = -msg.twist.angular.z  # 시뮬레이터 기준 보정
+        pose_x=msg.range_min
+        pose_y=msg.scan_time
+        heading=msg.time_increment
+        Distance=np.array(msg.ranges)
 
-        # 로직 5: lidar scan 데이터를 별도로 보관하고 있어야 laser 사용 가능
-        if self.latest_scan is None:
-            return
+        # 각도 범위를 -π ~ π로 설정해서 정면 = 180도 방향 반영
+        angles = np.linspace(-np.pi, np.pi, 360)
 
-        Distance = np.array(self.latest_scan.ranges)
-        angle = np.linspace(0, 2 * np.pi, len(Distance))
-        x = Distance * np.cos(angle)
-        y = Distance * np.sin(angle)
+        # 정면 기준 각도로 라이다 포인트 계산
+        x = Distance * np.cos(angles)
+        y = Distance * np.sin(angles)
         laser = np.vstack((x.reshape((1, -1)), y.reshape((1, -1))))
 
-        # 로직 6 : map 업데이트 실행
-        pose = np.array([[pose_x], [pose_y], [heading]])
+        pose = np.array([[pose_x],[pose_y],[heading]])
         self.mapping.update(pose, laser)
 
-        # OccupancyGrid 메시지 데이터 생성
-        np_map_data = self.mapping.map.reshape(1, self.map_size)
-        list_map_data = np_map_data.tolist()
-
-        # 0~1 값을 0~100으로 변환 + clamp
+        np_map_data=self.mapping.map.reshape(1,self.map_size) 
+        list_map_data=np_map_data.tolist()
         for i in range(self.map_size):
-            list_map_data[0][i] = 100 - int(list_map_data[0][i] * 100)
-            if list_map_data[0][i] > 100:
-                list_map_data[0][i] = 100
-            if list_map_data[0][i] < 0:
-                list_map_data[0][i] = 0
+            list_map_data[0][i]=100-int(list_map_data[0][i]*100)
+            if list_map_data[0][i] >100 :
+                list_map_data[0][i]=100
 
-        # 로직 11 : 업데이트 중인 map publish
-        self.map_msg.header.stamp = self.get_clock().now().to_msg()
-        self.map_msg.data = list_map_data[0]
+            if list_map_data[0][i] <0 :
+                list_map_data[0][i]=0
+
+        self.map_msg.header.stamp =rclpy.clock.Clock().now().to_msg()
+        self.map_msg.data=list_map_data[0]
         self.map_pub.publish(self.map_msg)
 
-    def scan_callback(self, msg):
-        self.latest_scan = msg
-
-def save_map(node,file_path):
+def save_all_map(node, file_name_txt='map.txt', file_name_png='map.png'):
 
     # 로직 12 : 맵 저장
     pkg_path =os.getcwd()
     back_folder='..'
     folder_name='map'
-    file_name=file_path
-    full_path=os.path.join(pkg_path,back_folder,folder_name,file_name)
-    print(full_path)
-    f=open(full_path,'w')
-    data=''
-    for pixel in node.map_msg.data :
+    folder_path=os.path.join(pkg_path,back_folder,folder_name)
 
-        data+='{0} '.format(pixel)
-    f.write(data) 
-    f.close()
+    # 경로가 없다면 생성
+    os.makedirs(folder_path, exist_ok=True)
 
+    # OccupancyGrid 데이터 -> .txt 저장
+    full_txt_path = os.path.join(folder_path, file_name_txt)
+    print(f"Saving map data to: {full_txt_path}")
+    with open(full_txt_path, 'w') as f:
+        data = ' '.join(str(pixel) for pixel in node.map_msg.data)
+        f.write(data)
+
+    # 2D 맵 이미지 -> .png 저장
+    full_png_path = os.path.join(folder_path, file_name_png)
+    print(f"Saving map image to: {full_png_path}")
+    map_image = (node.mapping.map.copy() * 255).astype(np.uint8)
+    cv2.imwrite(full_png_path, map_image)
         
 def main(args=None):    
     rclpy.init(args=args)
@@ -311,7 +280,7 @@ def main(args=None):
         rclpy.shutdown()
 
     except :
-        save_map(node,'map.txt')
+        save_all_map(node, 'map.txt', 'map.png')
 
 
 if __name__ == '__main__':

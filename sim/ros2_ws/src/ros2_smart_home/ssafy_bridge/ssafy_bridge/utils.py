@@ -135,7 +135,8 @@ class UDP_LIDAR_Parser :
                 Distance = np.frombuffer(Buffer_dist, dtype=np.uint8)
 
                 Distance = (Distance[0::2].astype(np.float32) + 256*Distance[1::2].astype(np.float32))/1000
-            
+                # Distance = np.concatenate([Distance[180:],Distance[:180]])
+
                 Intensity = np.frombuffer(Buffer[0::3], dtype=np.ubyte)
 
 
