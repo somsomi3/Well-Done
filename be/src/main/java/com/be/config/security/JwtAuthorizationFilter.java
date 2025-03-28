@@ -57,6 +57,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             "/swagger-resources/**",
             "/webjars/**",
             "/auth/test-login",
+            "/auth/check-id",
             "/auth/logout",
             "/ws/**"
     );
