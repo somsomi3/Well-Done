@@ -47,7 +47,7 @@ public class CustomAuthSuccessHandler implements AuthenticationSuccessHandler {
         //리프레시 토큰 생성
         String refreshToken = tokenUtils.generateRefreshToken(userDto);
 
-        // ✅ RefreshToken을 쿠키로 설정
+        // RefreshToken을 쿠키로 설정
         Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
         refreshCookie.setHttpOnly(true);
         refreshCookie.setSecure(false); // 로컬 개발용. 배포 환경에선 true
@@ -56,12 +56,13 @@ public class CustomAuthSuccessHandler implements AuthenticationSuccessHandler {
 
         response.addCookie(refreshCookie);
 
-        // ✅ AccessToken은 응답 body로 전달
+        // AccessToken은 응답 body로 전달
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
         Map<String, String> tokenMap = new HashMap<>();
         tokenMap.put("accessToken", accessToken);
+        tokenMap.put("username", userDto.getUsername());
         tokenMap.put("message", "로그인 성공");
 
         ObjectMapper objectMapper = new ObjectMapper();
