@@ -26,6 +26,9 @@ setup(
     entry_points={
         "console_scripts": [
             "main_launch = warehouse_bot.main_launch:main",
+            "run_mapping = warehouse_bot.slam.run_mapping:main",
+            "auto_mapping = warehouse_bot.slam.auto_mapping_with_odom:main",
+            "odom = warehouse_bot.slam.odom:main",
         ],
     },
 )
