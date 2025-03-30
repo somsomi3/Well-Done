@@ -2,11 +2,15 @@ import socket
 import numpy as np
 import cv2
 
-# -	utils_skeleton.py : 
+# -	utils_skeleton.py :
+
 
 def xyh2mat2D(vec):
-    euler_rad = vec[2] * np.pi / 180
-    rot = np.array([np.cos(euler_rad), -np.sin(euler_rad), np.sin(euler_rad), np.cos(euler_rad)])
+    # euler_rad = vec[2] * np.pi / 180
+    euler_rad = vec[2]
+    rot = np.array(
+        [np.cos(euler_rad), -np.sin(euler_rad), np.sin(euler_rad), np.cos(euler_rad)]
+    )
     trans = vec[0:2]
 
     T = np.identity(3)
@@ -18,13 +22,14 @@ def xyh2mat2D(vec):
 
     return T
 
+
 def mat2D2xyh(T):
     vec = np.array([0.0, 0.0, 0.0])
     t = T[:2, 2]
     rot = T[:2, :2]
     vec[0] = t[0]
     vec[1] = t[1]
-    vec[2] = np.arctan2(rot[1,0], rot[0,0])*180.0/np.pi
+    vec[2] = np.arctan2(rot[1, 0], rot[0, 0]) * 180.0 / np.pi
 
     return vec
 
@@ -33,15 +38,15 @@ def mat2D2xyh(T):
 def limit_angular_range(rad):
 
     if rad > np.pi:
-        rad -= 2*np.pi
+        rad -= 2 * np.pi
 
     if rad < -np.pi:
-        rad += 2*np.pi
+        rad += 2 * np.pi
 
     if rad > np.pi:
-        rad -= 2*np.pi
+        rad -= 2 * np.pi
 
     if rad < -np.pi:
-        rad += 2*np.pi
+        rad += 2 * np.pi
 
     return rad
