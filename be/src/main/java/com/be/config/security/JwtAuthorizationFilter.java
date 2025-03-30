@@ -103,15 +103,15 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             String accessTokenHeader = request.getHeader(ACCESS_TOKEN_HEADER_KEY);
             String refreshTokenHeader = request.getHeader(REFRESH_TOKEN_HEADER_KEY);
 
-            System.out.println("🧪 Authorization Header: " + accessTokenHeader);
-            System.out.println("🧪 Refresh Header: " + refreshTokenHeader);
+            System.out.println("Authorization Header: " + accessTokenHeader);
+            System.out.println("Refresh Header: " + refreshTokenHeader);
 
             if (StringUtils.isBlank(accessTokenHeader) || !accessTokenHeader.startsWith("Bearer ")) {
                 throw new IllegalArgumentException("잘못된 Authorization 헤더 형식 현재 값: [" + accessTokenHeader + "]");
             }
 
             String paramAccessToken = TokenUtils.getHeaderToToken(accessTokenHeader);
-            System.out.println("🔎 추출된 Access Token: " + paramAccessToken);
+            System.out.println("추출된 Access Token: " + paramAccessToken);
 
             // 블랙리스트 체크
             if (tokenBlackListService.isContainToken(paramAccessToken)) {
@@ -123,19 +123,18 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                 String userId = tokenUtils.getClaimsToUserId(paramAccessToken);
                 Long userIdLong = Long.valueOf(userId);
 
-                // ✅ DB 조회로 UserDto 구성
+                // DB 조회로 UserDto 구성
                 User user = userRepository.findById(userIdLong)
                         .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
                 UserDto userDto = new UserDto(user);
-
+                List<SimpleGrantedAuthority> authorities = userDto.getRoles().stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .toList();
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDto, null,
-                                Collections.singletonList(new SimpleGrantedAuthority("USER"))
-                        );
+                    new UsernamePasswordAuthenticationToken(userDto, null, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                chain.doFilter(request, response);  // ✅ 성공하면 필터 통과
+                chain.doFilter(request, response);  // 성공하면 필터 통과
             } else if ("TOKEN_EXPIRED".equals(accTokenValidDto.getErrorName())) {
                 if (StringUtils.isNotBlank(refreshTokenHeader) && refreshTokenHeader.startsWith("Bearer ")) {
                     String paramRefreshToken = TokenUtils.getHeaderToToken(refreshTokenHeader);
