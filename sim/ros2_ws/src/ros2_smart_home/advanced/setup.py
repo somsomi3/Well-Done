@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'load_map = advanced.load_map:main',
-            'a_strun_mappingar = advanced.run_mapping:main',
+            'odom = advanced.odom:main',
+            'run_mapping = advanced.run_mapping:main',
             'run_localization = advanced.run_localization:main'
         ],
     },

@@ -48,9 +48,9 @@ class odom(Node):
         self.laser_tf = geometry_msgs.msg.TransformStamped()
         self.laser_tf.header.frame_id = 'base_link'
         self.laser_tf.child_frame_id = 'laser'
-        self.laser_tf.transform.translation.x = 0.01  # LiDAR 위치 (시뮬레이터 기준)
+        self.laser_tf.transform.translation.x = 0.0  # LiDAR 위치 (시뮬레이터 기준)
         self.laser_tf.transform.translation.y = 0.0
-        self.laser_tf.transform.translation.z = 0.19
+        self.laser_tf.transform.translation.z = 0.10
         self.laser_tf.transform.rotation.w = 1.0  # 회전 없음
 
         # map → odom 정적 TF 설정
@@ -72,7 +72,7 @@ class odom(Node):
         self.theta = yaw
 
     def listener_callback(self, msg):
-        # print('linear_vel : {}  angular_vel : {}'.format(msg.twist.linear.x,-msg.twist.angular.z))
+        print('linear_vel : {}  angular_vel : {}'.format(msg.twist.linear.x,-msg.twist.angular.z))
         current_time = self.get_clock().now()
 
         # 절대 위치 (turtlebot_status의 twist.angular.x, twist.angular.y 사용)
