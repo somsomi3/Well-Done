@@ -26,7 +26,7 @@ const useAuth = () => {
       return false;
     }
   };
-
+ 
   const register = async (username, email, password, companyId) => {
     setLoading(true);
     setError(null);
