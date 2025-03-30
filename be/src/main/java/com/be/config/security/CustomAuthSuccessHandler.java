@@ -40,11 +40,16 @@ public class CustomAuthSuccessHandler implements AuthenticationSuccessHandler {
 
         UserDto userDto = ((CustomUserDetails) authentication.getPrincipal()).toUserDto();
 
-        String accessToken = tokenUtils.generateAccessToken(
-                userDto.getUserid(),
-                userDto.getUsername()
-        );
-        //리프레시 토큰 생성
+        // String accessToken = tokenUtils.generateAccessToken(
+        //         userDto.getUserid(),
+        //         userDto.getUsername()
+        // );
+        // //리프레시 토큰 생성
+        // String refreshToken = tokenUtils.generateRefreshToken(userDto);
+        // roles까지 포함해서 accessToken 생성
+        String accessToken = tokenUtils.generateAccessToken(userDto);
+
+        // refreshToken도 기존대로
         String refreshToken = tokenUtils.generateRefreshToken(userDto);
 
         // RefreshToken을 쿠키로 설정
