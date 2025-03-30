@@ -6,33 +6,33 @@ from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage, LaserScan
 
 params_lidar = {
-    "Range" : 90, #min & max range of lidar azimuths
-    "CHANNEL" : int(1), #verticla channel of a lidar
+    "Range": 90,  # min & max range of lidar azimuths
+    "CHANNEL": int(1),  # verticla channel of a lidar
     "localIP": "127.0.0.1",
     "localPort": 9094,
     "Block_SIZE": int(1206),
-    "X": 0, # meter
+    "X": 0,  # meter
     "Y": 0,
     "Z": 0.10,
-    "YAW": 0, # deg
+    "YAW": 0,  # deg
     "PITCH": 0,
-    "ROLL": 0
+    "ROLL": 0,
 }
 
 
 params_cam = {
-    "WIDTH": 320, # image width
-    "HEIGHT": 240, # image height
-    "FOV": 60, # Field of view
+    "WIDTH": 320,  # image width
+    "HEIGHT": 240,  # image height
+    "FOV": 60,  # Field of view
     "localIP": "127.0.0.1",
     "localPort": 1232,
     "Block_SIZE": int(65000),
-    "X": 0, # meter
+    "X": 0,  # meter
     "Y": 0,
     "Z": 0.19,
-    "YAW": 0, # deg
+    "YAW": 0,  # deg
     "PITCH": 0,
-    "ROLL": 0
+    "ROLL": 0,
 }
 
 # ex 노드 설명
@@ -42,40 +42,53 @@ params_cam = {
 
 # --------------------------- Transformation Utilities ---------------------------
 
+
 def rotationMtx(yaw, pitch, roll):
-    
-    R_x = np.array([[1,         0,              0,                0],
-                    [0,         math.cos(roll), -math.sin(roll) , 0],
-                    [0,         math.sin(roll), math.cos(roll)  , 0],
-                    [0,         0,              0,               1],
-                    ])
-                    
-    R_y = np.array([[math.cos(pitch),    0,      math.sin(pitch) , 0],
-                    [0,                  1,      0               , 0],
-                    [-math.sin(pitch),   0,      math.cos(pitch) , 0],
-                    [0,         0,              0,               1],
-                    ])
-    
-    R_z = np.array([[math.cos(yaw),    -math.sin(yaw),    0,    0],
-                    [math.sin(yaw),    math.cos(yaw),     0,    0],
-                    [0,                0,                 1,    0],
-                    [0,         0,              0,               1],
-                    ])
-                    
+
+    R_x = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, math.cos(roll), -math.sin(roll), 0],
+            [0, math.sin(roll), math.cos(roll), 0],
+            [0, 0, 0, 1],
+        ]
+    )
+
+    R_y = np.array(
+        [
+            [math.cos(pitch), 0, math.sin(pitch), 0],
+            [0, 1, 0, 0],
+            [-math.sin(pitch), 0, math.cos(pitch), 0],
+            [0, 0, 0, 1],
+        ]
+    )
+
+    R_z = np.array(
+        [
+            [math.cos(yaw), -math.sin(yaw), 0, 0],
+            [math.sin(yaw), math.cos(yaw), 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
+        ]
+    )
+
     R = np.matmul(R_z, np.matmul(R_x, R_y))
 
     return R
 
+
 def translationMtx(x, y, z):
 
-    M = np.array([[1,         0,              0,               x],
-                  [0,         1,              0,               y],
-                  [0,         0,              1,               z],
-                  [0,         0,              0,               1],
-                  ])
-    
-    return M
+    M = np.array(
+        [
+            [1, 0, 0, x],
+            [0, 1, 0, y],
+            [0, 0, 1, z],
+            [0, 0, 0, 1],
+        ]
+    )
 
+    return M
 
 
 def transformMTX_lidar2cam(params_lidar, params_cam):
@@ -85,22 +98,23 @@ def transformMTX_lidar2cam(params_lidar, params_cam):
     2. 라이다 → 카메라로 변환되는 RT 행렬 생성
     """
 
-    lidar_yaw   = math.radians(params_lidar["YAW"])
+    lidar_yaw = math.radians(params_lidar["YAW"])
     lidar_pitch = math.radians(params_lidar["PITCH"])
-    lidar_roll  = math.radians(params_lidar["ROLL"])
+    lidar_roll = math.radians(params_lidar["ROLL"])
 
-    cam_yaw   = math.radians(params_cam["YAW"])
+    cam_yaw = math.radians(params_cam["YAW"])
     cam_pitch = math.radians(params_cam["PITCH"])
-    cam_roll  = math.radians(params_cam["ROLL"])
-    
+    cam_roll = math.radians(params_cam["ROLL"])
+
     lidar_pos = np.array([params_lidar["X"], params_lidar["Y"], params_lidar["Z"]])
-    cam_pos   = np.array([params_cam["X"], params_cam["Y"], params_cam["Z"]])
+    cam_pos = np.array([params_cam["X"], params_cam["Y"], params_cam["Z"]])
 
     dx, dy, dz = cam_pos - lidar_pos
     T = translationMtx(dx, dy, dz)
-    R = rotationMtx(np.radians(-90),np.radians(-180),np.radians(-90))
-    RT = T@R
+    R = rotationMtx(np.radians(-90), np.radians(-90), np.radians(-90))
+    RT = T @ R
     return np.linalg.inv(RT)
+
 
 def project2img_mtx(params_cam):
     # 3D 카메라의 좌표계의 점을 2D 이미지 좌표계로 정사영
@@ -119,19 +133,18 @@ def project2img_mtx(params_cam):
     cy = height / 2
 
     # 로직 3. 2x3 프로젝션 행렬 구성
-    R_f = np.array([
-        [fc_x,   0,   cx],
-        [0,     fc_y, cy]
-    ])
+    R_f = np.array([[fc_x, 0, cx], [0, fc_y, cy]])
 
     return R_f
+
 
 def draw_pts_img(img, xi, yi):
     point_np = img.copy()
     for ctr in zip(xi, yi):
         ctr_int = (int(ctr[0]), int(ctr[1]))
-        point_np = cv2.circle(point_np, ctr_int, 2, (255,0,0),-1)
+        point_np = cv2.circle(point_np, ctr_int, 2, (255, 0, 0), -1)
     return point_np
+
 
 # --------------------------- Main Transformation Class ---------------------------
 class LIDAR2CAMTransform:
@@ -157,13 +170,18 @@ class LIDAR2CAMTransform:
         x, y = pts[:, 0], pts[:, 1]
         mask = (x >= 0) & (x < self.width) & (y >= 0) & (y < self.height)
         return pts[mask]
-    
+
+
 # --------------------------- ROS2 Node ---------------------------
 class SensorCalib(Node):
     def __init__(self):
-        super().__init__(node_name='ex_calib')
-        self.subs_scan = self.create_subscription(LaserScan,'/scan',self.scan_callback, 10)
-        self.subs_img = self.create_subscription(CompressedImage,'/image_jpeg/compressed',self.img_callback,10)
+        super().__init__(node_name="ex_calib")
+        self.subs_scan = self.create_subscription(
+            LaserScan, "/scan", self.scan_callback, 10
+        )
+        self.subs_img = self.create_subscription(
+            CompressedImage, "/image_jpeg/compressed", self.img_callback, 10
+        )
         self.l2c_trans = LIDAR2CAMTransform(params_cam, params_lidar)
 
         self.timer_period = 0.1
@@ -197,7 +215,7 @@ class SensorCalib(Node):
         # ----- 정면 부분만 crop (90~270)-----
         angles = np.arange(len(self.R)) * self.angle_increment + self.angle_min
         angle_deg = np.degrees(angles)
-        mask = (angle_deg >= 90) & (angle_deg <= 270)
+        mask = (angle_deg >= 0) & (angle_deg <= 180)
         xyz_crop = self.xyz[mask]
 
         # ----- LiDAR → Camera 좌표계 변환 -----
@@ -211,6 +229,7 @@ class SensorCalib(Node):
         cv2.imshow("Lidar2Cam", img_show)
         cv2.waitKey(1)
 
+
 # --------------------------- Main Entry ---------------------------
 def main(args=None):
     rclpy.init(args=args)
@@ -219,5 +238,6 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
