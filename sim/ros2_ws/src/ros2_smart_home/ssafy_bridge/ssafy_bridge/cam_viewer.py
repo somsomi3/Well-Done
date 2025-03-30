@@ -7,17 +7,15 @@ from rclpy.node import Node
 
 from sensor_msgs.msg import CompressedImage
 
+
 class IMGParser(Node):
 
     def __init__(self):
-        super().__init__(node_name='image_parser')
+        super().__init__(node_name="image_parser")
 
         self.subscription = self.create_subscription(
-            CompressedImage,
-            '/image_jpeg/compressed',
-            self.img_callback,
-            10)
-        
+            CompressedImage, "/image_jpeg/compressed", self.img_callback, 10
+        )
 
     def img_callback(self, msg):
 
@@ -37,6 +35,6 @@ def main(args=None):
     rclpy.spin(image_parser)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     main()
