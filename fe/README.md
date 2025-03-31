@@ -8,8 +8,8 @@ npm create vite@latest fe -- --template react
 cd fe
 
 ## 2단계: 라이브러리 설치
-### 1. 라우터,, 주스탠드, 이머, 액시오스 설치
-npm install react-router-dom zustand immer axios
+### 1. 라우터,, 주스탠드, 이머, 액시오스, 리액트모달 설치
+npm install react-router-dom zustand immer axios react-modal
 
 ### 2. Tailwind CSS v4와 Vite 플러그인 설치
 npm install tailwindcss @tailwindcss/vite
