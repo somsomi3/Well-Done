@@ -29,14 +29,17 @@ public class TokenUtils {
     /**
      * 🔹 userId만 받아서 Access Token 생성
      */
-    public String generateAccessToken(Long userId, String username) {
-        UserDto userDto = UserDto.builder()
-                .userid(userId)
-                .username(username) // 꼭 포함시켜야 Claims에도 들어감
-                .build();
+    // public String generateAccessToken(Long userId, String username) {
+    //     UserDto userDto = UserDto.builder()
+    //             .userid(userId)
+    //             .username(username) // 꼭 포함시켜야 Claims에도 들어감
+    //         .roles(role)
+    //             .build();
+    //     return generateJwt(userDto);
+    // }
+    public String generateAccessToken(UserDto userDto) {
         return generateJwt(userDto);
     }
-
 
     /**
      * 🔹 JWT 만료 날짜 생성
@@ -73,6 +76,7 @@ public class TokenUtils {
                 .subject(userDto.getEmail())
                 .claim("userId", userDto.getUserid())
                 .claim("username", userDto.getUsername())
+                .claim("roles", userDto.getRoles())
                 .signWith(JWT_SECRET_KEY, Jwts.SIG.HS256)
                 .expiration(createExpiredDate(true))
                 .compact();
