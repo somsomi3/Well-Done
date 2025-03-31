@@ -53,5 +53,7 @@ public class CustomUserDetails implements UserDetails {
                 .email(user.getEmail()) // 필요 시 추가
                 .build();
     }
-
+    public Long getUserId() {
+        return user.getId();
+    }
 }
