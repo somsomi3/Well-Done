@@ -34,7 +34,7 @@ backend-build:
 frontend-build:
   stage: build
   script:
-    - echo "REACT_APP_BASE_URL=https://j12e102.p.ssafy.io/api/" > ./fe/.env
+    - echo "VITE_BASE_URL=${VITE_BASE_URL}" > ./fe/.env
     - docker build -t $FRONTEND_IMAGE ./fe
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
