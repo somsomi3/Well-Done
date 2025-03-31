@@ -91,10 +91,19 @@ class detection_net_class():
         self.category_index = category_index
 
         #init tensor
-        self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
-        self.boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
-        self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
-        self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
+        #1.x 버전에서는 get_default_graph()를 사용했지만,
+        #2.x 버전에서는 tf.Graph()를 사용합니다.
+        # self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
+        # self.boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
+        # self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
+        # self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
+        detections = infer(tf.convert_to_tensor(image_np_expanded))
+
+        boxes = detections['detection_boxes']
+        scores = detections['detection_scores']
+        classes = detections['detection_classes']
+        num_detections = detections['num_detections']
+
         self.num_detections = \
              self.detection_graph.get_tensor_by_name('num_detections:0')
 
@@ -207,33 +216,87 @@ def main(args=None):
     # 로직 3. detection model graph 생성
     # tf.Graph()를 하나 생성하고, 이전에 불러들인 pretrained file 안의 뉴럴넷 파라메터들을
     # 생성된 그래프 안에 덮어씌웁니다.    
+    # detection_graph = tf.Graph()
+    # with detection_graph.as_default():
+    #     od_graph_def = tf.GraphDef()
+    #     with tf.gfile.GFile(PATH_TO_WEIGHT, "rb") as fid:
+    #         serialized_graph = fid.read()
+    #         od_graph_def.ParseFromString(serialized_graph)
+    #         tf.import_graph_def(od_graph_def, name="")
 
-    detection_graph = tf.Graph()
-    with detection_graph.as_default():
-        od_graph_def = tf.GraphDef()
-        with tf.gfile.GFile(PATH_TO_WEIGHT, "rb") as fid:
-            serialized_graph = fid.read()
-            od_graph_def.ParseFromString(serialized_graph)
-            tf.import_graph_def(od_graph_def, name="")
+    # Load the pretrained model using SavedModel format
+    loaded_model = tf.saved_model.load(PATH_TO_WEIGHT)
+
+    # Get the default inference function
+    infer = loaded_model.signatures['serving_default']
 
 
     # 로직 4. gpu configuration 정의
     # 현재 머신에 사용되는 GPU의 memory fraction 등을 설정합니다.
     # gpu의 memory fraction 이 너무 높으면 사용 도중 out of memory 등이 발생할 수 있습니다.
 
-    config = tf.ConfigProto()
-    config = tf.ConfigProto(device_count={'GPU': 1})
-    config.gpu_options.per_process_gpu_memory_fraction = 0.3
-    config.gpu_options.allow_growth = True
-    config.gpu_options.allocator_type = 'BFC'
+    # config = tf.ConfigProto()
+    # config = tf.ConfigProto(device_count={'GPU': 1})
+    # config.gpu_options.per_process_gpu_memory_fraction = 0.3
+    # config.gpu_options.allow_growth = True
+    # config.gpu_options.allocator_type = 'BFC'
+
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Set memory growth for GPUs to prevent OOM errors
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+        except RuntimeError as e:
+            print(e)
+
+
 
     # 로직 5. session 생성
     # 위에 정의한 graph와 config로 세션을 생성합니다.
-    sess2 = tf.Session(graph=detection_graph, config=config)
+    # sess2 = tf.Session(graph=detection_graph, config=config)
+
+    # TensorFlow 2.x에서는 세션을 사용하지 않음. 모델 로드 후 바로 추론 가능.
+    # 추론은 infer 함수로 수행됩니다.
 
     # 로직 6. object detection 클래스 생성
     # detector model parameter를 load 하고 이를 세션으로 실행시켜 inference 하는 클래스를 생성합니다
     ssd_net = detection_net_class(sess2, detection_graph, category_index)
+    class detection_net_class():
+        def __init__(self, infer_function, category_index):
+            # Initialize inference function and category index
+            self.infer = infer_function
+            self.category_index = category_index
+
+        def inference(self, image_np):
+            # Preprocess the image
+            image_np_expanded = np.expand_dims(image_np, axis=0)
+            t_start = time.time()
+
+            # Perform inference
+            detections = self.infer(tf.convert_to_tensor(image_np_expanded))
+
+            # Extract detection results
+            boxes = detections['detection_boxes'].numpy()
+            scores = detections['detection_scores'].numpy()
+            classes = detections['detection_classes'].numpy()
+            num_detections = int(detections['num_detections'])
+
+            # Visualization
+            image_process = np.copy(image_np)
+            vis_util.visualize_boxes_and_labels_on_image_array(
+                image_process,
+                boxes,
+                classes.astype(np.int32),
+                scores,
+                self.category_index,
+                use_normalized_coordinates=True,
+                min_score_thresh=0.5,
+                line_thickness=8
+            )
+
+            infer_time = time.time() - t_start
+            return image_process, infer_time, boxes, scores, classes
 
     # 로직 7. node 및 image/scan subscriber 생성
     # 이번 sub3의 스켈레톤 코드는 rclpy.Node 클래스를 쓰지 않고,
@@ -287,7 +350,7 @@ def main(args=None):
 
         xyii = np.concatenate([xy_i, xyz_p], axis=1)
 
-        """
+        
 
         # 로직 12. bounding box 결과 좌표 뽑기
         ## boxes_detect 안에 들어가 있는 bounding box 결과들을
@@ -296,17 +359,16 @@ def main(args=None):
         ## numpy array로 변환
 
         if len(boxes_detect) != 0:
-
             ih = img_bgr.shape[0]
             iw = img_bgr.shape[1]
 
-            boxes_np = 
+            # Extract bounding box coordinates
+            x = boxes_detect[:, 1] * iw
+            y = boxes_detect[:, 0] * ih
+            w = (boxes_detect[:, 3] - boxes_detect[:, 1]) * iw
+            h = (boxes_detect[:, 2] - boxes_detect[:, 0]) * ih
 
-            x = 
-            y = 
-            w = 
-            h = 
-
+            # Convert to integer and stack as numpy array
             bbox = np.vstack([
                 x.astype(np.int32).tolist(),
                 y.astype(np.int32).tolist(),
@@ -314,40 +376,54 @@ def main(args=None):
                 h.astype(np.int32).tolist()
             ]).T
 
-        """
 
             
-        """
+        
 
             # 로직 13. 인식된 물체의 위치 추정
             ## bbox가 구해졌으면, bbox 안에 들어가는 라이다 포인트 들을 구하고
             ## 그걸로 물체의 거리를 추정할 수 있습니다.
-            
-            ostate_list = []
 
+            ostate_list = []
             for i in range(bbox.shape[0]):
                 x = int(bbox[i, 0])
                 y = int(bbox[i, 1])
                 w = int(bbox[i, 2])
                 h = int(bbox[i, 3])
 
-                cx = 
-                cy = 
-                
-                xyv = 
+                # 바운더리 박스 중심 구하기
+                cx = x + w // 2
+                cy = y + h // 2
 
-                ## bbox 안에 들어가는 라이다 포인트들의 대표값(예:평균)을 뽑는다
-                ostate = 
+                # 바운더리 박스 안에 들어가는 라이다 포인트들 구하기
+                xyv = xyii[(xyii[:, 0] >= x) & (xyii[:, 0] <= x + w) &
+                        (xyii[:, 1] >= y) & (xyii[:, 1] <= y + h)]
 
-                ## 대표값이 존재하면 
-                if not np.isnan(ostate[0]):
-                    ostate_list.append(ostate)
+                if len(xyv) > 0:
+                    ostate = np.mean(xyv[:, :3], axis=0)  # Calculate mean position of points
+                    if not np.isnan(ostate[0]):
+                        ostate_list.append(ostate)
 
-            image_process = draw_pts_img(image_process, xy_i[:, 0].astype(np.int32),
-                                            xy_i[:, 1].astype(np.int32))
-
+            # Draw lidar points on the image for visualization
+            image_process = draw_pts_img(image_process, xy_i[:, 0].astype(np.int32), xy_i[:, 1].astype(np.int32))
             print(ostate_list)
-        """
+
+            
+                
+            #     xyv = 
+
+            #     ## bbox 안에 들어가는 라이다 포인트들의 대표값(예:평균)을 뽑는다
+            #     ostate = 
+
+            #     ## 대표값이 존재하면 
+            #     if not np.isnan(ostate[0]):
+            #         ostate_list.append(ostate)
+
+            # image_process = draw_pts_img(image_process, xy_i[:, 0].astype(np.int32),
+            #                                 xy_i[:, 1].astype(np.int32))
+
+            # print(ostate_list)
+        
         visualize_images(image_process, infer_time)
 
     g_node.destroy_node()
