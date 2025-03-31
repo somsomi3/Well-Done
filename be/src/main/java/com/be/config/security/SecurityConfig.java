@@ -107,7 +107,7 @@ public class SecurityConfig {
 								"/webjars/**",
 								"/auth/**",
 								"/auth/login",
-								"/auth/check-id",
+								"/auth/check-username",
 								"/mqtt", // MQTT 엔드포인트는 인증 없이 접근 가능
 								"/ws/**" // WebSocket 경로 허용 추가
 						).permitAll()
