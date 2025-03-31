@@ -9,16 +9,7 @@ from ssafy_msgs.msg import ScanWithPose
 from nav_msgs.msg import Odometry, OccupancyGrid, MapMetaData
 from squaternion import Quaternion
 import warehouse_bot.slam.utils as utils
-
-params_map = {
-    "MAP_RESOLUTION": 0.02,
-    "OCCUPANCY_UP": 1,
-    "OCCUPANCY_DOWN": 0.3,
-    "MAP_CENTER": (-50.0, -50.0),
-    "MAP_SIZE": (17.5, 17.5),
-    "MAP_FILENAME": "test.png",
-    "MAPVIS_RESIZE_SCALE": 1.0,
-}
+from warehouse_bot.utils.sim_config import params_map
 
 
 def createLineIterator(P1, P2, img):
@@ -288,14 +279,18 @@ def save_all_map(node, file_name_txt="map.txt", file_name_png="map.png"):
 
 def main(args=None):
     rclpy.init(args=args)
+    node = Mapper()
     try:
-        node = Mapper()
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info("KeyboardInterrupt detected.")
+    except Exception as e:
+        node.get_logger().error(f"Exception occurred in main(): {e}")
+    finally:
+        node.get_logger().info("Saving map...")
+        save_all_map(node)
         node.destroy_node()
         rclpy.shutdown()
-    except Exception as e:
-        print("Exception occurred in main():", e)
-        save_all_map(node)
 
 
 if __name__ == "__main__":
