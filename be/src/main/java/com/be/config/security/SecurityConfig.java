@@ -107,10 +107,13 @@ public class SecurityConfig {
 								"/webjars/**",
 								"/auth/**",
 								"/auth/login",
+								"/auth/check-username",
 								"/mqtt", // MQTT 엔드포인트는 인증 없이 접근 가능
 								"/ws/**" // WebSocket 경로 허용 추가
 						).permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 메소드 허용
+						.requestMatchers("/admin/**").hasRole("ADMIN") // /admin/** 경로에 접근하려면 관리자 권한이 필요
+						.requestMatchers("/rooms/create").authenticated()
 						.anyRequest().authenticated() // 다른 모든 요청은 인증 필요
 				)
 				.exceptionHandling(exception -> exception
