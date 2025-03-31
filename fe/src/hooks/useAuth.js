@@ -55,7 +55,7 @@ const useAuth = () => {
     setError(null);
     try {
       // API 명세에 맞게 엔드포인트 수정
-      const response = await publicApi.get('/auth/check-id', {
+      const response = await publicApi.get('/auth/check-username', {
         params: { username }
       });
       
