@@ -69,7 +69,7 @@ public class AuthController {
     }
 
         // 아이디 중복 검사 (GET 방식)
-    @GetMapping("/check-id")
+    @GetMapping("/check-username")
     public ResponseEntity<BaseResponseBody<Void>> checkUsername(@RequestParam String username) {
         log.info("아이디 중복 검사 요청: {}", username);
 
