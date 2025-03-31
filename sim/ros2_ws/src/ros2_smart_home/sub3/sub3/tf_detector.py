@@ -51,7 +51,8 @@ params_lidar = {
     "Block_SIZE": int(1206),
     "X": 0, # meter
     "Y": 0,
-    "Z": 0.6,
+    # "Z": 0.6,
+    "Z": 0.1,
     "YAW": 0, # deg
     "PITCH": 0,
     "ROLL": 0
@@ -67,7 +68,8 @@ params_cam = {
     "Block_SIZE": int(65000),
     "X": 0, # meter
     "Y": 0,
-    "Z": 1,
+    # "Z": 1,
+    "Z": 0.9,
     "YAW": 0, # deg
     "PITCH": 5,
     "ROLL": 0
