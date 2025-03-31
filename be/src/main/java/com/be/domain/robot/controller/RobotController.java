@@ -14,7 +14,7 @@ import com.be.db.repository.RobotPathRepository;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/robots")
+@RequestMapping("/api/robots")
 @RequiredArgsConstructor
 public class RobotController {
 
