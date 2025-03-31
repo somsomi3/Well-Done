@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API 기본 URL 설정
-const baseURL = 'https://j12e102.p.ssafy.io/';
+const baseURL = process.env.REACT_APP_BASE_URL;
 
 const api = axios.create({
   baseURL,
