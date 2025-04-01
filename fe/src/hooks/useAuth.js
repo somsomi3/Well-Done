@@ -4,7 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import { useAuthStore } from '../stores/authStore';
 
 const useAuth = () => {
-  const { setToken, logout } = useAuthStore();
+  const { setToken, logout: logoutStore } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -26,7 +26,7 @@ const useAuth = () => {
       return false;
     }
   };
- 
+
   const register = async (username, email, password, companyId) => {
     setLoading(true);
     setError(null);
@@ -37,7 +37,7 @@ const useAuth = () => {
         username, 
         email, 
         password, 
-        companyId,
+        company_id: companyId 
       });
       
       console.log('회원가입 성공:', response.data);
@@ -55,7 +55,7 @@ const useAuth = () => {
     setError(null);
     try {
       // API 명세에 맞게 엔드포인트 수정
-      const response = await publicApi.get('/auth/check-username', {
+      const response = await publicApi.get('/auth/check-id', {
         params: { username }
       });
       
@@ -70,6 +70,29 @@ const useAuth = () => {
         return false;
       }
       setError(error.response?.data?.message || '사용자명 확인 중 오류가 발생했습니다.');
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // 로그아웃 API 호출
+      await api.post('/auth/logout');
+      // 로컬 스토리지에서 토큰 제거 및 상태 초기화
+      localStorage.removeItem('accessToken');
+      logoutStore();
+      setLoading(false);
+      return true;
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+      setError(error.response?.data?.message || '로그아웃 중 오류가 발생했습니다.');
+      // API 호출이 실패해도 클라이언트에서는 로그아웃 처리
+      localStorage.removeItem('accessToken');
+      logoutStore();
+      setLoading(false);
       return false;
     }
   };
@@ -92,6 +115,7 @@ const useAuth = () => {
     login, 
     register, 
     checkUsername, 
+    logout,
     refreshToken, 
     loading, 
     error 
