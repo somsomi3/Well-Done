@@ -44,7 +44,7 @@ public class RosBridgeClient {
     @PostConstruct
     public void init() {
         // 빈 초기화 후 ROS Bridge 연결 시작
-        connect();
+
     }
 
     /**

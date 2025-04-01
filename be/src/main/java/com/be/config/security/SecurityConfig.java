@@ -108,7 +108,9 @@ public class SecurityConfig {
 								"/auth/**",
 								"/auth/login",
 								"/mqtt", // MQTT 엔드포인트는 인증 없이 접근 가능
-								"/ws/**" // WebSocket 경로 허용 추가
+								"/ws/**", // WebSocket 경로 허용 추가
+								"/api/spring-data/**",  // 추가
+								"/api/ros-data/**"      // 추가
 						).permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 메소드 허용
 						.anyRequest().authenticated() // 다른 모든 요청은 인증 필요
