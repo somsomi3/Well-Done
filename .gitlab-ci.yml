@@ -114,6 +114,8 @@ frontend-push:
 backend-deploy:
   stage: deploy
   image: alpine:latest
+  variables:
+    PEM_FILE: '/tmp/J12E102T.pem' # 절대 경로로 지정
   before_script:
     - apk add --no-cache openssh-client bash
     - eval $(ssh-agent -s)
@@ -124,13 +126,15 @@ backend-deploy:
     - ssh-keyscan $SERVER_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
+    - ls -la $PEM_FILE # 파일 존재 확인
+    - pwd # 현재 디렉토리 확인
     - ssh -i $PEM_FILE ubuntu@$SERVER_HOST "
       cd ~/project &&
       sudo docker pull $BACKEND_IMAGE &&
       sudo docker-compose up -d backend
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:
         - be/**/*
         - .gitlab-ci.yml
