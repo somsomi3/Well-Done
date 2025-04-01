@@ -1,4 +1,5 @@
 stages:
+  - verify
   - build
   - push
   - deploy
@@ -19,27 +20,64 @@ default:
   before_script:
     - docker info
 
-backend-build:
-  stage: build
+# 백엔드 검증 단계 - MR용
+backend-verify:
+  stage: verify
+  image: gradle:8.13-jdk17
   script:
-    - docker build -t $BACKEND_IMAGE ./be
+    - cd be
+    - gradle clean build -x test
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
       changes:
         - be/**/*
         - .gitlab-ci.yml
   tags:
     - ssafy-second-infra
 
+# 프론트엔드 검증 단계 - MR용
+frontend-verify:
+  stage: verify
+  image: node:20
+  script:
+    - cd fe
+    - npm ci
+    - npm run build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      changes:
+        - fe/**/*
+        - .gitlab-ci.yml
+  tags:
+    - ssafy-second-infra
+
+# 백엔드 빌드 - develop 브랜치용
+backend-build:
+  stage: build
+  needs:
+    - backend-verify
+  script:
+    - docker build -t $BACKEND_IMAGE ./be
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop'
+      changes:
+        - be/**/*
+        - .gitlab-ci.yml
+  tags:
+    - ssafy-second-infra
+
+# 프론트엔드 빌드 - develop 브랜치용
 frontend-build:
   stage: build
+  needs:
+    - frontend-verify
   script:
     - echo "VITE_BASE_URL=${VITE_BASE_URL}" > ./fe/.env
     - echo "VITE_TOKEN_REFRESH_INTERVAL=${VITE_TOKEN_REFRESH_INTERVAL}" >> ./fe/.env
     - echo "VITE_TOKEN_EXPIRY_THRESHOLD=${VITE_TOKEN_EXPIRY_THRESHOLD}" >> ./fe/.env
     - docker build -t $FRONTEND_IMAGE ./fe
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
@@ -48,11 +86,13 @@ frontend-build:
 
 backend-push:
   stage: push
+  needs:
+    - backend-build
   script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push $BACKEND_IMAGE
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop'
       changes:
         - be/**/*
         - .gitlab-ci.yml
@@ -61,11 +101,13 @@ backend-push:
 
 frontend-push:
   stage: push
+  needs:
+    - frontend-build
   script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push $FRONTEND_IMAGE
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
@@ -74,6 +116,8 @@ frontend-push:
 
 backend-deploy:
   stage: deploy
+  needs:
+    - backend-push
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client bash
@@ -91,7 +135,7 @@ backend-deploy:
       sudo docker-compose up -d backend
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop'
       changes:
         - be/**/*
         - .gitlab-ci.yml
@@ -100,6 +144,8 @@ backend-deploy:
 
 frontend-deploy:
   stage: deploy
+  needs:
+    - frontend-push
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client bash
@@ -117,7 +163,7 @@ frontend-deploy:
       sudo docker-compose up -d frontend
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
