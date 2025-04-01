@@ -117,7 +117,7 @@ frontend-deploy:
       sudo docker-compose up -d frontend
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'fe-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
