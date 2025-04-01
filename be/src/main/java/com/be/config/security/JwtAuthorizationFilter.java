@@ -95,10 +95,6 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
         System.out.println("JWT Authorization Filter가 호출되었습니다.");
 
-        if (isWhitelisted(uri) || HTTP_METHOD_OPTIONS.equalsIgnoreCase(request.getMethod())) {
-            chain.doFilter(request, response);
-            return;
-        }
 
         try {
             String accessTokenHeader = request.getHeader(ACCESS_TOKEN_HEADER_KEY);
