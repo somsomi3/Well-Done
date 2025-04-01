@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout/Layout';
 import AlertModal from '../components/AlertModal';
 import { useAuthStore } from '../stores/authStore';
+import { api } from '../utils/api';
 
 function SettingsPage() {
   const navigate = useNavigate();
@@ -46,9 +47,18 @@ function SettingsPage() {
     showModal('성공', '비밀번호가 성공적으로 변경되었습니다.');
   };
   
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // 로그아웃 API 호출
+      await api.post('/auth/logout');
+      // 로컬 상태 초기화
+      logout();
+      // 로그인 페이지로 이동
+      navigate('/login');
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+      showModal('오류', '로그아웃 중 문제가 발생했습니다.');
+    }
   };
   
   const showModal = (title, message) => {
