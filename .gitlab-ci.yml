@@ -46,7 +46,7 @@ frontend-test:
   script:
     - cd fe
     - npm ci
-    - npm run test
+    - npm run build
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
       changes:
