@@ -205,13 +205,31 @@ def main(args=None):
 
     NUM_CLASSES = 90
 
-    # Loading label map
-    label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
-    categories = label_map_util.convert_label_map_to_categories(label_map,
-                                                            max_num_classes=NUM_CLASSES,
-                                                            use_display_name=True)
+    # # 직접 파일 읽기
+    # with open(PATH_TO_LABELS, 'r', encoding='utf-8') as file:
+    #     label_map_string = file.read()
+
+    # # Loading label map
+    # label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
+    # categories = label_map_util.convert_label_map_to_categories(label_map,
+    #                                                         max_num_classes=NUM_CLASSES,
+    #                                                         use_display_name=True)
     
-    category_index = label_map_util.create_category_index(categories)
+    # category_index = label_map_util.create_category_index(categories)
+
+    # Loading label map with explicit UTF-8 encoding
+    try:
+        with open(PATH_TO_LABELS, 'r', encoding='utf-8') as file:
+            label_map_string = file.read()
+        label_map = label_map_util.load_labelmap_from_string(label_map_string)
+        categories = label_map_util.convert_label_map_to_categories(
+            label_map,
+            max_num_classes=NUM_CLASSES,
+            use_display_name=True
+        )
+        category_index = label_map_util.create_category_index(categories)
+    except Exception as e:
+        print(f"Error loading label map: {e}")
 
     # 로직 3. detection model graph 생성
     # tf.Graph()를 하나 생성하고, 이전에 불러들인 pretrained file 안의 뉴럴넷 파라메터들을
