@@ -28,7 +28,7 @@ backend-verify:
     - cd be
     - gradle clean build -x test
   rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == 'develop'
       changes:
         - be/**/*
         - .gitlab-ci.yml
@@ -44,7 +44,7 @@ frontend-verify:
     - npm ci
     - npm run build
   rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == 'develop'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
