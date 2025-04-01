@@ -7,15 +7,12 @@ stages:
 variables:
   # 🆕 Docker 호스트 및 TLS 설정 추가
   DOCKER_HOST: tcp://docker:2375
-  DOCKER_TLS_CERTDIR: ''
+  DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
   SERVER_HOST: j12e102.p.ssafy.io
   PEM_FILE: J12E102T.pem
   BACKEND_IMAGE: busankim/ssafyproject:backend
   FRONTEND_IMAGE: busankim/ssafyproject:frontend
-
-services:
-  - docker:dind
 
 default:
   image: docker:latest
