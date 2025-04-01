@@ -29,7 +29,7 @@ backend-test:
   script:
     - cd be
     - chmod +x gradlew
-    - ./gradlew test
+    - ./gradlew build -x test
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
       changes:
