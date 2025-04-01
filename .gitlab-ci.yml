@@ -25,6 +25,7 @@ default:
 backend-test:
   stage: test
   image: gradle:8.13-jdk17
+  before_script: [] # 비워서 기본 before_script를 건너뜀
   script:
     - cd be
     - chmod +x gradlew
@@ -41,6 +42,7 @@ backend-test:
 frontend-test:
   stage: test
   image: node:20
+  before_script: [] # 비워서 기본 before_script를 건너뜀
   script:
     - cd fe
     - npm ci
