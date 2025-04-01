@@ -50,8 +50,6 @@ frontend-test:
 # 백엔드 빌드 단계
 backend-build:
   stage: build
-  needs:
-    - backend-test
   script:
     - docker build -t $BACKEND_IMAGE ./be
   rules:
@@ -65,8 +63,6 @@ backend-build:
 # 프론트엔드 빌드 단계
 frontend-build:
   stage: build
-  needs:
-    - frontend-test
   script:
     - echo "VITE_BASE_URL=${VITE_BASE_URL}" > ./fe/.env
     - echo "VITE_TOKEN_REFRESH_INTERVAL=${VITE_TOKEN_REFRESH_INTERVAL}" >> ./fe/.env
@@ -83,8 +79,6 @@ frontend-build:
 # 백엔드 푸시 단계
 backend-push:
   stage: push
-  needs:
-    - backend-build
   script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push $BACKEND_IMAGE
@@ -99,8 +93,6 @@ backend-push:
 # 프론트엔드 푸시 단계
 frontend-push:
   stage: push
-  needs:
-    - frontend-build
   script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push $FRONTEND_IMAGE
@@ -115,8 +107,6 @@ frontend-push:
 # 백엔드 배포 단계
 backend-deploy:
   stage: deploy
-  needs:
-    - backend-push
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client bash
@@ -144,8 +134,6 @@ backend-deploy:
 # 프론트엔드 배포 단계
 frontend-deploy:
   stage: deploy
-  needs:
-    - frontend-push
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client bash
