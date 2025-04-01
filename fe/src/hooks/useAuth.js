@@ -1,11 +1,17 @@
 import { useState } from 'react';
-import { api, publicApi } from '../../../utils/api';
+import { api, publicApi } from '../utils/api';
 import { jwtDecode } from 'jwt-decode';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 
 const useAuth = () => {
-  const { setToken, clearToken, refreshAccessToken: storeRefreshToken } = useAuthStore();
+  const { 
+    setToken, 
+    clearToken, 
+    refreshAccessToken: storeRefreshToken,
+    setIsRefreshing,
+    isRefreshing 
+  } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -83,11 +89,20 @@ const useAuth = () => {
   };
 
   const refreshAccessToken = async () => {
+    // 이미 리프레시 중이면 중복 요청 방지
+    if (isRefreshing) {
+      console.log('이미 토큰 리프레시가 진행 중입니다.');
+      return false;
+    }
+    
     setLoading(true);
+    setIsRefreshing(true);
+    
     try {
       // 스토어의 리프레시 토큰 함수 호출
       const success = await storeRefreshToken();
       setLoading(false);
+      setIsRefreshing(false);
       
       if (!success) {
         // 리프레시 실패 시 로그인 페이지로 리다이렉트
@@ -99,6 +114,7 @@ const useAuth = () => {
       console.error('토큰 갱신 실패:', error);
       setError('인증이 만료되었습니다. 다시 로그인해주세요.');
       setLoading(false);
+      setIsRefreshing(false);
       
       // 에러 발생 시 로그인 페이지로 리다이렉트
       handleAuthFailure();
