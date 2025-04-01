@@ -76,7 +76,7 @@ public class SecurityConfig {
 	@Bean
 	public CustomAuthenticationFilter customAuthenticationFilter(AuthenticationManager authenticationManager) {
 		CustomAuthenticationFilter customAuthenticationFilter = new CustomAuthenticationFilter(authenticationManager);
-		customAuthenticationFilter.setFilterProcessesUrl("/auth/login");
+		customAuthenticationFilter.setFilterProcessesUrl("/api/auth/login");
 
 		// 핸들러 등록
 		customAuthenticationFilter.setAuthenticationSuccessHandler(customLoginSuccessHandler());
@@ -124,7 +124,7 @@ public class SecurityConfig {
 				.addFilterAt(customAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.addFilterBefore(jwtAuthorizationFilter, BasicAuthenticationFilter.class)
 				.logout(logout -> logout
-						.logoutUrl("/auth/logout")
+						.logoutUrl("api/auth/logout")
 						.addLogoutHandler(customLogoutHandler)
 						.logoutSuccessHandler((request, response, authentication) ->
 								response.setStatus(HttpServletResponse.SC_OK)
