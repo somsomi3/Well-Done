@@ -27,7 +27,7 @@ const useAuth = () => {
     }
   };
  
-  const register = async (username, email, password, company_id) => {
+  const register = async (username, email, password, companyId) => {
     setLoading(true);
     setError(null);
     
@@ -37,7 +37,7 @@ const useAuth = () => {
         username, 
         email, 
         password, 
-        company_id,
+        company_id: companyId,
       });
       
       console.log('회원가입 성공:', response.data);
