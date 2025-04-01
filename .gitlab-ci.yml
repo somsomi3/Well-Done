@@ -12,8 +12,14 @@ variables:
   BACKEND_IMAGE: busankim/ssafyproject:backend
   FRONTEND_IMAGE: busankim/ssafyproject:frontend
 
-services:
-  - docker:dind
+# Docker-in-Docker 서비스 제거 (소켓 마운트 방식 사용 중이므로)
+# services:
+#   - docker:dind
+
+default:
+  image: docker:latest
+  before_script:
+    - docker info
 
 # 백엔드 테스트 단계
 backend-test:
@@ -53,7 +59,7 @@ backend-build:
   script:
     - docker build -t $BACKEND_IMAGE ./be
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
       changes:
         - be/**/*
         - .gitlab-ci.yml
@@ -69,7 +75,7 @@ frontend-build:
     - echo "VITE_TOKEN_EXPIRY_THRESHOLD=${VITE_TOKEN_EXPIRY_THRESHOLD}" >> ./fe/.env
     - docker build -t $FRONTEND_IMAGE ./fe
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
@@ -83,7 +89,7 @@ backend-push:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push $BACKEND_IMAGE
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
       changes:
         - be/**/*
         - .gitlab-ci.yml
@@ -97,7 +103,7 @@ frontend-push:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push $FRONTEND_IMAGE
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
@@ -124,7 +130,7 @@ backend-deploy:
       sudo docker-compose up -d backend
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
       changes:
         - be/**/*
         - .gitlab-ci.yml
@@ -151,7 +157,7 @@ frontend-deploy:
       sudo docker-compose up -d frontend
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
