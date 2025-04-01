@@ -124,7 +124,7 @@ public class SecurityConfig {
 				.addFilterAt(customAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.addFilterBefore(jwtAuthorizationFilter, BasicAuthenticationFilter.class)
 				.logout(logout -> logout
-						.logoutUrl("api/auth/logout")
+						.logoutUrl("/api/auth/logout")
 						.addLogoutHandler(customLogoutHandler)
 						.logoutSuccessHandler((request, response, authentication) ->
 								response.setStatus(HttpServletResponse.SC_OK)
