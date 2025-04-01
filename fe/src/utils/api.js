@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { useAuthStore } from '../features/auth/store/authStore';
+import { useAuthStore } from '../stores/authStore';
 
 // API 기본 URL 설정
-const baseURL = 'http://localhost:8080';
+const baseURL = import.meta.env.VITE_BASE_URL || 'https://j12e102.p.ssafy.io/api';
 
 // 인증이 필요한 요청을 위한 인스턴스
 const api = axios.create({
