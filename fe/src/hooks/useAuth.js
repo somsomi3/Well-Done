@@ -16,10 +16,10 @@ const useAuth = () => {
       const response = await publicApi.post('/auth/login', { username, password });
       const accessToken = response.data.accessToken;
       
-      // 토큰을 스토어에 저장
+      // 토큰을 스토어에만 저장
       setToken(accessToken);
       
-      // 토큰에서 사용자 정보 추출
+      // 토큰에서 사용자 정보 추출 (디버깅 목적)
       try {
         const decodedToken = jwtDecode(accessToken);
         console.log('로그인 성공, 토큰 정보:', decodedToken);
