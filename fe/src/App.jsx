@@ -2,36 +2,38 @@ import React, { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { useAuthStore } from './stores/authStore';
-import { jwtDecode } from 'jwt-decode';
 
 function App() {
-  const { token, setToken, logout } = useAuthStore();
+  const { isTokenValid, refreshAccessToken, clearToken } = useAuthStore();
 
-  // 토큰 유효성 검사 및 초기화
+  // 앱 초기화 시 토큰 유효성 검사 및 리프레시
   useEffect(() => {
-    const storedToken = localStorage.getItem('accessToken');
-    
-    if (storedToken) {
-      try {
-        // 토큰 디코딩하여 만료 여부 확인
-        const decodedToken = jwtDecode(storedToken);
-        const currentTime = Date.now() / 1000;
+    const initializeAuth = async () => {
+      // 토큰이 유효한지 확인
+      if (!isTokenValid()) {
+        console.log('토큰이 유효하지 않거나 만료되었습니다. 리프레시 시도...');
         
-        if (decodedToken.exp < currentTime) {
-          // 토큰이 만료된 경우
-          console.log('토큰이 만료되었습니다. 로그아웃 처리합니다.');
-          logout();
-        } else {
-          // 유효한 토큰인 경우 상태 업데이트
-          setToken(storedToken);
+        try {
+          // 토큰 리프레시 시도
+          const refreshed = await refreshAccessToken();
+          
+          if (refreshed) {
+            console.log('토큰 리프레시 성공');
+          } else {
+            console.log('토큰 리프레시 실패, 로그아웃 처리');
+            clearToken();
+          }
+        } catch (error) {
+          console.error('토큰 리프레시 중 오류 발생:', error);
+          clearToken();
         }
-      } catch (error) {
-        // 토큰 디코딩 실패 시 (유효하지 않은 토큰)
-        console.error('유효하지 않은 토큰:', error);
-        logout();
+      } else {
+        console.log('유효한 토큰이 있습니다.');
       }
-    }
-  }, [setToken, logout]);
+    };
+
+    initializeAuth();
+  }, [isTokenValid, refreshAccessToken, clearToken]);
 
   return (
     <BrowserRouter>
