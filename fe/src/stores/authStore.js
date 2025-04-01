@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { jwtDecode } from 'jwt-decode';
-import { api } from '../utils/api';
+import { api } from '../../../utils/api';
+
+// 리프레시 중인지 추적하는 플래그 (스토어 외부에 선언하여 전역적으로 관리)
+let isRefreshing = false;
 
 const useAuthStore = create((set, get) => ({
   token: null,
@@ -26,6 +29,8 @@ const useAuthStore = create((set, get) => ({
   // 토큰 초기화
   clearToken: () => {
     set({ token: null, user: null });
+    // 리프레시 플래그도 초기화
+    isRefreshing = false;
   },
   
   // 토큰 유효성 검사
@@ -47,17 +52,32 @@ const useAuthStore = create((set, get) => ({
   
   // 액세스 토큰 리프레시
   refreshAccessToken: async () => {
+    // 이미 리프레시 중이면 중복 요청 방지
+    if (isRefreshing) {
+      console.log('이미 토큰 리프레시가 진행 중입니다.');
+      return false;
+    }
+    
+    isRefreshing = true;
+    
     try {
+      console.log('토큰 리프레시 시도...');
       const response = await api.post('/auth/refresh');
       const newToken = response.data.accessToken;
       
       // 새 토큰 설정
       get().setToken(newToken);
+      console.log('토큰 리프레시 성공');
+      
+      isRefreshing = false;
       return true;
     } catch (error) {
       console.error('액세스 토큰 리프레시 오류:', error);
       // 리프레시 실패 시 로그아웃 처리
       get().clearToken();
+      console.log('토큰 리프레시 실패, 로그아웃 처리됨');
+      
+      isRefreshing = false;
       return false;
     }
   },

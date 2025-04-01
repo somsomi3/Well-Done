@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../features/auth/store/authStore';
 
 // API 기본 URL 설정
-const baseURL = import.meta.env.VITE_BASE_URL || 'https://j12e102.p.ssafy.io/api';
+const baseURL = 'http://localhost:8080';
 
 // 인증이 필요한 요청을 위한 인스턴스
 const api = axios.create({
@@ -52,14 +52,16 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${token}`;
           return api(originalRequest);
         } else {
+          // 리프레시 실패 시 로그아웃 처리
           clearToken();
-          // 로그인 페이지로 리다이렉트 또는 다른 처리
+          // 로그인 페이지로 리다이렉트
           window.location.href = '/login';
           return Promise.reject(error);
         }
       } catch (refreshError) {
+        // 리프레시 과정에서 오류 발생 시 로그아웃 처리
         clearToken();
-        // 로그인 페이지로 리다이렉트 또는 다른 처리
+        // 로그인 페이지로 리다이렉트
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
