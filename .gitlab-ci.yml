@@ -5,8 +5,10 @@ stages:
   - deploy
 
 variables:
-  DOCKER_DRIVER: overlay2
+  # 🆕 Docker 호스트 및 TLS 설정 추가
+  DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ''
+  DOCKER_DRIVER: overlay2
   SERVER_HOST: j12e102.p.ssafy.io
   PEM_FILE: J12E102T.pem
   BACKEND_IMAGE: busankim/ssafyproject:backend
@@ -17,13 +19,21 @@ services:
 
 default:
   image: docker:latest
+  # 🆕 Docker 서비스 명시적 추가
+  services:
+    - docker:dind
+  # 🆕 Docker CLI 설치 및 정보 확인 스크립트 추가
   before_script:
+    - apk add --no-cache docker-cli
     - docker info
 
 # 백엔드 검증 단계 - MR용
 backend-verify:
   stage: verify
   image: gradle:8.13-jdk17
+  # 🆕 Docker 서비스 추가
+  services:
+    - docker:dind
   script:
     - cd be
     - gradle clean build -x test
@@ -39,6 +49,9 @@ backend-verify:
 frontend-verify:
   stage: verify
   image: node:20
+  # 🆕 Docker 서비스 추가
+  services:
+    - docker:dind
   script:
     - cd fe
     - npm ci
@@ -120,7 +133,7 @@ backend-deploy:
     - backend-push
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client bash
+    - apk add --no-cache openssh-client bash docker-cli
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" > $PEM_FILE
     - chmod 400 $PEM_FILE
@@ -148,7 +161,7 @@ frontend-deploy:
     - frontend-push
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client bash
+    - apk add --no-cache openssh-client bash docker-cli
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" > $PEM_FILE
     - chmod 400 $PEM_FILE
