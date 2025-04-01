@@ -24,7 +24,7 @@ backend-test:
     - chmod +x gradlew
     - ./gradlew test
   rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == 'develop'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
       changes:
         - be/**/*
         - .gitlab-ci.yml
@@ -40,7 +40,7 @@ frontend-test:
     - npm ci
     - npm run test
   rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == 'develop'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
@@ -55,7 +55,7 @@ backend-build:
   script:
     - docker build -t $BACKEND_IMAGE ./be
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:
         - be/**/*
         - .gitlab-ci.yml
