@@ -6,9 +6,10 @@ stages:
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ''
-  IMAGE_NAME: busankim/ssafyproject:frontend
   SERVER_HOST: j12e102.p.ssafy.io
   PEM_FILE: J12E102T.pem
+  BACKEND_IMAGE: busankim/ssafyproject:backend
+  FRONTEND_IMAGE: busankim/ssafyproject:frontend
 
 services:
   - docker:dind
@@ -18,35 +19,60 @@ default:
   before_script:
     - docker info
 
-build:
+backend-build:
   stage: build
-  only:
-    - develop
-    - feature/fe-infra
-  tags:
-    - ssafy-second-infra
   script:
-    - docker build -t $IMAGE_NAME ./fe
-
-push:
-  stage: push
-  only:
-    - develop
-    - feature/fe-infra
+    - docker build -t $BACKEND_IMAGE ./be
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+      changes:
+        - be/**/*
+        - .gitlab-ci.yml
   tags:
     - ssafy-second-infra
+
+frontend-build:
+  stage: build
+  script:
+    - echo "VITE_BASE_URL=https://j12e102.p.ssafy.io/api" > ./fe/.env
+    - docker build -t $FRONTEND_IMAGE ./fe
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+      changes:
+        - fe/**/*
+        - .gitlab-ci.yml
+  tags:
+    - ssafy-second-infra
+
+backend-push:
+  stage: push
   script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
-    - docker push $IMAGE_NAME
-
-deploy:
-  stage: deploy
-  image: alpine:latest
-  only:
-    - develop
-    - feature/fe-infra
+    - docker push $BACKEND_IMAGE
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+      changes:
+        - be/**/*
+        - .gitlab-ci.yml
   tags:
     - ssafy-second-infra
+
+frontend-push:
+  stage: push
+  script:
+    - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+    - docker push $FRONTEND_IMAGE
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+      changes:
+        - fe/**/*
+        - .gitlab-ci.yml
+  tags:
+    - ssafy-second-infra
+
+backend-deploy:
+  stage: deploy
+  image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client bash
     - eval $(ssh-agent -s)
@@ -59,6 +85,39 @@ deploy:
   script:
     - ssh -i $PEM_FILE ubuntu@$SERVER_HOST "
       cd ~/project &&
-      docker pull $IMAGE_NAME &&
+      sudo docker pull $BACKEND_IMAGE &&
+      sudo docker-compose up -d backend
+      "
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+      changes:
+        - be/**/*
+        - .gitlab-ci.yml
+  tags:
+    - ssafy-second-infra
+
+frontend-deploy:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client bash
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" > $PEM_FILE
+    - chmod 400 $PEM_FILE
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SERVER_HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - ssh -i $PEM_FILE ubuntu@$SERVER_HOST "
+      cd ~/project &&
+      sudo docker pull $FRONTEND_IMAGE &&
       sudo docker-compose up -d frontend
       "
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+      changes:
+        - fe/**/*
+        - .gitlab-ci.yml
+  tags:
+    - ssafy-second-infra

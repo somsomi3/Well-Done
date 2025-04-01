@@ -76,7 +76,7 @@ public class SecurityConfig {
 	@Bean
 	public CustomAuthenticationFilter customAuthenticationFilter(AuthenticationManager authenticationManager) {
 		CustomAuthenticationFilter customAuthenticationFilter = new CustomAuthenticationFilter(authenticationManager);
-		customAuthenticationFilter.setFilterProcessesUrl("/auth/login");
+		customAuthenticationFilter.setFilterProcessesUrl("/api/auth/login");
 
 		// 핸들러 등록
 		customAuthenticationFilter.setAuthenticationSuccessHandler(customLoginSuccessHandler());
@@ -101,18 +101,21 @@ public class SecurityConfig {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(
-								"/swagger-ui/**",
-								"/v3/api-docs/**",
-								"/swagger-resources/**",
-								"/webjars/**",
-								"/auth/**",
-								"/auth/login",
+								"/api/swagger-ui/**",
+								"/api/v3/api-docs/**",
+								"/api/swagger-resources/**",
+								"/api/webjars/**",
+								"/api/auth/**",
+								"/api/auth/login",
+								"/api/auth/check-username",
 								"/mqtt", // MQTT 엔드포인트는 인증 없이 접근 가능
 								"/ws/**", // WebSocket 경로 허용 추가
 								"/api/spring-data/**",  // 추가
 								"/api/ros-data/**"      // 추가
 						).permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 메소드 허용
+						.requestMatchers("/admin/**").hasRole("ADMIN") // /admin/** 경로에 접근하려면 관리자 권한이 필요
+						.requestMatchers("/rooms/create").authenticated()
 						.anyRequest().authenticated() // 다른 모든 요청은 인증 필요
 				)
 				.exceptionHandling(exception -> exception
@@ -122,7 +125,7 @@ public class SecurityConfig {
 				.addFilterAt(customAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.addFilterBefore(jwtAuthorizationFilter, BasicAuthenticationFilter.class)
 				.logout(logout -> logout
-						.logoutUrl("/auth/logout")
+						.logoutUrl("/api/auth/logout")
 						.addLogoutHandler(customLogoutHandler)
 						.logoutSuccessHandler((request, response, authentication) ->
 								response.setStatus(HttpServletResponse.SC_OK)
@@ -136,7 +139,7 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+		configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000", "https://j12e102.p.ssafy.io"));
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("Authorization", "x-refresh-token", "Content-Type"));
 		configuration.setAllowCredentials(true);
