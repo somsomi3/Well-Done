@@ -3,22 +3,34 @@ import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { useAuthStore } from './stores/authStore';
 import { getTokenRefreshInterval, getTokenExpiryThreshold } from './configs/env';
+import ErrorBoundary from './components/ErrorBoundary';
+import Toast from './components/atoms/Toast/Toast';
+import { useToastStore } from './stores/toastStore';
 
 function App() {
-  const { isTokenValid, refreshAccessToken, clearToken, getTokenExpiryTime } =
-    useAuthStore();
+  const { 
+    isTokenValid, 
+    refreshAccessToken, 
+    clearToken, 
+    getTokenExpiryTime,
+    isRefreshing,
+    initializeAuth
+  } = useAuthStore();
+  const { toasts } = useToastStore();
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // 초기 인증 상태 확인 및 토큰 리프레시
   useEffect(() => {
-    const initializeAuth = async () => {
+    const initializeAuth2 = () => {
+      // initializeAuth2 함수의 내용
+    };
+
+    const initializeAuthProcess = async () => {
+      initializeAuth(); // 로컬 스토리지에서 토큰 복원 시도
+      
       try {
         if (!isTokenValid()) {
-          console.log(
-            '토큰이 유효하지 않거나 만료되었습니다. 리프레시 시도...'
-          );
-
-          // 최대 1회만 리프레시 시도
+          console.log('토큰이 유효하지 않거나 만료되었습니다. 리프레시 시도...');
+          
           const refreshed = await refreshAccessToken();
 
           if (refreshed) {
@@ -38,52 +50,51 @@ function App() {
       }
     };
 
-    initializeAuth();
-  }, [isTokenValid, refreshAccessToken, clearToken]);
+    initializeAuthProcess();
+  }, [isTokenValid, refreshAccessToken, clearToken, initializeAuth]);
 
-  // 주기적으로 토큰 만료 시간 체크 및 필요 시 리프레시
   useEffect(() => {
     if (isInitializing) return;
 
-    const tokenExpiryThreshold = getTokenExpiryThreshold(); // 토큰 만료 임계값 (초)
-    const refreshInterval = getTokenRefreshInterval(); // 토큰 체크 간격 (밀리초)
-
-    console.log(
-      `토큰 만료 임계값: ${tokenExpiryThreshold}초, 체크 간격: ${
-        refreshInterval / 1000
-      }초`
-    );
-
-    // 토큰 상태 체크 함수
+    const tokenExpiryThreshold = getTokenExpiryThreshold();
+    const refreshInterval = getTokenRefreshInterval();
+    
+    console.log(`토큰 만료 임계값: ${tokenExpiryThreshold}초, 체크 간격: ${refreshInterval / 1000}초`);
+    
     const checkTokenStatus = async () => {
+      if (isRefreshing) {
+        console.log('이미 토큰 리프레시가 진행 중입니다.');
+        return;
+      }
+      
       if (!isTokenValid()) {
         console.log('토큰이 만료되었습니다. 리프레시 시도...');
         await refreshAccessToken();
         return;
       }
-
-      // 토큰 만료까지 남은 시간 확인
+      
       const expiryTime = getTokenExpiryTime();
       console.log(`토큰 만료까지 남은 시간: ${expiryTime}초`);
-
-      // 만료 임계값보다 적게 남았으면 미리 리프레시
+      
       if (expiryTime <= tokenExpiryThreshold) {
         console.log('토큰 만료가 임박했습니다. 미리 리프레시 시도...');
         await refreshAccessToken();
       }
     };
-
-    // 초기 체크
+    
     checkTokenStatus();
-
-    // 주기적으로 체크
+    
     const intervalId = setInterval(checkTokenStatus, refreshInterval);
-
-    // 컴포넌트 언마운트 시 인터벌 정리
+    
     return () => clearInterval(intervalId);
-  }, [isInitializing, isTokenValid, refreshAccessToken, getTokenExpiryTime]);
+  }, [
+    isInitializing, 
+    isTokenValid, 
+    refreshAccessToken, 
+    getTokenExpiryTime,
+    isRefreshing
+  ]);
 
-  // 초기화 중에는 로딩 표시
   if (isInitializing) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -93,9 +104,21 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppRoutes />
+        <div className="toast-container fixed bottom-4 right-4 z-50">
+          {toasts.map(toast => (
+            <Toast 
+              key={toast.id} 
+              message={toast.message} 
+              type={toast.type} 
+              id={toast.id} 
+            />
+          ))}
+        </div>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
