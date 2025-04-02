@@ -36,15 +36,21 @@ const MAX_REFRESH_FAILS = 3;
 api.interceptors.request.use(
   (config) => {
     const { token } = useAuthStore.getState();
-    if (token) {
+
+    // ✅ /auth 요청은 토큰 붙이지 않음
+    const isAuthUrl =
+      config.url?.includes('/auth/login') ||
+      config.url?.includes('/auth/register') ||
+      config.url?.includes('/auth/refresh');
+
+    if (token && !isAuthUrl) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // withCredentials 옵션 확인
+
     if (config.withCredentials === undefined) {
       config.withCredentials = true;
     }
-    
+
     return config;
   },
   (error) => {
@@ -52,6 +58,7 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
 
 // 응답 인터셉터 - 토큰 만료 시 리프레시 처리
 api.interceptors.response.use(
