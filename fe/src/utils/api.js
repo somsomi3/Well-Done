@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
-import { getApiUrl } from '../config/env';
+import { getApiUrl } from '../configs/env';
 
 // API 기본 URL 설정 - 환경 변수에서 가져옴
 const baseURL = getApiUrl();
