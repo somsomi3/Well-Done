@@ -1,7 +1,7 @@
 // 환경 변수에서 API URL을 가져오는 함수
 export const getApiUrl = () => {
     // Vite 환경 변수 사용
-    return import.meta.env.VITE_BASE_URL || 'http://localhost:8080';
+    return import.meta.env.VITE_BASE_URL || 'http://localhost:8080/api';
   };
   
   // 환경 변수에서 다른 설정값들을 가져오는 함수들
