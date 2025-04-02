@@ -11,6 +11,7 @@ variables:
   PEM_FILE: J12E102T.pem
   BACKEND_IMAGE: busankim/ssafyproject:backend
   FRONTEND_IMAGE: busankim/ssafyproject:frontend
+  GIT_CLEAN_FLAGS: -ffdx -e node_modules/
 
 # Docker-in-Docker 서비스 제거 (소켓 마운트 방식 사용 중이므로)
 # services:
