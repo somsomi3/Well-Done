@@ -1,4 +1,5 @@
 stages:
+  - test
   - build
   - push
   - deploy
@@ -11,26 +12,63 @@ variables:
   BACKEND_IMAGE: busankim/ssafyproject:backend
   FRONTEND_IMAGE: busankim/ssafyproject:frontend
 
-services:
-  - docker:dind
+# Docker-in-Docker 서비스 제거 (소켓 마운트 방식 사용 중이므로)
+# services:
+#   - docker:dind
 
 default:
   image: docker:latest
   before_script:
     - docker info
 
-backend-build:
-  stage: build
+# 백엔드 테스트 단계
+backend-test:
+  stage: test
+  image: gradle:8.13-jdk17
+  before_script: [] # 비워서 기본 before_script를 건너뜀
   script:
-    - docker build -t $BACKEND_IMAGE ./be
+    - cd be
+    - chmod +x gradlew
+    - ./gradlew build -x test
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
       changes:
         - be/**/*
         - .gitlab-ci.yml
   tags:
     - ssafy-second-infra
 
+# 프론트엔드 테스트 단계
+frontend-test:
+  stage: test
+  image: node:20
+  before_script: [] # 비워서 기본 before_script를 건너뜀
+  script:
+    - cd fe
+    - npm ci
+    - npm run build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      changes:
+        - fe/**/*
+        - .gitlab-ci.yml
+  tags:
+    - ssafy-second-infra
+
+# 백엔드 빌드 단계
+backend-build:
+  stage: build
+  script:
+    - docker build -t $BACKEND_IMAGE ./be
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
+      changes:
+        - be/**/*
+        - .gitlab-ci.yml
+  tags:
+    - ssafy-second-infra
+
+# 프론트엔드 빌드 단계
 frontend-build:
   stage: build
   script:
@@ -39,42 +77,47 @@ frontend-build:
     - echo "VITE_TOKEN_EXPIRY_THRESHOLD=${VITE_TOKEN_EXPIRY_THRESHOLD}" >> ./fe/.env
     - docker build -t $FRONTEND_IMAGE ./fe
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
   tags:
     - ssafy-second-infra
 
+# 백엔드 푸시 단계
 backend-push:
   stage: push
   script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push $BACKEND_IMAGE
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:
         - be/**/*
         - .gitlab-ci.yml
   tags:
     - ssafy-second-infra
 
+# 프론트엔드 푸시 단계
 frontend-push:
   stage: push
   script:
     - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
     - docker push $FRONTEND_IMAGE
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
   tags:
     - ssafy-second-infra
 
+# 백엔드 배포 단계
 backend-deploy:
   stage: deploy
   image: alpine:latest
+  variables:
+    PEM_FILE: '/tmp/J12E102T.pem' # 절대 경로로 지정
   before_script:
     - apk add --no-cache openssh-client bash
     - eval $(ssh-agent -s)
@@ -85,19 +128,22 @@ backend-deploy:
     - ssh-keyscan $SERVER_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
+    - ls -la $PEM_FILE # 파일 존재 확인
+    - pwd # 현재 디렉토리 확인
     - ssh -i $PEM_FILE ubuntu@$SERVER_HOST "
       cd ~/project &&
       sudo docker pull $BACKEND_IMAGE &&
       sudo docker-compose up -d backend
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/be-infra' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:
         - be/**/*
         - .gitlab-ci.yml
   tags:
     - ssafy-second-infra
 
+# 프론트엔드 배포 단계
 frontend-deploy:
   stage: deploy
   image: alpine:latest
@@ -117,7 +163,7 @@ frontend-deploy:
       sudo docker-compose up -d frontend
       "
   rules:
-    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/fe-infra'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:
         - fe/**/*
         - .gitlab-ci.yml
