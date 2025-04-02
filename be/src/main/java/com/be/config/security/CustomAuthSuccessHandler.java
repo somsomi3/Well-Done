@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.http.ResponseCookie; // 추가
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -32,34 +33,69 @@ public class CustomAuthSuccessHandler implements AuthenticationSuccessHandler {
 
     private final TokenUtils tokenUtils;
 
+//    @Override
+//    public void onAuthenticationSuccess(HttpServletRequest request,
+//                                        HttpServletResponse response,
+//                                        Authentication authentication) throws IOException {
+//        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+//
+//        UserDto userDto = ((CustomUserDetails) authentication.getPrincipal()).toUserDto();
+//
+//        // String accessToken = tokenUtils.generateAccessToken(
+//        //         userDto.getUserid(),
+//        //         userDto.getUsername()
+//        // );
+//        // //리프레시 토큰 생성
+//        // String refreshToken = tokenUtils.generateRefreshToken(userDto);
+//        // roles까지 포함해서 accessToken 생성
+//        String accessToken = tokenUtils.generateAccessToken(userDto);
+//
+//        // refreshToken도 기존대로
+//        String refreshToken = tokenUtils.generateRefreshToken(userDto);
+//
+//        // RefreshToken을 쿠키로 설정
+//        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
+//        refreshCookie.setHttpOnly(true);
+//        refreshCookie.setSecure(false); // 로컬 개발용. 배포 환경에선 true
+//        refreshCookie.setPath("/");
+//        refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
+//
+//        response.addCookie(refreshCookie);
+//
+//        // AccessToken은 응답 body로 전달
+//        response.setContentType("application/json");
+//        response.setCharacterEncoding("UTF-8");
+//
+//        Map<String, String> tokenMap = new HashMap<>();
+//        tokenMap.put("accessToken", accessToken);
+//        tokenMap.put("username", userDto.getUsername());
+//        tokenMap.put("message", "로그인 성공");
+//
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        response.getWriter().write(objectMapper.writeValueAsString(tokenMap));
+//    }
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UserDto userDto = userDetails.toUserDto();
 
-        UserDto userDto = ((CustomUserDetails) authentication.getPrincipal()).toUserDto();
-
-        // String accessToken = tokenUtils.generateAccessToken(
-        //         userDto.getUserid(),
-        //         userDto.getUsername()
-        // );
-        // //리프레시 토큰 생성
-        // String refreshToken = tokenUtils.generateRefreshToken(userDto);
-        // roles까지 포함해서 accessToken 생성
+        // Access & Refresh Token 생성
         String accessToken = tokenUtils.generateAccessToken(userDto);
-
-        // refreshToken도 기존대로
         String refreshToken = tokenUtils.generateRefreshToken(userDto);
 
-        // RefreshToken을 쿠키로 설정
-        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(false); // 로컬 개발용. 배포 환경에선 true
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
+        // ✅ RefreshToken을 ResponseCookie로 설정 (SameSite 등 제어 가능)
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(false) // 배포 환경에선 true
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .sameSite("Lax") // CSRF 방지
+                .build();
 
-        response.addCookie(refreshCookie);
+        response.addHeader("Set-Cookie", refreshCookie.toString()); // 이 부분만 바뀜
 
         // AccessToken은 응답 body로 전달
         response.setContentType("application/json");
