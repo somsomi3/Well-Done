@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { useAuthStore } from './stores/authStore';
-import {
-  getTokenRefreshInterval,
-  getTokenExpiryThreshold,
-} from './configs/env';
+import { getTokenRefreshInterval, getTokenExpiryThreshold } from './configs/env';
 
 function App() {
   const { isTokenValid, refreshAccessToken, clearToken, getTokenExpiryTime } =
