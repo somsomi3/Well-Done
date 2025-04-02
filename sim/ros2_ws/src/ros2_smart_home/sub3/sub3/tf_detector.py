@@ -321,6 +321,7 @@ def main(args=None):
         # 라이다 -> 카메라 좌표 변환 및 정사영
         xyz_c = l2c_trans.transform_lidar2cam(xyz_p)
         xy_i = l2c_trans.project_pts2img(xyz_c, False)
+        
 
         # 디버깅 출력
         print(f"Transformed lidar points (xyz_c) shape: {xyz_c.shape}")
@@ -383,27 +384,44 @@ def main(args=None):
                 w = int(bbox[i, 2])
                 h = int(bbox[i, 3])
 
+
+                margin = 20  # 바운더리 박스 확장 마진
+
                 # 바운더리 박스 중심 구하기
                 cx = x + w // 2
                 cy = y + h // 2
+                radius = max(w, h) // 2+margin
 
-                # 바운더리 박스 안에 들어가는 라이다 포인트들 구하기
-                xyv = xyii[(xyii[:, 0] >= x) & (xyii[:, 0] <= x + w) &
-                        (xyii[:, 1] >= y) & (xyii[:, 1] <= y + h)]
+                distances = np.sqrt((xyii[:, 0] - cx)**2 + (xyii[:, 1] - cy)**2)
+                xyv = xyii[distances < radius]
+
+                # # 바운더리 박스 안에 들어가는 라이다 포인트들 구하기
+                
+                # xyv = xyii[(xyii[:, 0] >= x - margin) & (xyii[:, 0] <= x + w + margin) &
+                #         (xyii[:, 1] >= y - margin) & (xyii[:, 1] <= y + h + margin)]
+                
+                print(f"BBox coordinates: x={x}, y={y}, w={w}, h={h}")
+                print(f"Filtered lidar points (xyv): {xyv.shape}")
 
                 if len(xyv) > 0:
                     ostate = np.mean(xyv[:, :3], axis=0)  # Calculate mean position of points
-                    if not np.isnan(ostate[0]):
+                    if not np.isnan(ostate).any():  # NaN 값 체크
                         ostate_list.append(ostate)
+
                         # 위치 데이터 퍼블리시
                         msg = Point()
                         msg.x = float(ostate[0])
                         msg.y = float(ostate[1])
                         msg.z = float(ostate[2])
                         position_publisher.publish(msg)
+                    else:
+                        print("NaN detected in ostate. Skipping.")
+                else:
+                    print("No lidar points found in bounding box.")
             # Draw lidar points on the image for visualization
             image_process = draw_pts_img(image_process, xy_i[:, 0].astype(np.int32), xy_i[:, 1].astype(np.int32))
-            print(ostate_list)
+            print(f"ostate_list: {ostate_list}")
+            
 
             
                 
