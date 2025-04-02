@@ -15,7 +15,7 @@ def find_frontiers(occupancy_grid):
         for x in range(1, width - 1):
             if occupancy_grid[y, x] == 0:
                 neighbors = occupancy_grid[y - 1 : y + 2, x - 1 : x + 2].flatten()
-                if 50 in neighbors:
+                if -1 in neighbors:
                     frontiers.add((x, y))
     return list(frontiers)
 

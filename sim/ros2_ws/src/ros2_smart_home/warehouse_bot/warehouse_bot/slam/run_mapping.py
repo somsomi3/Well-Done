@@ -136,9 +136,11 @@ class Mapping:
             / self.map_resolution
         ).astype(int)
 
+        num_skipped = 0
         for i, end in enumerate(laser_grid):
             dist = np.linalg.norm(laser[:, i])
             if dist >= 10:  # 예: 라이다 최대 사거리보다 크면 무시
+                num_skipped += 1
                 continue
 
             line_iter = createLineIterator(pose_grid, end, self.map)
@@ -153,7 +155,8 @@ class Mapping:
                     py = avail_y[-1] + dy
                     if 0 <= px < self.map.shape[1] and 0 <= py < self.map.shape[0]:
                         self.map[py, px] -= self.occu_up
-
+        if self.logger:
+            self.logger.info(f"Skipped {num_skipped}/{laser.shape[1]} laser points")
         # occupancy 값 안정화 (0~1 범위로)
         self.map = np.clip(self.map, 0.0, 1.0)
         # self.show_pose_and_points(pose, laser_global)
@@ -281,16 +284,28 @@ class Mapper(Node):
         self.publish_map()
 
     def publish_map(self):
-        np_map_data = self.mapping.map.reshape(1, self.map_size)
-        list_map_data = [
-            max(0, min(100, 100 - int(val * 100))) for val in np_map_data[0]
-        ]
+        # start = self.get_clock().now().nanoseconds / 1e9
+        # self.get_logger().info("Starting map publish...")
+        
+        np_map = self.mapping.map
+        np_map_data = np_map.reshape(1, self.map_size)
+
+        list_map_data = []
+        for val in np_map_data[0]:
+            if val >= 1.0:
+                list_map_data.append(0)        # 자유 공간 (흰색)
+            elif val <= 0.0:
+                list_map_data.append(100)      # 장애물 (검은색)
+            else:
+                list_map_data.append(-1)       # 미개척 영역 (회색)
+
         self.map_msg.header.stamp = self.get_clock().now().to_msg()
         self.map_msg.data = list_map_data
         self.map_pub.publish(self.map_msg)
 
-        np_int_map = np.array(self.map_msg.data).reshape(self.mapping.map.shape)
-        inflated = utils.inflate_map(np_int_map, 5)  # ★ 사용자 정의
+        # inflated map (경로 생성용)
+        np_int_map = np.array(list_map_data).reshape(self.mapping.map.shape)
+        inflated = utils.inflate_map(np_int_map, 5)
 
         # map_inflated 생성 및 퍼블리시 (경로용)
         inflated_msg = OccupancyGrid()
@@ -298,6 +313,9 @@ class Mapper(Node):
         inflated_msg.info = self.map_msg.info
         inflated_msg.data = inflated.flatten().tolist()
         self.map_inflated_pub.publish(inflated_msg)
+
+        # end = self.get_clock().now().nanoseconds / 1e9
+        # self.get_logger().info(f"Map published in {end - start:.3f} seconds.")
 
 
 def save_all_map(node, file_name_txt="map.txt", file_name_png="map.png"):

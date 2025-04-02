@@ -6,7 +6,7 @@ MAP_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "..", "map")
 
 # === 🗺️ Mapping Parameters ===
 params_map = {
-    "MAP_RESOLUTION": 0.02,
+    "MAP_RESOLUTION": 0.05,
     "OCCUPANCY_UP": 0.5,
     "OCCUPANCY_DOWN": 0.2,
     "MAP_CENTER": (-52.5, -59.0),

@@ -82,7 +82,7 @@ class PathTracking(Node):
     def scan_callback(self, msg):  # 🔧 전방 장애물 거리 계산
         num_ranges = len(msg.ranges)
         mid = num_ranges // 2
-        half_fov = 10  # ±10도 (총 20도)
+        half_fov = 15  # ±10도 (총 20도)
         front_ranges = [
             r
             for r in msg.ranges[mid - half_fov : mid + half_fov]
@@ -97,7 +97,7 @@ class PathTracking(Node):
 
         now = self.get_clock().now().nanoseconds / 1e9  # 현재 시간 (초)
 
-        if self.forward_min_dist < 0.3:
+        if self.forward_min_dist < 0.2:
             if self.blocked_start_time is None:
                 self.blocked_start_time = now
                 self.get_logger().warn("🛑 장애물 감지됨 - 회피 시작")
@@ -119,7 +119,7 @@ class PathTracking(Node):
             if not self.recovery_sent:
                 self.get_logger().info("🔁 장애물 회피 시도 중 (회전)")
                 self.cmd_msg.linear.x = 0.0
-                self.cmd_msg.angular.z = 0.3  # 좌회전
+                self.cmd_msg.angular.z = -0.3  # 좌회전
                 self.cmd_pub.publish(self.cmd_msg)
             else:
                 self.get_logger().info("🔁 회피 실패, 다음 goal을 기다리는 중...")
@@ -157,7 +157,7 @@ class PathTracking(Node):
             return
 
         # 선속도 기준 전방 주시 거리 동적 조정
-        # linear_speed = self.status_msg.twist.linear.x
+        # linear_speed = self.odom_msg.twist.twist.linear.x
         # self.lfd = max(self.min_lfd, min(self.max_lfd, linear_speed * self.lfd_gain))
 
         # 전방 주시 포인트 탐색
