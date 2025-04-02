@@ -17,31 +17,31 @@ import socketio
 sio = socketio.Client()
 
 
-
 @sio.event
 def connect():
-    print('connection established')
+    print("connection established")
 
 
 # 로직 2. 데이터 수신 콜백함수
-@sio.on('sendAirConOn')
+@sio.on("sendAirConOn")
 def aircon_on(data):
-    print('message received with ', data)
+    print("message received with ", data)
 
-@sio.on('sendAirConOff')
+
+@sio.on("sendAirConOff")
 def aircon_off(data):
-    print('message received with ', data)
+    print("message received with ", data)
 
 
 @sio.event
 def disconnect():
-    print('disconnected from server')
+    print("disconnected from server")
 
 
 # 로직 3. 서버 연결
-sio.connect('http://ec2-3-34-134-166.ap-northeast-2.compute.amazonaws.com:12001/')
+sio.connect("http://ec2-3-34-134-166.ap-northeast-2.compute.amazonaws.com:12001/")
 
 # 로직 4. 데이터 송신
-sio.emit('sendTime','TEST')
+sio.emit("sendTime", "TEST")
 
 sio.wait()

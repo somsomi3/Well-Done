@@ -1,13 +1,13 @@
 import rclpy
 from rclpy.node import Node
 import ros2pkg
-from geometry_msgs.msg import Twist,PoseStamped,Pose,TransformStamped
+from geometry_msgs.msg import Twist, PoseStamped, Pose, TransformStamped
 from ssafy_msgs.msg import TurtlebotStatus
-from sensor_msgs.msg import Imu,LaserScan
+from sensor_msgs.msg import Imu, LaserScan
 from std_msgs.msg import Float32
 from squaternion import Quaternion
-from nav_msgs.msg import Odometry,Path,OccupancyGrid,MapMetaData
-from math import pi,cos,sin,sqrt
+from nav_msgs.msg import Odometry, Path, OccupancyGrid, MapMetaData
+from math import pi, cos, sin, sqrt
 import tf2_ros
 import os
 import sub3.utils as utils
@@ -35,15 +35,15 @@ params_map = {
     "OCCUPANCY_DOWN": 0.01,
     "MAP_CENTER": (-8.0, -4.0),
     "MAP_SIZE": (17.5, 17.5),
-    "MAP_FILENAME": 'test.png',
-    "MAPVIS_RESIZE_SCALE": 2.0
+    "MAP_FILENAME": "test.png",
+    "MAPVIS_RESIZE_SCALE": 2.0,
 }
 
 
 def createLineIterator(P1, P2, img):
 
     # Bresenham's line algorithm을 구현해서 이미지에 직선을 그리는 메소드입니다.
-    
+
     # 로직 순서
     # 1. 두 점을 있는 백터의 x, y 값과 크기 계산
     # 2. 직선을 그릴 grid map의 픽셀 좌표를 넣을 numpy array 를 predifine
@@ -53,13 +53,12 @@ def createLineIterator(P1, P2, img):
     # 6. 대각선의 픽셀 좌표 계산
     # 7. 맵 바깥 픽셀 좌표 삭제
 
-   
-    imageH = img.shape[0] #height
-    imageW = img.shape[1] #width
-    P1Y = P1[1] #시작점 y 픽셀 좌표
-    P1X = P1[0] #시작점 x 픽셀 좌표
-    P2X = P2[0] #끝점 y 픽셀 좌표
-    P2Y = P2[1] #끝점 x 픽셀 좌표
+    imageH = img.shape[0]  # height
+    imageW = img.shape[1]  # width
+    P1Y = P1[1]  # 시작점 y 픽셀 좌표
+    P1X = P1[0]  # 시작점 x 픽셀 좌표
+    P2X = P2[0]  # 끝점 y 픽셀 좌표
+    P2Y = P2[1]  # 끝점 x 픽셀 좌표
 
     """
     로직 1 : 두 점을 있는 백터의 x, y 값과 크기 계산
@@ -86,7 +85,7 @@ def createLineIterator(P1, P2, img):
     negX = 
  
     """
-    
+
     """ 
     # 로직 4 : 수직선의 픽셀 좌표 계산   
     if P1X == P2X:        
@@ -131,7 +130,6 @@ def createLineIterator(P1, P2, img):
 
     """
 
-    
     """
     로직 7 : 맵 바깥 픽셀 좌표 삭제.
     colX = 
@@ -159,14 +157,17 @@ class Mapping:
         self.map_resolution = params_map["MAP_RESOLUTION"]
         self.map_size = np.array(params_map["MAP_SIZE"]) / self.map_resolution
         self.map_center = params_map["MAP_CENTER"]
-        self.map = np.ones((self.map_size[0].astype(np.int), self.map_size[1].astype(np.int)))*0.5
+        self.map = (
+            np.ones((self.map_size[0].astype(np.int), self.map_size[1].astype(np.int)))
+            * 0.5
+        )
         self.occu_up = params_map["OCCUPANCY_UP"]
         self.occu_down = params_map["OCCUPANCY_DOWN"]
 
         self.map_filename = params_map["MAP_FILENAME"]
         self.map_vis_resize_scale = params_map["MAPVIS_RESIZE_SCALE"]
 
-        self.T_r_l = np.array([[0,-1,0],[1,0,0],[0,0,1]])
+        self.T_r_l = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
 
     def update(self, pose, laser):
 
@@ -174,9 +175,8 @@ class Mapping:
         n_points = laser.shape[1]
         pose_mat = utils.xyh2mat2D(pose)
 
-
         # 로직 8. laser scan 데이터 좌표 변환
-        pose_mat = np.matmul(pose_mat,self.T_r_l)
+        pose_mat = np.matmul(pose_mat, self.T_r_l)
         laser_mat = np.ones((3, n_points))
         laser_mat[:2, :] = laser
 
@@ -210,87 +210,101 @@ class Mapping:
         
             ## Occupied
             self.map[avail_y[-1], avail_x[-1]] = 
-        """        
+        """
 
-        # self.show_pose_and_points(pose, laser_global)        
+        # self.show_pose_and_points(pose, laser_global)
 
     def __del__(self):
         # 로직 12. 종료 시 map 저장
         ## Ros2의 노드가 종료될 때 만들어진 맵을 저장하도록 def __del__과 save_map이 정의되어 있습니다
         self.save_map(())
 
-
     def save_map(self):
         map_clone = self.map.copy()
-        cv2.imwrite(self.map_filename, map_clone*255)
-
-
+        cv2.imwrite(self.map_filename, map_clone * 255)
 
     def show_pose_and_points(self, pose, laser_global):
         tmp_map = self.map.astype(np.float32)
         map_bgr = cv2.cvtColor(tmp_map, cv2.COLOR_GRAY2BGR)
 
-        pose_x = (pose[0] - self.map_center[0] + (self.map_size[0]*self.map_resolution)/2) / self.map_resolution
-        pose_y = (pose[1] - self.map_center[1] + (self.map_size[1]*self.map_resolution)/2) / self.map_resolution
+        pose_x = (
+            pose[0] - self.map_center[0] + (self.map_size[0] * self.map_resolution) / 2
+        ) / self.map_resolution
+        pose_y = (
+            pose[1] - self.map_center[1] + (self.map_size[1] * self.map_resolution) / 2
+        ) / self.map_resolution
 
-        laser_global_x = (laser_global[0, :] - self.map_center[0] + (self.map_size[0]*self.map_resolution)/2) / self.map_resolution
-        laser_global_y =  (laser_global[1, :] - self.map_center[1] + (self.map_size[1]*self.map_resolution)/2) / self.map_resolution
+        laser_global_x = (
+            laser_global[0, :]
+            - self.map_center[0]
+            + (self.map_size[0] * self.map_resolution) / 2
+        ) / self.map_resolution
+        laser_global_y = (
+            laser_global[1, :]
+            - self.map_center[1]
+            + (self.map_size[1] * self.map_resolution) / 2
+        ) / self.map_resolution
 
         for i in range(laser_global.shape[1]):
             (l_x, l_y) = np.array([laser_global_x[i], laser_global_y[i]]).astype(np.int)
             center = (l_x, l_y)
-            cv2.circle(map_bgr, center, 1, (0,255,0), -1)
+            cv2.circle(map_bgr, center, 1, (0, 255, 0), -1)
 
         center = (pose_x.astype(np.int32)[0], pose_y.astype(np.int32)[0])
-        
-        cv2.circle(map_bgr, center, 2, (0,0,255), -1)
 
-        map_bgr = cv2.resize(map_bgr, dsize=(0, 0), fx=self.map_vis_resize_scale, fy=self.map_vis_resize_scale)
+        cv2.circle(map_bgr, center, 2, (0, 0, 255), -1)
+
+        map_bgr = cv2.resize(
+            map_bgr,
+            dsize=(0, 0),
+            fx=self.map_vis_resize_scale,
+            fy=self.map_vis_resize_scale,
+        )
         # cv2.imshow('Sample Map', map_bgr)
         # cv2.waitKey(1)
 
 
-
-        
 class Mapper(Node):
 
     def __init__(self):
-        super().__init__('Mapper')
-        
+        super().__init__("Mapper")
+
         # 로직 1 : publisher, subscriber, msg 생성
-        self.subscription = self.create_subscription(LaserScan,
-        '/scan',self.scan_callback,10)
-        self.map_pub = self.create_publisher(OccupancyGrid, '/map', 1)
-        
-        self.map_msg=OccupancyGrid()
-        self.map_msg.header.frame_id="map"
-        self.map_size=int(params_map["MAP_SIZE"][0]\
-            /params_map["MAP_RESOLUTION"]*params_map["MAP_SIZE"][1]/params_map["MAP_RESOLUTION"])
-        
+        self.subscription = self.create_subscription(
+            LaserScan, "/scan", self.scan_callback, 10
+        )
+        self.map_pub = self.create_publisher(OccupancyGrid, "/map", 1)
+
+        self.map_msg = OccupancyGrid()
+        self.map_msg.header.frame_id = "map"
+        self.map_size = int(
+            params_map["MAP_SIZE"][0]
+            / params_map["MAP_RESOLUTION"]
+            * params_map["MAP_SIZE"][1]
+            / params_map["MAP_RESOLUTION"]
+        )
 
         m = MapMetaData()
         m.resolution = params_map["MAP_RESOLUTION"]
-        m.width = int(params_map["MAP_SIZE"][0]/params_map["MAP_RESOLUTION"])
-        m.height = int(params_map["MAP_SIZE"][1]/params_map["MAP_RESOLUTION"])
+        m.width = int(params_map["MAP_SIZE"][0] / params_map["MAP_RESOLUTION"])
+        m.height = int(params_map["MAP_SIZE"][1] / params_map["MAP_RESOLUTION"])
         quat = np.array([0, 0, 0, 1])
         m.origin = Pose()
-        m.origin.position.x = params_map["MAP_CENTER"][0]-8.75
-        m.origin.position.y = params_map["MAP_CENTER"][1]-8.75
+        m.origin.position.x = params_map["MAP_CENTER"][0] - 8.75
+        m.origin.position.y = params_map["MAP_CENTER"][1] - 8.75
         self.map_meta_data = m
 
-        self.map_msg.info=self.map_meta_data
+        self.map_msg.info = self.map_meta_data
 
         # 로직 2 : mapping 클래스 생성
         self.mapping = Mapping(params_map)
 
-
-    def scan_callback(self,msg):
-        
+    def scan_callback(self, msg):
         """
         # 로직 4 : laser scan 메시지 안의 ground truth pose 받기
-        pose_x = 
-        pose_y = 
-        heading = 
+        pose_x =
+        pose_y =
+        heading =
         """
 
         """
@@ -305,14 +319,14 @@ class Mapper(Node):
         # pose = np.array([[pose_x],[pose_y],[heading]])
         # self.mapping.update(pose, laser)
 
-        # np_map_data=self.mapping.map.reshape(1,self.map_size) 
+        # np_map_data=self.mapping.map.reshape(1,self.map_size)
         # list_map_data=np_map_data.tolist()
 
         # for i in range(self.map_size):
         #     list_map_data[0][i]=100-int(list_map_data[0][i]*100)
         #     if list_map_data[0][i] >100 :
         #         list_map_data[0][i]=100
- 
+
         #     if list_map_data[0][i] <0 :
         #         list_map_data[0][i]=0
 
@@ -325,36 +339,37 @@ class Mapper(Node):
 
         """
 
-def save_map(node,file_path):
+
+def save_map(node, file_path):
 
     # 로직 12 : 맵 저장
-    pkg_path =os.getcwd()
-    back_folder='..'
-    folder_name='map'
-    file_name=file_path
-    full_path=os.path.join(pkg_path,back_folder,folder_name,file_name)
+    pkg_path = os.getcwd()
+    back_folder = ".."
+    folder_name = "map"
+    file_name = file_path
+    full_path = os.path.join(pkg_path, back_folder, folder_name, file_name)
     print(full_path)
-    f=open(full_path,'w')
-    data=''
-    for pixel in node.map_msg.data :
+    f = open(full_path, "w")
+    data = ""
+    for pixel in node.map_msg.data:
 
-        data+='{0} '.format(pixel)
-    f.write(data) 
+        data += "{0} ".format(pixel)
+    f.write(data)
     f.close()
 
-        
-def main(args=None):    
+
+def main(args=None):
     rclpy.init(args=args)
-    
-    try :    
+
+    try:
         run_mapping = Mapper()
         rclpy.spin(run_mapping)
         run_mapping.destroy_node()
         rclpy.shutdown()
 
-    except :
-        save_map(run_mapping,'map.txt')
+    except:
+        save_map(run_mapping, "map.txt")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
