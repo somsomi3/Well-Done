@@ -9,6 +9,10 @@ const MAX_REFRESH_ATTEMPTS = 3;
 const MIN_REFRESH_INTERVAL = 5000;
 // 로컬 스토리지 키
 const TOKEN_STORAGE_KEY = 'auth_token';
+// 마지막 갱신 실패 시간 키
+const LAST_REFRESH_FAIL_KEY = 'last_refresh_fail';
+// 갱신 실패 후 쿨다운 시간 (밀리초)
+const REFRESH_COOLDOWN = 60000; // 1분
 
 const useAuthStore = create((set, get) => ({
   token: null,
@@ -109,11 +113,21 @@ const useAuthStore = create((set, get) => ({
       return false;
     }
     
-    // 마지막 리프레시 시도 후 최소 간격 확인
+    // 마지막 갱신 실패 후 쿨다운 시간 확인
+    const lastFailTime = parseInt(localStorage.getItem(LAST_REFRESH_FAIL_KEY) || '0', 10);
     const now = Date.now();
+    const timeSinceLastFail = now - lastFailTime;
+    
+    if (lastFailTime > 0 && timeSinceLastFail < REFRESH_COOLDOWN) {
+      const remainingCooldown = Math.ceil((REFRESH_COOLDOWN - timeSinceLastFail) / 1000);
+      console.log(`토큰 갱신 쿨다운 중입니다. ${remainingCooldown}초 후에 다시 시도하세요.`);
+      return false;
+    }
+    
+    // 마지막 리프레시 시도 후 최소 간격 확인
     const timeSinceLastRefresh = now - get().lastRefreshTime;
     if (timeSinceLastRefresh < MIN_REFRESH_INTERVAL) {
-      console.log(`토큰 리프레시 요청이 너무 빈번합니다. ${(MIN_REFRESH_INTERVAL - timeSinceLastRefresh) / 1000}초 후 다시 시도하세요.`);
+      console.log(`토큰 리프레시 요청이 너무 빈번합니다. ${Math.ceil((MIN_REFRESH_INTERVAL - timeSinceLastRefresh) / 1000)}초 후 다시 시도하세요.`);
       return false;
     }
     
@@ -149,6 +163,8 @@ const useAuthStore = create((set, get) => ({
       get().setToken(newToken);
       console.log('토큰 리프레시 성공');
       
+      // 성공 시 실패 기록 초기화
+      localStorage.removeItem(LAST_REFRESH_FAIL_KEY);
       set({ isRefreshing: false, refreshAttempts: 0 });
       return true;
     } catch (error) {
@@ -162,6 +178,9 @@ const useAuthStore = create((set, get) => ({
       
       errorService.logError(error, errorInfo, 'error', ErrorCategory.AUTH);
       console.error('액세스 토큰 리프레시 오류:', error.message);
+      
+      // 실패 시간 기록
+      localStorage.setItem(LAST_REFRESH_FAIL_KEY, Date.now().toString());
       
       // 401 오류가 계속 발생하면 로그아웃 처리
       if (error.response?.status === 401 && get().refreshAttempts >= 2) {
@@ -201,6 +220,20 @@ const useAuthStore = create((set, get) => ({
       localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
     return false;
+  },
+  
+  // 디버그 정보 출력
+  debugAuthState: () => {
+    const state = get();
+    console.log('===== 인증 상태 디버그 =====');
+    console.log('토큰 존재:', !!state.token);
+    console.log('사용자 정보:', state.user);
+    console.log('토큰 유효성:', state.isTokenValid());
+    console.log('만료까지 남은 시간:', state.getTokenExpiryTime(), '초');
+    console.log('리프레시 중:', state.isRefreshing);
+    console.log('리프레시 시도 횟수:', state.refreshAttempts);
+    console.log('마지막 리프레시 시간:', new Date(state.lastRefreshTime).toLocaleString());
+    console.log('===========================');
   }
 }));
 

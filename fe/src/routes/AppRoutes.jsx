@@ -24,7 +24,20 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   
   if (!isAuthenticated()) {
+    // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
     return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
+// 공개 라우트 컴포넌트 - 이미 인증된 사용자는 메인 페이지로 리다이렉트 (선택적)
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated } = useAuthStore();
+  
+  // 이미 인증된 사용자가 로그인/회원가입 페이지에 접근하면 메인 페이지로 리다이렉트
+  if (isAuthenticated()) {
+    return <Navigate to="/main" replace />;
   }
   
   return children;
@@ -35,11 +48,29 @@ function AppRoutes() {
     <ErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          {/* 공개 라우트 */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          {/* 공개 라우트 - 인증이 필요하지 않음 */}
+          <Route 
+            path="/login" 
+            element={
+              <PublicRoute>
+                <ErrorBoundary>
+                  <LoginPage />
+                </ErrorBoundary>
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/register" 
+            element={
+              <PublicRoute>
+                <ErrorBoundary>
+                  <RegisterPage />
+                </ErrorBoundary>
+              </PublicRoute>
+            } 
+          />
           
-          {/* 보호된 라우트 */}
+          {/* 보호된 라우트 - 인증이 필요함 */}
           <Route 
             path="/main" 
             element={
