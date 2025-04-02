@@ -32,7 +32,7 @@ function App() {
           console.log('토큰이 유효하지 않거나 만료되었습니다. 리프레시 시도...');
           
           const refreshed = await refreshAccessToken();
-          
+
           if (refreshed) {
             console.log('토큰 리프레시 성공');
           } else {
@@ -96,7 +96,11 @@ function App() {
   ]);
 
   if (isInitializing) {
-    return <div className="flex items-center justify-center h-screen">로딩 중...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        로딩 중...
+      </div>
+    );
   }
 
   return (

@@ -22,7 +22,7 @@ const publicApi = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-  }
+  },
 });
 
 // 진행 중인 토큰 갱신 요청을 추적하기 위한 변수
@@ -58,7 +58,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // 401 에러이고 아직 재시도하지 않은 경우에만 리프레시 시도
     if (error.response?.status === 401 && !originalRequest._retry) {
       // 최대 실패 횟수 초과 확인
