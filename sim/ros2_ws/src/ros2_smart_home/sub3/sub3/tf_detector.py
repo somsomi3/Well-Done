@@ -7,6 +7,7 @@ from rclpy.node import Node
 import time
 from sensor_msgs.msg import CompressedImage, LaserScan
 from ssafy_msgs.msg import BBox
+from tensorflow.compat.v1 import graph_util, saved_model
 
 import tensorflow as tf
 
@@ -15,6 +16,7 @@ from sub2.ex_calib import *
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
 
+
 # 설치한 tensorflow를 tf 로 import 하고,
 # object_detection api 내의 utils인 vis_util과 label_map_util도 import해서
 # ROS 통신으로 들어오는 이미지의 객체 인식 결과를 ROS message로 송신하는 노드입니다.
@@ -22,7 +24,7 @@ from object_detection.utils import visualization_utils as vis_util
 # tf object detection node 로직 순서
 # 로직 1. tensorflow 및 object detection api 관련 utils import 
 # 로직 2. pretrained file and label map load
-# 로직 3. detection model graph 생성
+# 로직 3. detection model graph R생성
 # 로직 4. gpu configuration 정의
 # 로직 5. session 생성
 # 로직 6. object detection 클래스 생성
@@ -98,10 +100,9 @@ class detection_net_class():
         # self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
         # self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
         detections = infer(tf.convert_to_tensor(image_np_expanded))
-
-        boxes = detections['detection_boxes']
-        scores = detections['detection_scores']
-        classes = detections['detection_classes']
+        boxes = detections['detection_boxes'].numpy()
+        scores = detections['detection_scores'].numpy()
+        classes = detections['detection_classes'].numpy()
         num_detections = detections['num_detections']
 
         self.num_detections = \
@@ -111,11 +112,21 @@ class detection_net_class():
         image_np_expanded = np.expand_dims(image_np, axis=0)
         
         t_start = time.time()
-        (boxes, scores, classes, num_detections) = self.sess.run([self.boxes,
-                                                                self.scores,
-                                                                self.classes,
-                                                                self.num_detections],
-        feed_dict={self.image_tensor: image_np_expanded})
+        # (boxes, scores, classes, num_detections) = self.sess.run([self.boxes,
+        #                                                         self.scores,
+        #                                                         self.classes,
+        #                                                         self.num_detections],
+        # feed_dict={self.image_tensor: image_np_expanded})
+        with tf.compat.v1.Session(graph=detection_graph) as sess:
+            input_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
+            output_tensors = {
+                'detection_boxes': detection_graph.get_tensor_by_name('detection_boxes:0'),
+                'detection_scores': detection_graph.get_tensor_by_name('detection_scores:0'),
+                'detection_classes': detection_graph.get_tensor_by_name('detection_classes:0'),
+                'num_detections': detection_graph.get_tensor_by_name('num_detections:0')
+            }
+            output_dict = sess.run(output_tensors, feed_dict={input_tensor: image_np_expanded})
+
         
         image_process = np.copy(image_np)
 
@@ -188,22 +199,29 @@ def main(args=None):
     ## 'ssd_mobilenet_v1_coco_11_06_2017'와 data 폴더 내 mscoco_label_map.pbtxt를
     ## 넣어둬야 합니다    
     
-    pkg_path =os.getcwd()
-    # back_folder='catkin_ws\\src\\ros2_smart_home\\sub3'
-    back_folder='Desktop\\test_ws\\src\\ssafy_smarthome\\sub3'
+    # pkg_path =os.getcwd()
+    # back_folder='\ros2_ws\src\ros2_smart_home\sub3'
 
-    CWD_PATH = os.path.join(pkg_path, back_folder,'sub3')
-    
+    # CWD_PATH = os.path.join(pkg_path, back_folder,'sub3')
+    CWD_PATH = os.path.dirname(os.path.abspath(__file__))
+
     MODEL_NAME = 'ssd_mobilenet_v1_coco_2018_01_28'
 
-    PATH_TO_WEIGHT = os.path.join(CWD_PATH, 'model_weights', \
-        MODEL_NAME, 'frozen_inference_graph.pb')
-
-    print(PATH_TO_WEIGHT)
-    PATH_TO_LABELS = os.path.join(CWD_PATH, 'model_weights', \
-        'data', 'mscoco_label_map.pbtxt')
+    PATH_TO_WEIGHT = os.path.join(CWD_PATH, 'model_weights', MODEL_NAME, 'frozen_inference_graph.pb' )   
+    PATH_TO_LABELS = os.path.join(CWD_PATH, 'model_weights', 'data', 'mscoco_label_map.pbtxt')
+    
+    print(f"CWD_PATH: {CWD_PATH}")
+    print(f"PATH_TO_WEIGHT: {PATH_TO_WEIGHT} (Exists: {os.path.exists(PATH_TO_WEIGHT)})")
+    print(f"PATH_TO_LABELS: {PATH_TO_LABELS} (Exists: {os.path.exists(PATH_TO_LABELS)})")
 
     NUM_CLASSES = 90
+
+    # Load frozen graph
+    label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
+    categories = label_map_util.convert_label_map_to_categories(label_map,
+                                                              max_num_classes=NUM_CLASSES,
+                                                              use_display_name=True)
+    category_index = label_map_util.create_category_index(categories)
 
     # # 직접 파일 읽기
     # with open(PATH_TO_LABELS, 'r', encoding='utf-8') as file:
@@ -217,104 +235,93 @@ def main(args=None):
     
     # category_index = label_map_util.create_category_index(categories)
 
-    # Loading label map with explicit UTF-8 encoding
-    try:
-        with open(PATH_TO_LABELS, 'r', encoding='utf-8') as file:
-            label_map_string = file.read()
-        label_map = label_map_util.load_labelmap_from_string(label_map_string)
-        categories = label_map_util.convert_label_map_to_categories(
-            label_map,
-            max_num_classes=NUM_CLASSES,
-            use_display_name=True
-        )
-        category_index = label_map_util.create_category_index(categories)
-    except Exception as e:
-        print(f"Error loading label map: {e}")
 
     # 로직 3. detection model graph 생성
     # tf.Graph()를 하나 생성하고, 이전에 불러들인 pretrained file 안의 뉴럴넷 파라메터들을
     # 생성된 그래프 안에 덮어씌웁니다.    
-    # detection_graph = tf.Graph()
-    # with detection_graph.as_default():
-    #     od_graph_def = tf.GraphDef()
-    #     with tf.gfile.GFile(PATH_TO_WEIGHT, "rb") as fid:
-    #         serialized_graph = fid.read()
-    #         od_graph_def.ParseFromString(serialized_graph)
-    #         tf.import_graph_def(od_graph_def, name="")
-
-    # Load the pretrained model using SavedModel format
-    loaded_model = tf.saved_model.load(PATH_TO_WEIGHT)
-
-    # Get the default inference function
-    infer = loaded_model.signatures['serving_default']
+    detection_graph = tf.Graph()
+    with detection_graph.as_default():
+        od_graph_def = tf.GraphDef()
+        with tf.gfile.GFile(PATH_TO_WEIGHT, 'rb') as fid:
+            serialized_graph = fid.read()
+            od_graph_def.ParseFromString(serialized_graph)
+            tf.import_graph_def(od_graph_def, name='')
 
 
     # 로직 4. gpu configuration 정의
     # 현재 머신에 사용되는 GPU의 memory fraction 등을 설정합니다.
     # gpu의 memory fraction 이 너무 높으면 사용 도중 out of memory 등이 발생할 수 있습니다.
 
-    # config = tf.ConfigProto()
+    config = tf.ConfigProto()
     # config = tf.ConfigProto(device_count={'GPU': 1})
-    # config.gpu_options.per_process_gpu_memory_fraction = 0.3
-    # config.gpu_options.allow_growth = True
-    # config.gpu_options.allocator_type = 'BFC'
+    config.gpu_options.per_process_gpu_memory_fraction = 0.3
+    config.gpu_options.allow_growth = True
+    config.gpu_options.allocator_type = 'BFC'
 
-    gpus = tf.config.list_physical_devices('GPU')
-    if gpus:
-        try:
-            # Set memory growth for GPUs to prevent OOM errors
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-        except RuntimeError as e:
-            print(e)
+    # gpus = tf.config.list_physical_devices('GPU')
+    # if gpus:
+    #     try:
+    #         # Set memory growth for GPUs to prevent OOM errors
+    #         for gpu in gpus:
+    #             tf.config.experimental.set_memory_growth(gpu, True)
+    #     except RuntimeError as e:
+    #         print(e)
 
 
 
     # 로직 5. session 생성
     # 위에 정의한 graph와 config로 세션을 생성합니다.
-    # sess2 = tf.Session(graph=detection_graph, config=config)
+    sess = tf.Session(graph=detection_graph, config=config)
 
     # TensorFlow 2.x에서는 세션을 사용하지 않음. 모델 로드 후 바로 추론 가능.
     # 추론은 infer 함수로 수행됩니다.
 
     # 로직 6. object detection 클래스 생성
     # detector model parameter를 load 하고 이를 세션으로 실행시켜 inference 하는 클래스를 생성합니다
-    ssd_net = detection_net_class(sess2, detection_graph, category_index)
+    ssd_net = detection_net_class(sess, detection_graph, category_index)
+
+
     class detection_net_class():
         def __init__(self, infer_function, category_index):
-            # Initialize inference function and category index
-            self.infer = infer_function
+            self.sess = sess
+            self.detection_graph = graph
             self.category_index = category_index
-
+            
+            # init tensor
+            self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
+            self.boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
+            self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
+            self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
+            self.num_detections = self.detection_graph.get_tensor_by_name('num_detections:0')
+    
         def inference(self, image_np):
-            # Preprocess the image
             image_np_expanded = np.expand_dims(image_np, axis=0)
             t_start = time.time()
-
-            # Perform inference
-            detections = self.infer(tf.convert_to_tensor(image_np_expanded))
-
-            # Extract detection results
-            boxes = detections['detection_boxes'].numpy()
-            scores = detections['detection_scores'].numpy()
-            classes = detections['detection_classes'].numpy()
-            num_detections = int(detections['num_detections'])
-
-            # Visualization
+            
+            (boxes, scores, classes, num_detections) = self.sess.run(
+                [self.boxes, self.scores, self.classes, self.num_detections],
+                feed_dict={self.image_tensor: image_np_expanded})
+            
             image_process = np.copy(image_np)
+            
+            # 점수가 0.5 이상인 객체만 선택
+            idx_detect = np.where(scores[0] > 0.5)[0]
+            boxes_detect = boxes[0, idx_detect, :]
+            classes_pick = classes[0, idx_detect]
+            
             vis_util.visualize_boxes_and_labels_on_image_array(
                 image_process,
-                boxes,
-                classes.astype(np.int32),
-                scores,
+                np.squeeze(boxes),
+                np.squeeze(classes).astype(np.int32),
+                np.squeeze(scores),
                 self.category_index,
                 use_normalized_coordinates=True,
                 min_score_thresh=0.5,
-                line_thickness=8
-            )
-
+                line_thickness=8)
+            
             infer_time = time.time() - t_start
-            return image_process, infer_time, boxes, scores, classes
+            
+            return image_process, infer_time, boxes_detect, scores, classes_pick
 
     # 로직 7. node 및 image/scan subscriber 생성
     # 이번 sub3의 스켈레톤 코드는 rclpy.Node 클래스를 쓰지 않고,
