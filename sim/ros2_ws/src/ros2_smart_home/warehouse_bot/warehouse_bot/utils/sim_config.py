@@ -1,13 +1,17 @@
 # sim_config.py
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MAP_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "..", "map"))
 
 # === 🗺️ Mapping Parameters ===
 params_map = {
     "MAP_RESOLUTION": 0.02,
-    "OCCUPANCY_UP": 1,
-    "OCCUPANCY_DOWN": 0.3,
+    "OCCUPANCY_UP": 0.5,
+    "OCCUPANCY_DOWN": 0.2,
     "MAP_CENTER": (-52.5, -59.0),
     "MAP_SIZE": (24, 24),
-    "MAP_FILENAME": "test.png",
+    "MAP_FILENAME": "map",
     "MAPVIS_RESIZE_SCALE": 1.0,
 }
 

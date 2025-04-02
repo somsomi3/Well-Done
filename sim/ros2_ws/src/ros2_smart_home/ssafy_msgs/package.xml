@@ -9,12 +9,10 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- 기본 메시지 의존성 -->
   <build_depend>rosidl_default_generators</build_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
 
-  <!-- 메시지 타입 의존성 -->
   <build_depend>std_msgs</build_depend>
   <exec_depend>std_msgs</exec_depend>
   <build_depend>geometry_msgs</build_depend>
@@ -24,7 +22,6 @@
   <build_depend>builtin_interfaces</build_depend>
   <exec_depend>builtin_interfaces</exec_depend>
 
-  <!-- 테스트 의존성 -->
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

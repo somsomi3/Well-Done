@@ -9,7 +9,7 @@ from ssafy_msgs.msg import ScanWithPose
 from nav_msgs.msg import Odometry, OccupancyGrid, MapMetaData
 from squaternion import Quaternion
 import warehouse_bot.slam.utils as utils
-from warehouse_bot.utils.sim_config import params_map
+from warehouse_bot.utils.sim_config import params_map, MAP_PATH
 
 
 def createLineIterator(P1, P2, img):
@@ -73,23 +73,48 @@ def createLineIterator(P1, P2, img):
 
 
 class Mapping:
-    def __init__(self, params):
+    def __init__(self, params, reset_map=True, logger=None):
+        self.logger = logger
         self.map_resolution = params["MAP_RESOLUTION"]
         self.map_size = (np.array(params["MAP_SIZE"]) / self.map_resolution).astype(int)
         self.map_center = params["MAP_CENTER"]
-        self.map = np.ones(self.map_size) * 0.5
-        self.occu_up = params["OCCUPANCY_UP"]
-        self.occu_down = params["OCCUPANCY_DOWN"]
         self.map_filename = params["MAP_FILENAME"]
         self.map_vis_resize_scale = params["MAPVIS_RESIZE_SCALE"]
+        self.occu_up = params["OCCUPANCY_UP"]
+        self.occu_down = params["OCCUPANCY_DOWN"]
         self.T_r_l = np.array(
             [[0, -1, 0], [1, 0, 0], [0, 0, 1]]
         )  # 반시계 90도 회전 보정
 
+        if not reset_map:
+            if self.load_map():
+                self.logger.info("Loaded previous map.")
+            else:
+                self.logger.warn("Failed to load previous map. Creating new map.")
+                self.map = np.ones(self.map_size) * 0.5
+        else:
+            self.logger.info("Creating new map from scratch.")
+            self.map = np.ones(self.map_size) * 0.5
+
+    def load_map(self):
+        txt_path = os.path.join(MAP_PATH, self.map_filename + ".txt")
+        if not os.path.exists(txt_path):
+            return False
+
+        try:
+            with open(txt_path, "r") as f:
+                data = list(map(int, f.read().split()))
+                self.map = 1.0 - np.array(data).reshape(self.map_size) / 100.0
+                self.map = np.clip(self.map, 0.0, 1.0)
+            return True
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"[MAP] Failed to load map: {e}")
+            return False
+
     def update(self, pose, laser):
         n_points = laser.shape[1]
         pose_mat = utils.xyh2mat2D(pose) @ self.T_r_l
-        # pose_mat = utils.xyh2mat2D(pose)  # 보정 없음
         laser_mat = np.vstack((laser, np.ones((1, n_points))))
         laser_global = pose_mat @ laser_mat
 
@@ -111,14 +136,23 @@ class Mapping:
             / self.map_resolution
         ).astype(int)
 
-        for end in laser_grid:
+        for i, end in enumerate(laser_grid):
+            dist = np.linalg.norm(laser[:, i])
+            if dist >= 10:  # 예: 라이다 최대 사거리보다 크면 무시
+                continue
+
             line_iter = createLineIterator(pose_grid, end, self.map)
             if line_iter.shape[0] == 0:
                 continue
             avail_x = line_iter[:, 0].astype(int)
             avail_y = line_iter[:, 1].astype(int)
             self.map[avail_y[:-1], avail_x[:-1]] += self.occu_down
-            self.map[avail_y[-1], avail_x[-1]] -= self.occu_up
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    px = avail_x[-1] + dx
+                    py = avail_y[-1] + dy
+                    if 0 <= px < self.map.shape[1] and 0 <= py < self.map.shape[0]:
+                        self.map[py, px] -= self.occu_up
 
         # occupancy 값 안정화 (0~1 범위로)
         self.map = np.clip(self.map, 0.0, 1.0)
@@ -161,7 +195,7 @@ class Mapping:
 
 
 class Mapper(Node):
-    def __init__(self):
+    def __init__(self, reset_map=True):
         super().__init__("Mapper")
         use_absolute_pose = True
         if use_absolute_pose:
@@ -184,6 +218,7 @@ class Mapper(Node):
                 10,
             )
         self.map_pub = self.create_publisher(OccupancyGrid, "/map", 1)
+        self.map_inflated_pub = self.create_publisher(OccupancyGrid, "/map_inflated", 1)
 
         self.map_msg = OccupancyGrid()
         self.map_msg.header.frame_id = "map"
@@ -202,7 +237,9 @@ class Mapper(Node):
         self.map_size = m.width * m.height
 
         self.latest_pose = None
-        self.mapping = Mapping(params_map)
+        self.mapping = Mapping(
+            params_map, reset_map=reset_map, logger=self.get_logger()
+        )
         self.get_logger().info("Mapper initialized. Waiting for scan_with_pose...")
 
     def odom_callback(self, msg):
@@ -252,26 +289,30 @@ class Mapper(Node):
         self.map_msg.data = list_map_data
         self.map_pub.publish(self.map_msg)
 
+        np_int_map = np.array(self.map_msg.data).reshape(self.mapping.map.shape)
+        inflated = utils.inflate_map(np_int_map, 5)  # ★ 사용자 정의
+
+        # map_inflated 생성 및 퍼블리시 (경로용)
+        inflated_msg = OccupancyGrid()
+        inflated_msg.header = self.map_msg.header
+        inflated_msg.info = self.map_msg.info
+        inflated_msg.data = inflated.flatten().tolist()
+        self.map_inflated_pub.publish(inflated_msg)
+
 
 def save_all_map(node, file_name_txt="map.txt", file_name_png="map.png"):
-    # ✅ 현재 파일(run_mapping.py)의 절대 경로 기준으로 map 폴더 설정
-    curr_dir = os.path.dirname(os.path.abspath(__file__))
-    folder_path = os.path.join(
-        curr_dir, "..", "..", "..", "..", "map"
-    )  # 경로 상대 이동
-
     # 경로가 없다면 생성
-    os.makedirs(folder_path, exist_ok=True)
+    os.makedirs(MAP_PATH, exist_ok=True)
 
     # OccupancyGrid 데이터 -> .txt 저장
-    full_txt_path = os.path.join(folder_path, file_name_txt)
+    full_txt_path = os.path.join(MAP_PATH, file_name_txt)
     node.get_logger().info(f"Saving map data to: {full_txt_path}")
     with open(full_txt_path, "w") as f:
         data = " ".join(str(pixel) for pixel in node.map_msg.data)
         f.write(data)
 
     # 2D 맵 이미지 -> .png 저장
-    full_png_path = os.path.join(folder_path, file_name_png)
+    full_png_path = os.path.join(MAP_PATH, file_name_png)
     node.get_logger().info(f"Saving map image to: {full_png_path}")
     map_image = (node.mapping.map.copy() * 255).astype(np.uint8)
     cv2.imwrite(full_png_path, map_image)
@@ -279,7 +320,9 @@ def save_all_map(node, file_name_txt="map.txt", file_name_png="map.png"):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Mapper()
+
+    # True: 맵 초기화 / False: 기존 맵 이어서 갱신
+    node = Mapper(reset_map=False)
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
@@ -288,7 +331,11 @@ def main(args=None):
         node.get_logger().error(f"Exception occurred in main(): {e}")
     finally:
         node.get_logger().info("Saving map...")
-        save_all_map(node)
+        save_all_map(
+            node,
+            file_name_txt=params_map["MAP_FILENAME"] + ".txt",
+            file_name_png=params_map["MAP_FILENAME"] + ".png",
+        )
         node.destroy_node()
         rclpy.shutdown()
 

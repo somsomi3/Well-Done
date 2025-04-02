@@ -8,22 +8,28 @@ from nav_msgs.msg import Odometry, Path
 from math import pi, cos, sin, sqrt, atan2
 import numpy as np
 
-class followTheCarrot(Node):
 
-    """ 
+class followTheCarrot(Node):
+    """
     📌 경로 추종 노드 (Path Tracking)
     - 로봇의 현재 위치(/odom), 속도(/turtlebot_status), 경로(/local_path)를 받아
       전방 주시 포인트를 기준으로 속도 및 방향을 결정하여 /cmd_vel 퍼블리시
     """
 
     def __init__(self):
-        super().__init__('path_tracking')
+        super().__init__("path_tracking")
 
         # 🔌 Publisher & Subscriber 등록
-        self.cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
-        self.subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
-        self.status_sub = self.create_subscription(TurtlebotStatus, '/turtlebot_status', self.status_callback, 10)
-        self.path_sub = self.create_subscription(Path, '/local_path', self.path_callback, 10)
+        self.cmd_pub = self.create_publisher(Twist, "cmd_vel", 10)
+        self.subscription = self.create_subscription(
+            Odometry, "/odom", self.odom_callback, 10
+        )
+        self.status_sub = self.create_subscription(
+            TurtlebotStatus, "/turtlebot_status", self.status_callback, 10
+        )
+        self.path_sub = self.create_subscription(
+            Path, "/local_path", self.path_callback, 10
+        )
 
         # ⏱️ 제어 주기 타이머 설정 (주기: 0.01초 = 100Hz)
         self.time_period = 0.01
@@ -56,19 +62,21 @@ class followTheCarrot(Node):
 
                 # 📏 lateral error로부터 전방 주시 거리 계산
                 lateral_error = sqrt(
-                    (self.path_msg.poses[0].pose.position.x - robot_x) ** 2 +
-                    (self.path_msg.poses[0].pose.position.y - robot_y) ** 2
+                    (self.path_msg.poses[0].pose.position.x - robot_x) ** 2
+                    + (self.path_msg.poses[0].pose.position.y - robot_y) ** 2
                 )
                 # self.lfd = min(self.max_lfd, max(self.min_lfd, lateral_error))
-                self.lfd = 0.5 # 고정된 전방 주시 거리 사용
+                self.lfd = 0.5  # 고정된 전방 주시 거리 사용
 
-                min_dis = float('inf')
+                min_dis = float("inf")
 
                 # 🔍 전방 주시 포인트 탐색
                 for waypoint in self.path_msg.poses:
                     point = waypoint.pose.position
-                    dis = sqrt((point.x - self.path_msg.poses[0].pose.position.x) ** 2 + 
-                    (point.y - self.path_msg.poses[0].pose.position.y) ** 2)
+                    dis = sqrt(
+                        (point.x - self.path_msg.poses[0].pose.position.x) ** 2
+                        + (point.y - self.path_msg.poses[0].pose.position.y) ** 2
+                    )
 
                     if abs(dis - self.lfd) < min_dis:
                         min_dis = abs(dis - self.lfd)
@@ -79,11 +87,13 @@ class followTheCarrot(Node):
                     global_fp = [self.forward_point.x, self.forward_point.y, 1]
 
                     # 🔄 로컬 좌표계로 변환 (2D 동차 좌표계 이용)
-                    trans_matrix = np.array([
-                        [cos(self.robot_yaw), -sin(self.robot_yaw), robot_x],
-                        [sin(self.robot_yaw),  cos(self.robot_yaw), robot_y],
-                        [0,                   0,                    1]
-                    ])
+                    trans_matrix = np.array(
+                        [
+                            [cos(self.robot_yaw), -sin(self.robot_yaw), robot_x],
+                            [sin(self.robot_yaw), cos(self.robot_yaw), robot_y],
+                            [0, 0, 1],
+                        ]
+                    )
                     det_trans = np.linalg.inv(trans_matrix)
                     local_fp = det_trans.dot(np.array(global_fp).reshape(3, 1))
 
@@ -97,10 +107,10 @@ class followTheCarrot(Node):
 
                     # 🚗 선속도 계산 (cos(theta)로 전방 정렬 시 최대 속도)
                     out_vel = max(0.0, 1 * cos(theta))
-                    
+
                     # 🔄 각속도 계산 (Kp 게인 조정 및 제한)
                     Kp = 1.5
-                    out_rad_vel = Kp * theta                       # 감쇠된 각속도
+                    out_rad_vel = Kp * theta  # 감쇠된 각속도
                     out_rad_vel = max(-1.0, min(1.0, out_rad_vel))
 
                     self.cmd_msg.linear.x = float(out_vel)
@@ -138,5 +148,5 @@ def main(args=None):
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

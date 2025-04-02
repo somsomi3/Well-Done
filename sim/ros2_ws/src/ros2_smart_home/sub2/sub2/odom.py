@@ -5,10 +5,11 @@ from ssafy_msgs.msg import TurtlebotStatus
 from sensor_msgs.msg import Imu
 from squaternion import Quaternion
 from nav_msgs.msg import Odometry
-from math import pi,cos,sin
+from math import pi, cos, sin
 import tf2_ros
 import geometry_msgs.msg
 import time
+
 
 class odom(Node):
     """
@@ -16,13 +17,16 @@ class odom(Node):
     odom 메시지 및 TF를 퍼블리시합니다.
     방향(heading)은 IMU의 orientation을 이용하여 계산합니다.
     """
+
     def __init__(self):
-        super().__init__('odom')
-        
+        super().__init__("odom")
+
         # Publisher & Subscriber 생성
-        self.subscription = self.create_subscription(TurtlebotStatus,'/turtlebot_status',self.listener_callback,10)
-        self.imu_sub = self.create_subscription(Imu, '/imu', self.imu_callback, 10)
-        self.odom_publisher = self.create_publisher(Odometry, 'odom', 10)
+        self.subscription = self.create_subscription(
+            TurtlebotStatus, "/turtlebot_status", self.listener_callback, 10
+        )
+        self.imu_sub = self.create_subscription(Imu, "/imu", self.imu_callback, 10)
+        self.odom_publisher = self.create_publisher(Odometry, "odom", 10)
 
         # TF Broadcaster (base_link & laser)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
@@ -35,19 +39,19 @@ class odom(Node):
         self.theta = 0.0
 
         # Odometry 메시지 초기화 (odom frame 사용)
-        self.odom_msg=Odometry()
-        self.odom_msg.header.frame_id = 'odom'
-        self.odom_msg.child_frame_id = 'base_link'
+        self.odom_msg = Odometry()
+        self.odom_msg.header.frame_id = "odom"
+        self.odom_msg.child_frame_id = "base_link"
 
         # base_link TF 설정 (odom → base_link)
         self.base_link_tf = geometry_msgs.msg.TransformStamped()
-        self.base_link_tf.header.frame_id = 'odom'
-        self.base_link_tf.child_frame_id = 'base_link'
+        self.base_link_tf.header.frame_id = "odom"
+        self.base_link_tf.child_frame_id = "base_link"
 
         # laser TF 설정 (base_link → laser)
         self.laser_tf = geometry_msgs.msg.TransformStamped()
-        self.laser_tf.header.frame_id = 'base_link'
-        self.laser_tf.child_frame_id = 'laser'
+        self.laser_tf.header.frame_id = "base_link"
+        self.laser_tf.child_frame_id = "laser"
         self.laser_tf.transform.translation.x = 0.0  # LiDAR 위치 (시뮬레이터 기준)
         self.laser_tf.transform.translation.y = 0.0
         self.laser_tf.transform.translation.z = 0.10
@@ -55,8 +59,8 @@ class odom(Node):
 
         # map → odom 정적 TF 설정
         self.map_to_odom = geometry_msgs.msg.TransformStamped()
-        self.map_to_odom.header.frame_id = 'map'
-        self.map_to_odom.child_frame_id = 'odom'
+        self.map_to_odom.header.frame_id = "map"
+        self.map_to_odom.child_frame_id = "odom"
         self.map_to_odom.transform.translation.x = 0.0
         self.map_to_odom.transform.translation.y = 0.0
         self.map_to_odom.transform.translation.z = 0.0
@@ -67,12 +71,18 @@ class odom(Node):
         self.static_broadcaster.sendTransform(self.map_to_odom)
 
     def imu_callback(self, msg):
-        q = Quaternion(msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z)
+        q = Quaternion(
+            msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z
+        )
         _, _, yaw = q.to_euler()
         self.theta = yaw
 
     def listener_callback(self, msg):
-        print('linear_vel : {}  angular_vel : {}'.format(msg.twist.linear.x,-msg.twist.angular.z))
+        print(
+            "linear_vel : {}  angular_vel : {}".format(
+                msg.twist.linear.x, -msg.twist.angular.z
+            )
+        )
         current_time = self.get_clock().now()
 
         # 절대 위치 (turtlebot_status의 twist.angular.x, twist.angular.y 사용)
@@ -84,7 +94,7 @@ class odom(Node):
         angular_z = -msg.twist.angular.z  # 시뮬레이터 기준 방향 보정
 
         q = Quaternion.from_euler(0, 0, self.theta)
-        
+
         # odom 메시지 구성
         self.odom_msg.header.stamp = current_time.to_msg()
         self.odom_msg.pose.pose.position.x = x
@@ -114,7 +124,7 @@ class odom(Node):
         self.tf_broadcaster.sendTransform(self.laser_tf)
         self.odom_publisher.publish(self.odom_msg)
 
-        
+
 def main(args=None):
     rclpy.init(args=args)
     node = odom()
@@ -122,5 +132,6 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

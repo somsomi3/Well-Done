@@ -3,8 +3,9 @@
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, PoseStamped
+from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid, Odometry
+from std_msgs.msg import Bool
 from squaternion import Quaternion
 import numpy as np
 
@@ -43,7 +44,7 @@ class FrontierExplorer(Node):
 
         # 탐색 조건 파라미터
         self.MAP_CHANGE_THRESHOLD = 0.01  # 맵 변화율 기준
-        self.MAP_COVERAGE_THRESHOLD = 0.90  # 커버리지 종료 기준
+        self.MAP_COVERAGE_THRESHOLD = 0.60  # 커버리지 종료 기준
         self.MAP_IDLE_DURATION = 5.0  # 맵 변화 없을 시 종료 시간 기준
         self.GOAL_REPUBLISH_THRESHOLD = 0.5  # goal이 이전 goal과 너무 가까울 경우 skip
 
@@ -54,21 +55,61 @@ class FrontierExplorer(Node):
         self.last_change_time = self.get_clock().now().seconds_nanoseconds()[0]
         self.prev_goal = None
         self.current_pose = None
+        self.goal_failed = False  # ❌ 경로 실패 플래그
+        self.goal_reached = True  # ✅ goal 도달 상태 추가
 
         # 퍼블리셔/서브스크라이버 설정
-        self.pub_cmd = self.create_publisher(Twist, "/cmd_vel", 10)
         self.pub_goal = self.create_publisher(PoseStamped, "/goal_pose", 10)
+        self.done_pub = self.create_publisher(Bool, "/mapping_done", 1)
         self.sub_map = self.create_subscription(
-            OccupancyGrid, "/map", self.map_callback, 10
+            OccupancyGrid, "/map_inflated", self.map_callback, 10
         )
         self.sub_odom = self.create_subscription(
             Odometry, "/odom_true", self.odom_callback, 10
         )
+        self.sub_goal_failed = self.create_subscription(
+            Bool, "/goal_failed", self.goal_failed_callback, 10
+        )
+        self.sub_goal_reached = self.create_subscription(
+            Bool, "/goal_reached", self.goal_reached_callback, 10
+        )
+        self.sub_plan_failed = self.create_subscription(
+            Bool, "/plan_failed", self.plan_failed_callback, 10
+        )
+        self.sub_plan_success = self.create_subscription(
+            Bool, "/plan_success", self.plan_success_callback, 10
+        )
 
         # 타이머 콜백 (주기적 프론티어 탐색)
         self.timer = self.create_timer(1.0, self.timer_callback)
-
         self.get_logger().info("Frontier-based auto mapping started.")
+
+    def publish_mapping_done(self):
+        self.done_pub.publish(Bool(data=True))
+        self.get_logger().info("📬 Published mapping done signal.")
+
+    def goal_failed_callback(self, msg):
+        if msg.data:
+            self.get_logger().warn(
+                "[FAIL] Received goal failure signal from path_tracking."
+            )
+            self.goal_failed = True
+            self.goal_reached = True  # ✅ 실패도 도달로 처리
+
+    def goal_reached_callback(self, msg):  # ✅ 경로 도달 콜백 추가
+        if msg.data and not self.goal_reached:
+            self.get_logger().info("✅ [RESULT] Goal reached signal received.")
+            self.goal_reached = True
+
+    def plan_failed_callback(self, msg):
+        if msg.data:
+            self.get_logger().warn("[FAIL] Received plan failure from a_star.")
+            self.goal_failed = True
+            self.goal_reached = True
+
+    def plan_success_callback(self, msg):
+        if msg.data:
+            self.get_logger().info("✅ [PLAN] Received plan success from a_star.")
 
     # 현재 로봇 위치 저장
     def odom_callback(self, msg):
@@ -88,7 +129,7 @@ class FrontierExplorer(Node):
             self.get_logger().info(f"[MAP] Change rate: {change_rate:.4f}")
 
             # 맵 내 알려진 셀 비율 계산 (0 또는 100)
-            observed = (new_map == 0) | (new_map == 100)
+            observed = (new_map == 0) | (new_map > 70)
             coverage = np.count_nonzero(observed) / new_map.size
             self.get_logger().info(f"[MAP] Coverage: {coverage:.2%}")
 
@@ -96,19 +137,15 @@ class FrontierExplorer(Node):
             frontiers = find_frontiers(new_map)
             if len(frontiers) == 0:
                 self.get_logger().info("✅ [MAP] No frontiers left. Auto stopping.")
-                self.stop_robot()
+                self.publish_mapping_done()
                 self.destroy_node()
                 return
 
             # 맵 변화가 있다면 idle 타이머 초기화
             if change_rate >= self.MAP_CHANGE_THRESHOLD:
                 self.last_change_time = now
-                self.get_logger().info("[MAP] Map changed. Resetting idle timer.")
 
             duration = now - self.last_change_time
-            self.get_logger().info(
-                f"[MAP] Duration since last change: {duration:.2f} sec"
-            )
 
             # 일정 시간 변화가 없고, 커버리지가 충분하면 종료
             if (
@@ -116,7 +153,7 @@ class FrontierExplorer(Node):
                 and coverage > self.MAP_COVERAGE_THRESHOLD
             ):
                 self.get_logger().info("✅ [MAP] Mapping complete. Shutting down.")
-                self.stop_robot()
+                self.publish_mapping_done()
                 self.destroy_node()
                 return
 
@@ -137,8 +174,6 @@ class FrontierExplorer(Node):
         frontiers = find_frontiers(self.map_data)
         if not frontiers:
             self.get_logger().warn("[TIMER] No frontiers found.")
-            self.stop_robot()
-            self.destroy_node()
             return
 
         # 2. grid → world 좌표 변환
@@ -154,20 +189,35 @@ class FrontierExplorer(Node):
             self.get_logger().warn("[TIMER] No frontiers within FOV.")
             return
 
+        MIN_FRONTIER_DIST = 5  # 🔧 최소 프론티어 거리 제한
+
         # 4. 가장 가까운 프론티어 선택
         bot_x, bot_y = self.current_pose[0], self.current_pose[1]
-        dists = [get_distance((bot_x, bot_y), pt) for pt in fov_filtered]
-        nearest = fov_filtered[int(np.argmin(dists))]
+        far_enough_frontiers = [
+            pt
+            for pt in fov_filtered
+            if get_distance((bot_x, bot_y), pt) >= MIN_FRONTIER_DIST
+        ]
+
+        if not far_enough_frontiers:
+            self.get_logger().warn("[GOAL] No frontiers far enough. Skipping publish.")
+            return
+
+        nearest = min(
+            far_enough_frontiers, key=lambda pt: get_distance((bot_x, bot_y), pt)
+        )
 
         # 이전 goal과 너무 가까우면 skip
-        if (
-            self.prev_goal is not None
-            and get_distance(self.prev_goal, nearest) < self.GOAL_REPUBLISH_THRESHOLD
-        ):
-            self.get_logger().info(
-                "[GOAL] Goal too close to previous. Skipping publish."
-            )
-            return
+        if not self.goal_failed:
+            if (
+                self.prev_goal is not None
+                and get_distance(self.prev_goal, nearest)
+                < self.GOAL_REPUBLISH_THRESHOLD
+            ):
+                self.get_logger().info(
+                    "[GOAL] Goal too close to previous. Skipping publish."
+                )
+                return
 
         # goal_pose 메시지 생성 및 퍼블리시
         goal = PoseStamped()
@@ -182,10 +232,8 @@ class FrontierExplorer(Node):
         )
         self.pub_goal.publish(goal)
         self.prev_goal = nearest
-
-    # 로봇 정지 명령
-    def stop_robot(self):
-        self.pub_cmd.publish(Twist())
+        self.goal_failed = False  # ✅ goal 재설정 이후 실패 상태 초기화
+        self.goal_reached = False  # ✅ goal 설정 후 대기 상태로 전환
 
 
 def main(args=None):
