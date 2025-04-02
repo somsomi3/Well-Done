@@ -2,27 +2,34 @@ import { useState, useCallback } from 'react';
 import { api, publicApi } from '../utils/api';
 import { jwtDecode } from 'jwt-decode';
 import { useAuthStore } from '../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToastStore } from '../stores/toastStore';
 
+// 인증이 필요하지 않은 경로 목록 (App.jsx와 동일하게 유지)
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password'];
+
 const useAuth = () => {
-  const {
-    setToken,
-    clearToken,
+  const { 
+    setToken, 
+    clearToken, 
     refreshAccessToken: storeRefreshToken,
     setIsRefreshing,
-    isRefreshing,
+    isRefreshing 
   } = useAuthStore();
   const { addToast } = useToastStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // 현재 경로가 인증이 필요하지 않은 경로인지 확인
+  const isPublicPath = PUBLIC_PATHS.includes(location.pathname);
 
   // 로그인 함수
   const login = useCallback(async (username, password) => {
     setLoading(true);
     setError(null);
-
+    
     try {
       const response = await publicApi.post('/auth/login', { username, password }, {
         withCredentials: true // 쿠키 포함 설정
@@ -42,7 +49,7 @@ const useAuth = () => {
       
       // 토큰을 스토어에 저장
       setToken(accessToken);
-
+      
       // 토큰에서 사용자 정보 추출 (디버깅 목적)
       try {
         const decodedToken = jwtDecode(accessToken);
@@ -73,15 +80,15 @@ const useAuth = () => {
   const register = useCallback(async (username, email, password, companyId) => {
     setLoading(true);
     setError(null);
-
+    
     try {
-      const response = await publicApi.post('/auth/register', {
-        username,
-        email,
-        password,
-        company_id: companyId,
+      const response = await publicApi.post('/auth/register', { 
+        username, 
+        email, 
+        password, 
+        company_id: companyId 
       });
-
+      
       console.log('회원가입 성공:', response.data);
       
       // 성공 알림
@@ -110,7 +117,7 @@ const useAuth = () => {
       const response = await publicApi.get('/auth/check-username', {
         params: { username }
       });
-
+      
       console.log('아이디 중복 확인 응답:', response.data);
       return response.status === 200;
     } catch (error) {
@@ -128,27 +135,33 @@ const useAuth = () => {
 
   // 토큰 갱신 함수
   const refreshAccessToken = useCallback(async () => {
+    // 공개 경로에서는 토큰 갱신을 시도하지 않음
+    if (isPublicPath) {
+      console.log('공개 페이지에서는 토큰 갱신을 시도하지 않습니다.');
+      return false;
+    }
+    
     // 이미 리프레시 중이면 중복 요청 방지
     if (isRefreshing) {
       console.log('이미 토큰 리프레시가 진행 중입니다.');
       return false;
     }
-
+    
     setLoading(true);
     setIsRefreshing(true);
-
+    
     try {
       // 스토어의 리프레시 토큰 함수 호출
       const success = await storeRefreshToken();
       setLoading(false);
       setIsRefreshing(false);
-
+      
       if (!success) {
         // 리프레시 실패 시 로그인 페이지로 리다이렉트
         handleAuthFailure();
         addToast('인증이 만료되었습니다. 다시 로그인해주세요.', 'warning');
       }
-
+      
       return success;
     } catch (error) {
       console.error('토큰 갱신 실패:', error);
@@ -161,16 +174,16 @@ const useAuth = () => {
       
       // 에러 발생 시 로그인 페이지로 리다이렉트
       handleAuthFailure();
-
+      
       return false;
     }
-  }, [isRefreshing, setIsRefreshing, storeRefreshToken, addToast]);
+  }, [isPublicPath, isRefreshing, setIsRefreshing, storeRefreshToken, addToast]);
 
   // 로그아웃 함수
   const logout = useCallback(async () => {
     setLoading(true);
     setError(null);
-
+    
     try {
       // 로그아웃 API 호출
       await api.post('/auth/logout', {}, { 
@@ -207,14 +220,14 @@ const useAuth = () => {
     navigate('/login');
   }, [clearToken, navigate]);
 
-  return {
-    login,
-    register,
-    checkUsername,
+  return { 
+    login, 
+    register, 
+    checkUsername, 
     refreshAccessToken,
-    logout,
-    loading,
-    error,
+    logout, 
+    loading, 
+    error 
   };
 };
 
