@@ -7,7 +7,8 @@ from rclpy.node import Node
 import time
 from sensor_msgs.msg import CompressedImage, LaserScan
 from ssafy_msgs.msg import BBox
-from tensorflow.compat.v1 import graph_util, saved_model
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 import tensorflow as tf
 
@@ -15,7 +16,11 @@ from sub2.ex_calib import *
 
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
+from geometry_msgs.msg import Point
 
+
+global img_bgr
+img_bgr = None #콜백 되기전.
 
 # 설치한 tensorflow를 tf 로 import 하고,
 # object_detection api 내의 utils인 vis_util과 label_map_util도 import해서
@@ -79,64 +84,37 @@ params_cam = {
 
 
 class detection_net_class():
-    def __init__(self, sess, graph, category_index):
-        
-        # 로직 6. object detector 클래스 생성
-        # 스켈레톤 코드 내에 작성되어 있는 class인  detection_net_class()는 
-        # graph와 라벨정보를 받아서 ROS2 topic 통신으로 들어온 이미지를 inference 하고
-        # bounding box를 내놓는 역할을 합니다. 
-        # TF object detection API 튜토리얼 코드를 참고했습니다.
-                 
-        #session and dir
-        self.sess = sess
-        self.detection_graph = graph
-        self.category_index = category_index
+        def __init__(self, sess,graph, category_index):
+            self.sess = sess
+            self.detection_graph = graph
+            self.category_index = category_index
+            
+            # init tensor
+            self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
+            self.boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
+            self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
+            self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
+            self.num_detections = self.detection_graph.get_tensor_by_name('num_detections:0')
+    
+        def inference(self, image_np):
+            image_np_expanded = np.expand_dims(image_np, axis=0)
+            t_start = time.time()
+            
+            #추론 모델 시작 
+            (boxes, scores, classes, num_detections) = self.sess.run(
+                [self.boxes, self.scores, self.classes, self.num_detections],
+                feed_dict={self.image_tensor: image_np_expanded})
+            
 
-        #init tensor
-        #1.x 버전에서는 get_default_graph()를 사용했지만,
-        #2.x 버전에서는 tf.Graph()를 사용합니다.
-        # self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
-        # self.boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
-        # self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
-        # self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
-        detections = infer(tf.convert_to_tensor(image_np_expanded))
-        boxes = detections['detection_boxes'].numpy()
-        scores = detections['detection_scores'].numpy()
-        classes = detections['detection_classes'].numpy()
-        num_detections = detections['num_detections']
-
-        self.num_detections = \
-             self.detection_graph.get_tensor_by_name('num_detections:0')
-
-    def inference(self, image_np):
-        image_np_expanded = np.expand_dims(image_np, axis=0)
-        
-        t_start = time.time()
-        # (boxes, scores, classes, num_detections) = self.sess.run([self.boxes,
-        #                                                         self.scores,
-        #                                                         self.classes,
-        #                                                         self.num_detections],
-        # feed_dict={self.image_tensor: image_np_expanded})
-        with tf.compat.v1.Session(graph=detection_graph) as sess:
-            input_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
-            output_tensors = {
-                'detection_boxes': detection_graph.get_tensor_by_name('detection_boxes:0'),
-                'detection_scores': detection_graph.get_tensor_by_name('detection_scores:0'),
-                'detection_classes': detection_graph.get_tensor_by_name('detection_classes:0'),
-                'num_detections': detection_graph.get_tensor_by_name('num_detections:0')
-            }
-            output_dict = sess.run(output_tensors, feed_dict={input_tensor: image_np_expanded})
-
-        
-        image_process = np.copy(image_np)
-
-        idx_detect = np.arange(scores.shape[1]).reshape(scores.shape)[np.where(scores>0.5)]
-
-        boxes_detect = boxes[0, idx_detect, :]
-
-        classes_pick = classes[:, idx_detect]
-
-        vis_util.visualize_boxes_and_labels_on_image_array(image_process,
+            #결과 처리
+            image_process = np.copy(image_np)
+            # 점수가 0.5 이상인 객체만 선택
+            idx_detect = np.where(scores[0] > 0.5)[0]
+            boxes_detect = boxes[0, idx_detect, :]
+            classes_pick = classes[0, idx_detect]
+            
+            vis_util.visualize_boxes_and_labels_on_image_array(
+                image_process,
                 np.squeeze(boxes),
                 np.squeeze(classes).astype(np.int32),
                 np.squeeze(scores),
@@ -144,10 +122,9 @@ class detection_net_class():
                 use_normalized_coordinates=True,
                 min_score_thresh=0.5,
                 line_thickness=8)
-                
-        infer_time = time.time()-t_start
-
-        return image_process, infer_time, boxes_detect, scores, classes_pick
+            
+            infer_time = time.time() - t_start
+            return image_process, infer_time, boxes_detect, scores, classes_pick
 
         
 def visualize_images(image_out, t_cost):
@@ -167,7 +144,7 @@ def visualize_images(image_out, t_cost):
 def img_callback(msg):
 
     global img_bgr
-
+    
     np_arr = np.frombuffer(msg.data, np.uint8)
     img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
@@ -188,6 +165,7 @@ def scan_callback(msg):
         z.reshape([-1, 1])
     ], axis=1)
    
+
 
 def main(args=None):
 
@@ -210,9 +188,9 @@ def main(args=None):
     PATH_TO_WEIGHT = os.path.join(CWD_PATH, 'model_weights', MODEL_NAME, 'frozen_inference_graph.pb' )   
     PATH_TO_LABELS = os.path.join(CWD_PATH, 'model_weights', 'data', 'mscoco_label_map.pbtxt')
     
-    print(f"CWD_PATH: {CWD_PATH}")
-    print(f"PATH_TO_WEIGHT: {PATH_TO_WEIGHT} (Exists: {os.path.exists(PATH_TO_WEIGHT)})")
-    print(f"PATH_TO_LABELS: {PATH_TO_LABELS} (Exists: {os.path.exists(PATH_TO_LABELS)})")
+    # print(f"CWD_PATH: {CWD_PATH}")
+    # print(f"PATH_TO_WEIGHT: {PATH_TO_WEIGHT} (Exists: {os.path.exists(PATH_TO_WEIGHT)})")
+    # print(f"PATH_TO_LABELS: {PATH_TO_LABELS} (Exists: {os.path.exists(PATH_TO_LABELS)})")
 
     NUM_CLASSES = 90
 
@@ -241,18 +219,17 @@ def main(args=None):
     # 생성된 그래프 안에 덮어씌웁니다.    
     detection_graph = tf.Graph()
     with detection_graph.as_default():
-        od_graph_def = tf.GraphDef()
-        with tf.gfile.GFile(PATH_TO_WEIGHT, 'rb') as fid:
+        od_graph_def = tf.compat.v1.GraphDef()  
+        with tf.io.gfile.GFile(PATH_TO_WEIGHT, 'rb') as fid: 
             serialized_graph = fid.read()
             od_graph_def.ParseFromString(serialized_graph)
             tf.import_graph_def(od_graph_def, name='')
-
 
     # 로직 4. gpu configuration 정의
     # 현재 머신에 사용되는 GPU의 memory fraction 등을 설정합니다.
     # gpu의 memory fraction 이 너무 높으면 사용 도중 out of memory 등이 발생할 수 있습니다.
 
-    config = tf.ConfigProto()
+    config =  tf.compat.v1.ConfigProto()
     # config = tf.ConfigProto(device_count={'GPU': 1})
     config.gpu_options.per_process_gpu_memory_fraction = 0.3
     config.gpu_options.allow_growth = True
@@ -271,7 +248,7 @@ def main(args=None):
 
     # 로직 5. session 생성
     # 위에 정의한 graph와 config로 세션을 생성합니다.
-    sess = tf.Session(graph=detection_graph, config=config)
+    sess = tf.compat.v1.Session(graph=detection_graph, config=config)
 
     # TensorFlow 2.x에서는 세션을 사용하지 않음. 모델 로드 후 바로 추론 가능.
     # 추론은 infer 함수로 수행됩니다.
@@ -281,47 +258,7 @@ def main(args=None):
     ssd_net = detection_net_class(sess, detection_graph, category_index)
 
 
-    class detection_net_class():
-        def __init__(self, infer_function, category_index):
-            self.sess = sess
-            self.detection_graph = graph
-            self.category_index = category_index
-            
-            # init tensor
-            self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
-            self.boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
-            self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
-            self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
-            self.num_detections = self.detection_graph.get_tensor_by_name('num_detections:0')
     
-        def inference(self, image_np):
-            image_np_expanded = np.expand_dims(image_np, axis=0)
-            t_start = time.time()
-            
-            (boxes, scores, classes, num_detections) = self.sess.run(
-                [self.boxes, self.scores, self.classes, self.num_detections],
-                feed_dict={self.image_tensor: image_np_expanded})
-            
-            image_process = np.copy(image_np)
-            
-            # 점수가 0.5 이상인 객체만 선택
-            idx_detect = np.where(scores[0] > 0.5)[0]
-            boxes_detect = boxes[0, idx_detect, :]
-            classes_pick = classes[0, idx_detect]
-            
-            vis_util.visualize_boxes_and_labels_on_image_array(
-                image_process,
-                np.squeeze(boxes),
-                np.squeeze(classes).astype(np.int32),
-                np.squeeze(scores),
-                self.category_index,
-                use_normalized_coordinates=True,
-                min_score_thresh=0.5,
-                line_thickness=8)
-            
-            infer_time = time.time() - t_start
-            
-            return image_process, infer_time, boxes_detect, scores, classes_pick
 
     # 로직 7. node 및 image/scan subscriber 생성
     # 이번 sub3의 스켈레톤 코드는 rclpy.Node 클래스를 쓰지 않고,
@@ -336,13 +273,18 @@ def main(args=None):
 
     g_node = rclpy.create_node('tf_detector')
 
+    
+    # subscription_img
     subscription_img = g_node.create_subscription(CompressedImage, '/image_jpeg/compressed', img_callback, 3)
 
+    # subscription_scan
     subscription_scan = g_node.create_subscription(LaserScan, '/scan', scan_callback, 3)
 
-    # subscription_scan
+    # 위치 데이터 퍼블리셔 생성
+    position_publisher = g_node.create_publisher(Point, '/detected_object_position', 10)
 
-    # subscription_img
+
+    
     
     # 로직 8. lidar2img 좌표 변환 클래스 정의
     # sub2의 좌표 변환 클래스를 가져와서 정의.
@@ -359,6 +301,9 @@ def main(args=None):
         for _ in range(2):
 
             rclpy.spin_once(g_node)
+        if img_bgr is None:
+            print("Waiting for image...")
+            continue
 
         # 로직 10. object detection model inference
         image_process, infer_time, boxes_detect, scores, classes_pick = ssd_net.inference(img_bgr)
@@ -367,13 +312,35 @@ def main(args=None):
         # sub2 에서 ex_calib 에 했던 대로 라이다 포인트들을
         # 이미지 프레임 안에 정사영시킵니다.
 
-        xyz_p = xyz[np.where(xyz[:, 0]>=0)]
+        # 라이다 데이터 필터링
+        xyz_p = xyz[np.where(xyz[:, 0] >= 0)]
+        if xyz_p.shape[0] == 0:
+            print("No valid lidar points after filtering.")
+            continue
 
+        # 라이다 -> 카메라 좌표 변환 및 정사영
         xyz_c = l2c_trans.transform_lidar2cam(xyz_p)
-
         xy_i = l2c_trans.project_pts2img(xyz_c, False)
 
-        xyii = np.concatenate([xy_i, xyz_p], axis=1)
+        # 디버깅 출력
+        print(f"Transformed lidar points (xyz_c) shape: {xyz_c.shape}")
+        print(f"Projected points (xy_i) shape: {xy_i.shape}")
+
+        # xy_i를 xyz_p와 동일한 행 개수로 반복
+        if xy_i.shape[0] == 1 and xyz_p.shape[0] > 1:
+            xy_i = np.tile(xy_i, (xyz_p.shape[0], 1))
+
+        # 배열 크기 확인 및 처리
+        if xy_i.shape[0] != xyz_p.shape[0]:
+            print("Array dimensions do not match. Skipping concatenation.")
+            continue
+
+        # Concatenate lidar points with image coordinates
+        try:
+            xyii = np.concatenate([xy_i, xyz_p], axis=1)
+        except ValueError as e:
+            print(f"Concatenation failed: {e}")
+            continue
 
         
 
@@ -428,26 +395,19 @@ def main(args=None):
                     ostate = np.mean(xyv[:, :3], axis=0)  # Calculate mean position of points
                     if not np.isnan(ostate[0]):
                         ostate_list.append(ostate)
-
+                        # 위치 데이터 퍼블리시
+                        msg = Point()
+                        msg.x = float(ostate[0])
+                        msg.y = float(ostate[1])
+                        msg.z = float(ostate[2])
+                        position_publisher.publish(msg)
             # Draw lidar points on the image for visualization
             image_process = draw_pts_img(image_process, xy_i[:, 0].astype(np.int32), xy_i[:, 1].astype(np.int32))
             print(ostate_list)
 
             
                 
-            #     xyv = 
-
-            #     ## bbox 안에 들어가는 라이다 포인트들의 대표값(예:평균)을 뽑는다
-            #     ostate = 
-
-            #     ## 대표값이 존재하면 
-            #     if not np.isnan(ostate[0]):
-            #         ostate_list.append(ostate)
-
-            # image_process = draw_pts_img(image_process, xy_i[:, 0].astype(np.int32),
-            #                                 xy_i[:, 1].astype(np.int32))
-
-            # print(ostate_list)
+            
         
         visualize_images(image_process, infer_time)
 
