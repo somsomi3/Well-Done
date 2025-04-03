@@ -78,23 +78,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
         String requestURI = request.getRequestURI();
 
-        // WebSocket Handshake 요청(/ws/**)은 필터에서 제외
-        if (requestURI.startsWith("/ws/")) {
-            log.info("WebSocket Handshake 요청 - JWT 필터 제외");
+        // WebSocket이나 화이트리스트에 해당하는 경로는 검증 없이 통과
+        if (requestURI.startsWith("/ws/") || isWhitelisted(requestURI) ||
+            HTTP_METHOD_OPTIONS.equalsIgnoreCase(request.getMethod())) {
+            log.debug("JWT 필터 제외 경로: {}", requestURI);
             chain.doFilter(request, response);
-            return;
+            return; // 여기서 확실히 리턴
         }
-
-        System.out.println("JWT Authorization Filter가 호출되었습니다.");
-
-        String uri = request.getRequestURI();
-        if (isWhitelisted(uri) || HTTP_METHOD_OPTIONS.equalsIgnoreCase(request.getMethod())) {
-            chain.doFilter(request, response);
-            return;
-        }
-
-        System.out.println("JWT Authorization Filter가 호출되었습니다.");
-
 
         try {
             String accessTokenHeader = request.getHeader(ACCESS_TOKEN_HEADER_KEY);
