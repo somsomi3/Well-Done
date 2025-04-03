@@ -325,7 +325,8 @@ def main(args=None):
         
 
         # 라이다 데이터 필터링
-        xyz_p = xyz[np.where(xyz[:, 0] >= 0)]
+        # xyz_p = xyz[np.where(xyz[:, 0] >= 0)]
+        xyz_p = xyz
         if xyz_p.shape[0] == 0:
             print("No valid lidar points after filtering.")
             continue
@@ -334,7 +335,7 @@ def main(args=None):
         xyz_c = l2c_trans.transform_lidar2cam(xyz_p)
 
         # z > 0 필터링을 먼저 적용
-        valid_z = xyz_c[:, 2] > 0
+        valid_z =( xyz_c[:, 2] > 0)
         xyz_c_valid_z = xyz_c[valid_z]
 
 
@@ -359,6 +360,14 @@ def main(args=None):
             print(f"Concatenation failed: {e}")
             continue
         
+
+        # print(f"xyz shape: {xyz.shape}")
+        # print(f"xyz_p shape after filtering: {xyz_p.shape}")
+        # print(f"xyz_c shape: {xyz_c.shape}")
+        # print(f"xyz_c_valid_z shape: {xyz_c_valid_z.shape}")
+        # print(f"xy_i shape: {xy_i.shape}")
+        # print(f"xy_i_valid shape: {xy_i_valid.shape}")
+        # print(f"xyz_c_valid shape: {xyz_c_valid.shape}")
 
         # 로직 12. bounding box 결과 좌표 뽑기
         ## boxes_detect 안에 들어가 있는 bounding box 결과들을
