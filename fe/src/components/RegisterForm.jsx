@@ -90,7 +90,7 @@ function RegisterForm({
             />
             <button
               type="button"
-              className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline username-check-button"
               onClick={handleCheckUsername}
               disabled={isCheckingUsername || !username || username.length < 3}
             >

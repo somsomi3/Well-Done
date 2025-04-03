@@ -68,6 +68,11 @@ function LoginForm() {
         />
       </div>
       
+      {/* 로그인 폼에 추가 공간을 만들어 레지스터 폼과 높이 맞추기 */}
+      <div className="mb-6">
+        <div className="h-12"></div> {/* 빈 공간 추가 */}
+      </div>
+      
       <div className="flex items-center justify-between">
         <button
           className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}

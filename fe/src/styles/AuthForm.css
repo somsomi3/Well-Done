@@ -15,8 +15,12 @@
     border-radius: 0.5rem;
     padding: 2rem;
     width: 100%;
-    max-width: 24rem;
+    max-width: 30rem; /* 폼 너비 */
     margin-bottom: 1rem;
+    height: 45vh; /* 화면 높이의 66.67%로 고정 */
+    overflow-y: auto; /* 내용이 넘칠 경우 스크롤 표시 */
+    display: flex;
+    flex-direction: column;
   }
   
   .app-title {
@@ -78,5 +82,11 @@
     border-radius: 0.25rem;
     padding: 0.75rem 1.25rem;
     margin-bottom: 1rem;
+  }
+  
+  /* 아이디 중복 확인 버튼 스타일 */
+  .username-check-button {
+    white-space: nowrap; /* 버튼 텍스트가 한 줄로 표시되도록 설정 */
+    min-width: 90px; /* 버튼의 최소 너비 설정 */
   }
   
