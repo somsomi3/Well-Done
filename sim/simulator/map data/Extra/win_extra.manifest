@@ -1,0 +1,28 @@
+ManifestFileVersion: 0
+CRC: 3349176665
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: pallet.obstacle
+      Dependencies: {}
+    Info_1:
+      Name: palletwithcookdas.obstacle
+      Dependencies: {}
+    Info_2:
+      Name: palletwithmongshell.obstacle
+      Dependencies: {}
+    Info_3:
+      Name: rackcookdas.obstacle
+      Dependencies: {}
+    Info_4:
+      Name: wall.obstacle
+      Dependencies: {}
+    Info_5:
+      Name: casher.obstacle
+      Dependencies: {}
+    Info_6:
+      Name: motivated.obstacle
+      Dependencies: {}
+    Info_7:
+      Name: testmap.obstacle
+      Dependencies: {}
