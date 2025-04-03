@@ -73,10 +73,11 @@ backend-build:
 frontend-build:
   stage: build
   script:
-    - echo "VITE_BASE_URL=${VITE_BASE_URL}" > ./fe/.env
+    # - echo "VITE_BASE_URL=${VITE_BASE_URL}" > ./fe/.env
     - echo "VITE_TOKEN_REFRESH_INTERVAL=${VITE_TOKEN_REFRESH_INTERVAL}" >> ./fe/.env
     - echo "VITE_TOKEN_EXPIRY_THRESHOLD=${VITE_TOKEN_EXPIRY_THRESHOLD}" >> ./fe/.env
-    - docker build -t $FRONTEND_IMAGE ./fe
+    - echo "VITE_BASE_URL=https://j12e102.p.ssafy.io/api" > ./fe/.env
+    - docker build --build-arg VITE_BASE_URL=https://j12e102.p.ssafy.io/api -t
   rules:
     - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'feature/infra-env'
       changes:

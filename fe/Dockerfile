@@ -8,6 +8,10 @@ COPY package-lock.json package.json ./
 RUN npm i
 # 애플리케이션의 소스 파일을 작업 디렉토리로 복사하기
 COPY . .
+# 환경 변수 설정 - CI/CD에서 생성된 .env 파일이 이미 있어야 함
+# 또는 ARG를 사용해 빌드 시 전달할 수도 있음
+ARG VITE_BASE_URL
+ENV VITE_BASE_URL=${VITE_BASE_URL}
 # Vite를 사용해서 정적 파일을 빌드하기
 RUN npm run build
 # 실제 서비스용 Nginx 이미지 다운받기.
