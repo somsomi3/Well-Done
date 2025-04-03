@@ -27,7 +27,7 @@ img_bgr = None #콜백 되기전.
 # ROS 통신으로 들어오는 이미지의 객체 인식 결과를 ROS message로 송신하는 노드입니다.
 
 # tf object detection node 로직 순서
-# 로직 1. tensorflow 및 object detection api 관련 utils import 
+# 로직 1. tensorflow 및 object detection api 관련 utils import
 # 로직 2. pretrained file and label map load
 # 로직 3. detection model graph R생성
 # 로직 4. gpu configuration 정의
@@ -43,43 +43,43 @@ img_bgr = None #콜백 되기전.
 # 로직 14. 시각화
 
 
-# 로직 1. tensorflow 및 object detection api 관련 utils import 
+# 로직 1. tensorflow 및 object detection api 관련 utils import
 ## 설치한 tensorflow를 tf 로 import 하고,
-## object_detection api 내의 utils인 vis_util과 label_map_util도 
-## import합니다. 
+## object_detection api 내의 utils인 vis_util과 label_map_util도
+## import합니다.
 ## 그리고 lidar scan data를 받아서 이미지에 정사영하기위해 ex_calib에 있는
 ## class 들도 가져와 import 합니다.
 
 params_lidar = {
-    "Range" : 90, #min & max range of lidar azimuths
-    "CHANNEL" : int(1), #verticla channel of a lidar
+    "Range": 90,  # min & max range of lidar azimuths
+    "CHANNEL": int(1),  # verticla channel of a lidar
     "localIP": "127.0.0.1",
     "localPort": 9094,
     "Block_SIZE": int(1206),
-    "X": 0, # meter
+    "X": 0,  # meter
     "Y": 0,
     # "Z": 0.6,
     "Z": 0.1,
     "YAW": 0, # deg
     "PITCH": 0,
-    "ROLL": 0
+    "ROLL": 0,
 }
 
 
 params_cam = {
-    "WIDTH": 320, # image width
-    "HEIGHT": 240, # image height
-    "FOV": 60, # Field of view
+    "WIDTH": 320,  # image width
+    "HEIGHT": 240,  # image height
+    "FOV": 60,  # Field of view
     "localIP": "127.0.0.1",
     "localPort": 1232,
     "Block_SIZE": int(65000),
-    "X": 0, # meter
+    "X": 0,  # meter
     "Y": 0,
     # "Z": 1,
     "Z": 0.9,
     "YAW": 0, # deg
     "PITCH": 5,
-    "ROLL": 0
+    "ROLL": 0,
 }
 
 
@@ -126,21 +126,24 @@ class detection_net_class():
             infer_time = time.time() - t_start
             return image_process, infer_time, boxes_detect, scores, classes_pick
 
-        
+
 def visualize_images(image_out, t_cost):
 
     font = cv2.FONT_HERSHEY_SIMPLEX
-    
-    cv2.putText(image_out,'SSD',(30,50), font, 1,(0,255,0), 2, 0)
 
-    cv2.putText(image_out,'{:.4f}s'.format(t_cost),(30,150), font, 1,(0,255,0), 2, 0)
-    
-    winname = 'Vehicle Detection'
-    cv2.imshow(winname, cv2.resize(image_out, (2*image_out.shape[1], 2*image_out.shape[0])))
+    cv2.putText(image_out, "SSD", (30, 50), font, 1, (0, 255, 0), 2, 0)
+
+    cv2.putText(
+        image_out, "{:.4f}s".format(t_cost), (30, 150), font, 1, (0, 255, 0), 2, 0
+    )
+
+    winname = "Vehicle Detection"
+    cv2.imshow(
+        winname, cv2.resize(image_out, (2 * image_out.shape[1], 2 * image_out.shape[0]))
+    )
     cv2.waitKey(1)
 
 
-     
 def img_callback(msg):
 
     global img_bgr
@@ -155,25 +158,23 @@ def scan_callback(msg):
 
     R = np.array(msg.ranges)
 
-    x = R*np.cos(np.linspace(0, 2*np.pi, 360))
-    y = R*np.sin(np.linspace(0, 2*np.pi, 360))
+    x = R * np.cos(np.linspace(0, 2 * np.pi, 360))
+    y = R * np.sin(np.linspace(0, 2 * np.pi, 360))
     z = np.zeros_like(x)
 
-    xyz = np.concatenate([
-        x.reshape([-1, 1]),
-        y.reshape([-1, 1]),
-        z.reshape([-1, 1])
-    ], axis=1)
-   
+    xyz = np.concatenate(
+        [x.reshape([-1, 1]), y.reshape([-1, 1]), z.reshape([-1, 1])], axis=1
+    )
+
 
 
 def main(args=None):
 
-    # 로직 2. pretrained file and label map load    
-    ## 우선 스켈레톤 코드는 구글이 이미 학습시켜서 model zoo에 올린, mobilenet v1을 backbone으로 하는 
-    ## single shot detector 모델의 pretrained 파라메터인 
+    # 로직 2. pretrained file and label map load
+    ## 우선 스켈레톤 코드는 구글이 이미 학습시켜서 model zoo에 올린, mobilenet v1을 backbone으로 하는
+    ## single shot detector 모델의 pretrained 파라메터인
     ## 'ssd_mobilenet_v1_coco_2018_01_28' 폴더 내 frozen_inference_graph.pb를 받도록 했습니다.
-    ## 현재 sub3/sub3 디렉토리 안에 model_weights 폴더를 두고, 거기에 model 폴더인 
+    ## 현재 sub3/sub3 디렉토리 안에 model_weights 폴더를 두고, 거기에 model 폴더인
     ## 'ssd_mobilenet_v1_coco_11_06_2017'와 data 폴더 내 mscoco_label_map.pbtxt를
     ## 넣어둬야 합니다    
     
@@ -233,7 +234,7 @@ def main(args=None):
     # config = tf.ConfigProto(device_count={'GPU': 1})
     config.gpu_options.per_process_gpu_memory_fraction = 0.3
     config.gpu_options.allow_growth = True
-    config.gpu_options.allocator_type = 'BFC'
+    config.gpu_options.allocator_type = "BFC"
 
     # gpus = tf.config.list_physical_devices('GPU')
     # if gpus:
@@ -262,16 +263,16 @@ def main(args=None):
 
     # 로직 7. node 및 image/scan subscriber 생성
     # 이번 sub3의 스켈레톤 코드는 rclpy.Node 클래스를 쓰지 않고,
-    # rclpy.create_node()로 node를 생성한 것이 큰 특징입니다. 
-    # Tensorflow object detection model 이 종종 rclpy.Node 내의 timer callback 안에서 
-    # 잘 돌지 않는 경우가 있어서, timer 대신 외부 반복문에 Tensorflow object detection model의 
-    # inference를 하기 위함입니다    
+    # rclpy.create_node()로 node를 생성한 것이 큰 특징입니다.
+    # Tensorflow object detection model 이 종종 rclpy.Node 내의 timer callback 안에서
+    # 잘 돌지 않는 경우가 있어서, timer 대신 외부 반복문에 Tensorflow object detection model의
+    # inference를 하기 위함입니다
 
     global g_node
 
     rclpy.init(args=args)
 
-    g_node = rclpy.create_node('tf_detector')
+    g_node = rclpy.create_node("tf_detector")
 
     
     # subscription_img
@@ -296,7 +297,7 @@ def main(args=None):
     while rclpy.ok():
 
         time.sleep(0.05)
-        
+
         # 로직 9. ros 통신을 통한 이미지 수신
         for _ in range(2):
 
@@ -306,7 +307,9 @@ def main(args=None):
             continue
 
         # 로직 10. object detection model inference
-        image_process, infer_time, boxes_detect, scores, classes_pick = ssd_net.inference(img_bgr)
+        image_process, infer_time, boxes_detect, scores, classes_pick = (
+            ssd_net.inference(img_bgr)
+        )
 
         # 로직 11. 라이다-카메라 좌표 변환 및 정사영
         # sub2 에서 ex_calib 에 했던 대로 라이다 포인트들을
@@ -432,8 +435,7 @@ def main(args=None):
     g_node.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     main()
-
-    

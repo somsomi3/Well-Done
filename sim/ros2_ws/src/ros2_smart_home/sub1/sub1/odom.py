@@ -6,7 +6,7 @@ from ssafy_msgs.msg import TurtlebotStatus
 from sensor_msgs.msg import Imu
 from squaternion import Quaternion
 from nav_msgs.msg import Odometry
-from math import pi,cos,sin
+from math import pi, cos, sin
 import tf2_ros
 import geometry_msgs.msg
 import time
@@ -19,15 +19,18 @@ import time
   RViz에서 전체 로봇과 경로를 함께 확인 가능하게 함.
 """
 
+
 class odom(Node):
 
     def __init__(self):
-        super().__init__('odom')
-        
+        super().__init__("odom")
+
         # 🔌 Subscriber & Publisher 설정
-        self.subscription = self.create_subscription(TurtlebotStatus,'/turtlebot_status',self.listener_callback,10)
-        self.imu_sub = self.create_subscription(Imu,'/imu',self.imu_callback,10)
-        self.odom_publisher = self.create_publisher(Odometry, 'odom', 10)
+        self.subscription = self.create_subscription(
+            TurtlebotStatus, "/turtlebot_status", self.listener_callback, 10
+        )
+        self.imu_sub = self.create_subscription(Imu, "/imu", self.imu_callback, 10)
+        self.odom_publisher = self.create_publisher(Odometry, "odom", 10)
 
         # 🔄 TF Broadcaster 설정
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
@@ -35,7 +38,7 @@ class odom(Node):
         # 🧭 상태 변수 초기화
         self.is_status = False
         self.is_imu = False
-        self.is_calc_theta=False
+        self.is_calc_theta = False
 
         # 📍 로봇 상태 초기화
         self.x = 0.0
@@ -65,7 +68,7 @@ class odom(Node):
         self.laser_transform.transform.translation.x = 0.0  # LiDAR 위치 조정 가능
         self.laser_transform.transform.translation.y = 0.0
         self.laser_transform.transform.translation.z = 0.15  # LiDAR 높이 설정
-        self.laser_transform.transform.rotation.w = 1.0  # 기본 회전 값  
+        self.laser_transform.transform.rotation.w = 1.0  # 기본 회전 값
 
         # 🔀 TF: map → odom
         self.map_to_odom_transform = geometry_msgs.msg.TransformStamped()
@@ -83,11 +86,13 @@ class odom(Node):
         self.map_to_odom_transform.header.stamp = self.get_clock().now().to_msg()
         self.tf_broadcaster.sendTransform(self.map_to_odom_transform)
 
-    def imu_callback(self,msg):
-        """ IMU 데이터를 이용해 로봇의 방향(theta) 추정 """
-        imu_q = Quaternion(msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z)
+    def imu_callback(self, msg):
+        """IMU 데이터를 이용해 로봇의 방향(theta) 추정"""
+        imu_q = Quaternion(
+            msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z
+        )
         euler = imu_q.to_euler(degrees=False)  # 라디안 단위
-        
+
         if not self.is_imu:
             self.is_imu = True
             self.imu_offset = euler[2]  # Yaw 값 저장
@@ -95,23 +100,29 @@ class odom(Node):
             self.theta = euler[2] - self.imu_offset  # 초기 yaw 기준 보정
 
     def listener_callback(self, msg):
-        """ 로봇의 속도 데이터를 이용해 위치 추정 및 TF/Odom 메시지 퍼블리시 """
-        print(f'linear_vel : {msg.twist.linear.x},  angular_vel : {-msg.twist.angular.z}')
-        
+        """로봇의 속도 데이터를 이용해 위치 추정 및 TF/Odom 메시지 퍼블리시"""
+        print(
+            f"linear_vel : {msg.twist.linear.x},  angular_vel : {-msg.twist.angular.z}"
+        )
+
         if self.is_imu:
             if not self.is_status:
                 self.is_status = True
                 # self.prev_time = rclpy.clock.Clock().now()
-                self.prev_time = self.get_clock().now() # ROS 자체와 동기화된 시간 (권장)
-            else :
+                self.prev_time = (
+                    self.get_clock().now()
+                )  # ROS 자체와 동기화된 시간 (권장)
+            else:
                 # self.current_time=rclpy.clock.Clock().now()
                 current_time = self.get_clock().now()
-                self.period=(current_time - self.prev_time).nanoseconds / 1e9 # 초 단위 변환
+                self.period = (
+                    current_time - self.prev_time
+                ).nanoseconds / 1e9  # 초 단위 변환
 
                 # 속도 추출
                 linear_x = msg.twist.linear.x
                 angular_z = -msg.twist.angular.z  # 방향 보정 필요
-                
+
                 # 위치 계산
                 self.x += linear_x * cos(self.theta) * self.period
                 self.y += linear_x * sin(self.theta) * self.period
@@ -144,7 +155,7 @@ class odom(Node):
                 self.odom_msg.pose.pose.orientation.w = q.w
                 self.odom_msg.twist.twist.linear.x = linear_x
                 self.odom_msg.twist.twist.angular.z = angular_z
-                
+
                 # TF 및 Odometry 전송
                 self.tf_broadcaster.sendTransform(self.base_link_transform)
                 self.tf_broadcaster.sendTransform(self.laser_transform)
@@ -153,7 +164,7 @@ class odom(Node):
                 # 이전 시간 업데이트
                 self.prev_time = current_time
 
-        
+
 def main(args=None):
     rclpy.init(args=args)
     odom_node = odom()
@@ -163,5 +174,5 @@ def main(args=None):
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
