@@ -22,6 +22,9 @@ from geometry_msgs.msg import Point
 global img_bgr
 img_bgr = None #콜백 되기전.
 
+global xyz
+xyz = None  # 초기값 설정 콜백함수에서 사용하기 전
+
 # 설치한 tensorflow를 tf 로 import 하고,
 # object_detection api 내의 utils인 vis_util과 label_map_util도 import해서
 # ROS 통신으로 들어오는 이미지의 객체 인식 결과를 ROS message로 송신하는 노드입니다.
@@ -59,7 +62,7 @@ params_lidar = {
     "X": 0,  # meter
     "Y": 0,
     # "Z": 0.6,
-    "Z": 0.1,
+    "Z": 0.10,
     "YAW": 0, # deg
     "PITCH": 0,
     "ROLL": 0,
@@ -76,9 +79,9 @@ params_cam = {
     "X": 0,  # meter
     "Y": 0,
     # "Z": 1,
-    "Z": 0.9,
+    "Z": 0.19,
     "YAW": 0, # deg
-    "PITCH": 5,
+    "PITCH": 0,
     "ROLL": 0,
 }
 
@@ -314,6 +317,9 @@ def main(args=None):
         # 로직 11. 라이다-카메라 좌표 변환 및 정사영
         # sub2 에서 ex_calib 에 했던 대로 라이다 포인트들을
         # 이미지 프레임 안에 정사영시킵니다.
+        if xyz is None:
+            print("Waiting for lidar data...")
+            continue
 
         # 라이다 데이터 필터링
         xyz_p = xyz[np.where(xyz[:, 0] >= 0)]
