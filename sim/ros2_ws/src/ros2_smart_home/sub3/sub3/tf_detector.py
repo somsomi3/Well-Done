@@ -317,9 +317,12 @@ def main(args=None):
         # 로직 11. 라이다-카메라 좌표 변환 및 정사영
         # sub2 에서 ex_calib 에 했던 대로 라이다 포인트들을
         # 이미지 프레임 안에 정사영시킵니다.
+
+        # 라이더 데이타 기다리는중
         if xyz is None:
             print("Waiting for lidar data...")
             continue
+        
 
         # 라이다 데이터 필터링
         xyz_p = xyz[np.where(xyz[:, 0] >= 0)]
@@ -329,29 +332,32 @@ def main(args=None):
 
         # 라이다 -> 카메라 좌표 변환 및 정사영
         xyz_c = l2c_trans.transform_lidar2cam(xyz_p)
-        xy_i = l2c_trans.project_pts2img(xyz_c, False)
+
+        # z > 0 필터링을 먼저 적용
+        valid_z = xyz_c[:, 2] > 0
+        xyz_c_valid_z = xyz_c[valid_z]
+
+
+        xy_i = l2c_trans.project_pts2img(xyz_c_valid_z, crop=False)
         
+        # 이미지 범위 내에 있는 포인트만 필터링
+        valid_img = (xy_i[:, 0] >= 0) & (xy_i[:, 0] < params_cam["WIDTH"]) & \
+                (xy_i[:, 1] >= 0) & (xy_i[:, 1] < params_cam["HEIGHT"])
+                
+        xy_i_valid = xy_i[valid_img]
+        xyz_c_valid = xyz_c_valid_z[valid_img]
 
-        # 디버깅 출력
-        print(f"Transformed lidar points (xyz_c) shape: {xyz_c.shape}")
-        print(f"Projected points (xy_i) shape: {xy_i.shape}")
 
-        # xy_i를 xyz_p와 동일한 행 개수로 반복
-        if xy_i.shape[0] == 1 and xyz_p.shape[0] > 1:
-            xy_i = np.tile(xy_i, (xyz_p.shape[0], 1))
-
-        # 배열 크기 확인 및 처리
-        if xy_i.shape[0] != xyz_p.shape[0]:
+        if xy_i_valid.shape[0] != xyz_c_valid.shape[0]:
             print("Array dimensions do not match. Skipping concatenation.")
             continue
 
-        # Concatenate lidar points with image coordinates
+
         try:
-            xyii = np.concatenate([xy_i, xyz_p], axis=1)
+            xyii = np.concatenate([xy_i_valid, xyz_c_valid], axis=1)
         except ValueError as e:
             print(f"Concatenation failed: {e}")
             continue
-
         
 
         # 로직 12. bounding box 결과 좌표 뽑기
@@ -428,7 +434,8 @@ def main(args=None):
                 else:
                     print("No lidar points found in bounding box.")
             # Draw lidar points on the image for visualization
-            image_process = draw_pts_img(image_process, xy_i[:, 0].astype(np.int32), xy_i[:, 1].astype(np.int32))
+            # image_process = draw_pts_img(image_process, xy_i[:, 0].astype(np.int32), xy_i[:, 1].astype(np.int32))
+            image_process = draw_pts_img(image_process, xy_i_valid[:, 0].astype(np.int32), xy_i_valid[:, 1].astype(np.int32))
             print(f"ostate_list: {ostate_list}")
             
 
