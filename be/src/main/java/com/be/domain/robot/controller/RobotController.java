@@ -181,6 +181,36 @@ public class RobotController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/auto-map")
+    public ResponseEntity<?> startAutoMap(@RequestBody(required = false) Map<String, Object> command) {
+        // 명령 데이터 준비 (command가 null인 경우 기본값 설정)
+        boolean dataValue = true;
+        if (command != null && command.containsKey("data")) {
+            dataValue = Boolean.parseBoolean(command.get("data").toString());
+        }
+
+        log.info("자동 맵핑 명령: data={}", dataValue);
+
+        // 브릿지 서버로 명령 전송
+        Map<String, Object> requestData = new HashMap<>();
+        requestData.put("command", "start_auto_map");
+        requestData.put("data", dataValue);
+
+        try {
+            // 주입된 RestTemplate 사용 및 멤버 변수 bridgeUrl 사용
+            ResponseEntity<Map> response = this.restTemplate.postForEntity(
+                    this.bridgeUrl + "/command", requestData, Map.class);
+
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            log.error("자동 맵핑 명령 전송 실패: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "자동 맵핑 명령을 전송하는 데 실패했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
     // ----- 데이터 조회용 GET 엔드포인트 -----
 
     @GetMapping("/global-path")
