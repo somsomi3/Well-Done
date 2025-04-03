@@ -348,13 +348,13 @@ class RobotBridgeNode(Node):
                     # linear 속도
                     if hasattr(msg.twist, 'linear'):
                         data['linear_x'] = getattr(msg.twist.linear, 'x', 0.0)
-                        data['linear_y'] = getattr(msg.twist.linear, 'y', 0.0)
-                        data['linear_z'] = getattr(msg.twist.linear, 'z', 0.0)
+                        # data['linear_y'] = getattr(msg.twist.linear, 'y', 0.0)
+                        # data['linear_z'] = getattr(msg.twist.linear, 'z', 0.0)
                     
                     # angular 속도
                     if hasattr(msg.twist, 'angular'):
-                        data['angular_x'] = getattr(msg.twist.angular, 'x', 0.0)
-                        data['angular_y'] = getattr(msg.twist.angular, 'y', 0.0)
+                        # data['angular_x'] = getattr(msg.twist.angular, 'x', 0.0)
+                        # data['angular_y'] = getattr(msg.twist.angular, 'y', 0.0)
                         data['angular_z'] = getattr(msg.twist.angular, 'z', 0.0)
 
                 self.get_logger().info(f"Turtlebot status data received: {data}")
@@ -393,38 +393,38 @@ class RobotBridgeNode(Node):
             try:
                 # Path 메시지에서 데이터 추출
                 path_data = {
-                    "header": {
-                        "frame_id": msg.header.frame_id,
-                        "stamp": {
-                            "sec": msg.header.stamp.sec,
-                            "nanosec": msg.header.stamp.nanosec
-                        }
-                    },
+                    # "header": {
+                    #     "frame_id": msg.header.frame_id,
+                    #     "stamp": {
+                    #         "sec": msg.header.stamp.sec,
+                    #         "nanosec": msg.header.stamp.nanosec
+                    #     }
+                    # },
                     "poses": []
                 }
                 
                 # PoseStamped 배열 처리
                 for pose in msg.poses:
                     pose_data = {
-                        "header": {
-                            "frame_id": pose.header.frame_id,
-                            "stamp": {
-                                "sec": pose.header.stamp.sec,
-                                "nanosec": pose.header.stamp.nanosec
-                            }
-                        },
+                        # "header": {
+                        #     "frame_id": pose.header.frame_id,
+                        #     "stamp": {
+                        #         "sec": pose.header.stamp.sec,
+                        #         "nanosec": pose.header.stamp.nanosec
+                        #     }
+                        # },
                         "pose": {
                             "position": {
                                 "x": pose.pose.position.x,
                                 "y": pose.pose.position.y,
                                 "z": pose.pose.position.z
                             },
-                            "orientation": {
-                                "x": pose.pose.orientation.x,
-                                "y": pose.pose.orientation.y,
-                                "z": pose.pose.orientation.z,
-                                "w": pose.pose.orientation.w
-                            }
+                            # "orientation": {
+                            #     "x": pose.pose.orientation.x,
+                            #     "y": pose.pose.orientation.y,
+                            #     "z": pose.pose.orientation.z,
+                            #     "w": pose.pose.orientation.w
+                            # }
                         }
                     }
                     path_data["poses"].append(pose_data)
@@ -468,38 +468,38 @@ class RobotBridgeNode(Node):
             try:
                 # Path 메시지에서 데이터 추출
                 path_data = {
-                    "header": {
-                        "frame_id": msg.header.frame_id,
-                        "stamp": {
-                            "sec": msg.header.stamp.sec,
-                            "nanosec": msg.header.stamp.nanosec
-                        }
-                    },
+                    # "header": {
+                    #     "frame_id": msg.header.frame_id,
+                    #     "stamp": {
+                    #         "sec": msg.header.stamp.sec,
+                    #         "nanosec": msg.header.stamp.nanosec
+                    #     }
+                    # },
                     "poses": []
                 }
                 
                 # PoseStamped 배열 처리
                 for pose in msg.poses:
                     pose_data = {
-                        "header": {
-                            "frame_id": pose.header.frame_id,
-                            "stamp": {
-                                "sec": pose.header.stamp.sec,
-                                "nanosec": pose.header.stamp.nanosec
-                            }
-                        },
+                        # "header": {
+                        #     "frame_id": pose.header.frame_id,
+                        #     "stamp": {
+                        #         "sec": pose.header.stamp.sec,
+                        #         "nanosec": pose.header.stamp.nanosec
+                        #     }
+                        # },
                         "pose": {
                             "position": {
                                 "x": pose.pose.position.x,
                                 "y": pose.pose.position.y,
                                 "z": pose.pose.position.z
                             },
-                            "orientation": {
-                                "x": pose.pose.orientation.x,
-                                "y": pose.pose.orientation.y,
-                                "z": pose.pose.orientation.z,
-                                "w": pose.pose.orientation.w
-                            }
+                            # "orientation": {
+                            #     "x": pose.pose.orientation.x,
+                            #     "y": pose.pose.orientation.y,
+                            #     "z": pose.pose.orientation.z,
+                            #     "w": pose.pose.orientation.w
+                            # }
                         }
                     }
                     path_data["poses"].append(pose_data)
@@ -543,14 +543,14 @@ class RobotBridgeNode(Node):
             try:
                 # Odometry 메시지에서 데이터 추출
                 odom_data = {
-                    "header": {
-                        "frame_id": msg.header.frame_id,
-                        "stamp": {
-                            "sec": msg.header.stamp.sec,
-                            "nanosec": msg.header.stamp.nanosec
-                        }
-                    },
-                    "child_frame_id": msg.child_frame_id,
+                    # "header": {
+                    #     "frame_id": msg.header.frame_id,
+                    #     "stamp": {
+                    #         "sec": msg.header.stamp.sec,
+                    #         "nanosec": msg.header.stamp.nanosec
+                    #     }
+                    # },
+                    # "child_frame_id": msg.child_frame_id,
                     "pose": {
                         "pose": {
                             "position": {
@@ -558,24 +558,24 @@ class RobotBridgeNode(Node):
                                 "y": msg.pose.pose.position.y,
                                 "z": msg.pose.pose.position.z
                             },
-                            "orientation": {
-                                "x": msg.pose.pose.orientation.x,
-                                "y": msg.pose.pose.orientation.y,
-                                "z": msg.pose.pose.orientation.z,
-                                "w": msg.pose.pose.orientation.w
-                            }
+                            # "orientation": {
+                            #     "x": msg.pose.pose.orientation.x,
+                            #     "y": msg.pose.pose.orientation.y,
+                            #     "z": msg.pose.pose.orientation.z,
+                            #     "w": msg.pose.pose.orientation.w
+                            # }
                         }
                     },
                     "twist": {
                         "twist": {
                             "linear": {
                                 "x": msg.twist.twist.linear.x,
-                                "y": msg.twist.twist.linear.y,
-                                "z": msg.twist.twist.linear.z
+                                # "y": msg.twist.twist.linear.y,
+                                # "z": msg.twist.twist.linear.z
                             },
                             "angular": {
-                                "x": msg.twist.twist.angular.x,
-                                "y": msg.twist.twist.angular.y,
+                                # "x": msg.twist.twist.angular.x,
+                                # "y": msg.twist.twist.angular.y,
                                 "z": msg.twist.twist.angular.z
                             }
                         }
@@ -623,13 +623,13 @@ class RobotBridgeNode(Node):
             try:
                 # 맵 메타데이터 추출
                 map_data = {
-                    "header": {
-                        "frame_id": msg.header.frame_id,
-                        "stamp": {
-                            "sec": msg.header.stamp.sec,
-                            "nanosec": msg.header.stamp.nanosec
-                        }
-                    },
+                    # "header": {
+                    #     "frame_id": msg.header.frame_id,
+                    #     "stamp": {
+                    #         "sec": msg.header.stamp.sec,
+                    #         "nanosec": msg.header.stamp.nanosec
+                    #     }
+                    # },
                     "info": {
                         "width": msg.info.width,
                         "height": msg.info.height,
@@ -642,9 +642,9 @@ class RobotBridgeNode(Node):
                             },
                             "orientation": {
                                 "x": msg.info.origin.orientation.x,
-                                "y": msg.info.origin.orientation.y,
-                                "z": msg.info.origin.orientation.z,
-                                "w": msg.info.origin.orientation.w
+                                "y": msg.info.origin.orientation.y
+                                # "z": msg.info.origin.orientation.z,
+                                # "w": msg.info.origin.orientation.w
                             }
                         }
                     }
@@ -652,33 +652,33 @@ class RobotBridgeNode(Node):
                 
                 # 맵 데이터는 크기가 매우 클 수 있으므로 최적화 필요
                 # 공간 절약을 위해 비어 있는 공간(-1)은 건너뛰고 장애물만 전송
-                compressed_data = []
-                for i, value in enumerate(msg.data):
-                    if value > 0:  # 0보다 크면 점유 확률이 있는 셀
-                        # 1차원 인덱스를 2차원 좌표로 변환
-                        x = i % msg.info.width
-                        y = i // msg.info.width
-                        compressed_data.append({
-                            "x": x,
-                            "y": y,
-                            "value": int(value)
-                        })
+                # compressed_data = []
+                # for i, value in enumerate(msg.data):
+                #     if value > 0:  # 0보다 크면 점유 확률이 있는 셀
+                #         # 1차원 인덱스를 2차원 좌표로 변환
+                #         x = i % msg.info.width
+                #         y = i // msg.info.width
+                #         compressed_data.append({
+                #             "x": x,
+                #             "y": y,
+                #             "value": int(value)
+                #         })
                 
-                map_data["occupied_cells"] = compressed_data
-                map_data["cells_count"] = len(compressed_data)
-                map_data["total_cells"] = len(msg.data)
+                # map_data["occupied_cells"] = compressed_data
+                # map_data["cells_count"] = len(compressed_data)
+                # map_data["total_cells"] = len(msg.data)
                 
-                # 맵의 요약 통계도 포함
-                free_cells = sum(1 for val in msg.data if val == 0)
-                unknown_cells = sum(1 for val in msg.data if val == -1)
-                occupied_cells = sum(1 for val in msg.data if val > 0)
+                # # 맵의 요약 통계도 포함
+                # free_cells = sum(1 for val in msg.data if val == 0)
+                # unknown_cells = sum(1 for val in msg.data if val == -1)
+                # occupied_cells = sum(1 for val in msg.data if val > 0)
                 
-                map_data["stats"] = {
-                    "free": free_cells,
-                    "unknown": unknown_cells,
-                    "occupied": occupied_cells,
-                    "occupancy_percent": round(occupied_cells / (free_cells + occupied_cells + 0.0001) * 100, 2)
-                }
+                # map_data["stats"] = {
+                #     "free": free_cells,
+                #     "unknown": unknown_cells,
+                #     "occupied": occupied_cells,
+                #     "occupancy_percent": round(occupied_cells / (free_cells + occupied_cells + 0.0001) * 100, 2)
+                # }
                 
                 self.get_logger().info(f"Map data received: {msg.info.width}x{msg.info.height} with {len(compressed_data)} occupied cells")
                 
@@ -716,29 +716,29 @@ class RobotBridgeNode(Node):
             try:
                 # ScanWithPose 메시지에서 데이터 추출
                 scan_data = {
-                    "header": {
-                        "frame_id": msg.header.frame_id,
-                        "stamp": {
-                            "sec": msg.header.stamp.sec,
-                            "nanosec": msg.header.stamp.nanosec
-                        }
-                    },
+                    # "header": {
+                    #     "frame_id": msg.header.frame_id,
+                    #     "stamp": {
+                    #         "sec": msg.header.stamp.sec,
+                    #         "nanosec": msg.header.stamp.nanosec
+                    #     }
+                    # },
                     # 범위 데이터 - 너무 크면 데이터 양 감소
-                    "ranges_sample": list(msg.ranges[:20]) if len(msg.ranges) > 20 else list(msg.ranges),
-                    "ranges_length": len(msg.ranges),
+                    # "ranges_sample": list(msg.ranges[:20]) if len(msg.ranges) > 20 else list(msg.ranges),
+                    # "ranges_length": len(msg.ranges),
                     
                     # 강도 데이터 - 너무 크면 데이터 양 감소
-                    "intensities_sample": list(msg.intensities[:20]) if len(msg.intensities) > 20 else list(msg.intensities),
-                    "intensities_length": len(msg.intensities),
+                    # "intensities_sample": list(msg.intensities[:20]) if len(msg.intensities) > 20 else list(msg.intensities),
+                    # "intensities_length": len(msg.intensities),
                     
                     # 스캔 파라미터
-                    "angle_min": msg.angle_min,
-                    "angle_max": msg.angle_max,
-                    "angle_increment": msg.angle_increment,
-                    "range_min": msg.range_min,
-                    "range_max": msg.range_max,
-                    "scan_time": msg.scan_time,
-                    "time_increment": msg.time_increment,
+                    # "angle_min": msg.angle_min,
+                    # "angle_max": msg.angle_max,
+                    # "angle_increment": msg.angle_increment,
+                    # "range_min": msg.range_min,
+                    # "range_max": msg.range_max,
+                    # "scan_time": msg.scan_time,
+                    # "time_increment": msg.time_increment,
                     
                     # 포즈 정보
                     "pose": {
