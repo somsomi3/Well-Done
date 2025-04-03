@@ -48,17 +48,29 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     private static final String REFRESH_TOKEN_HEADER_KEY = "x-refresh-token";
     private static final List<String> WHITELIST_PREFIXES = List.of(
             "/api/swagger-ui/index.html",
+            "/swagger-ui/index.html",
             "/api/auth/login",
+            "/auth/login",
             "/api/auth/register",
+            "/auth/register",
             "/api/auth/refresh",
+            "/auth/refresh",
             "/api/v3/api-docs",
+            "/v3/api-docs",
             "/api/swagger-ui",
+            "/swagger-ui",
             "/api/swagger-ui/**",
+            "/swagger-ui/**",
             "/api/swagger-resources/**",
+            "/swagger-resources/**",
             "/api/webjars/**",
+            "/webjars/**",
             "/api/auth/test-login",
+            "/auth/test-login",
             "/api/auth/check-username",
+            "/auth/check-username",
             "/api/auth/logout",
+            "/auth/logout",
             "/ws/**",
             "/api/ws/**"
     );
@@ -148,7 +160,11 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
     //인증이 필요 없는 경로인지 확인하는 메서드
     private boolean isWhitelisted(String uri) {
-        return WHITELIST_PREFIXES.stream().anyMatch(uri::startsWith);
+        log.info("현재 URI 경로: {}", uri);
+        boolean isWhitelisted = WHITELIST_PREFIXES.stream().anyMatch(uri::startsWith);
+        log.info("화이트리스트 검사 결과: {} (경로: {})", isWhitelisted, uri);
+
+        return isWhitelisted;
     }
 
     //JWT 관련 에러가 발생했을 때, JSON 형태로 에러 응답을 내려주는 메서드
