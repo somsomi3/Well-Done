@@ -2,6 +2,8 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import LoginForm from '../components/LoginForm';
 import { useAuthStore } from '../stores/authStore';
+import '../styles/AuthForm.css';
+import bgImage from '../assets/bgimage.png'; // 배경 이미지 임포트
 
 function LoginPage() {
   const { token } = useAuthStore();
@@ -12,10 +14,16 @@ function LoginPage() {
   }
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="max-w-md w-full">
-        <LoginForm />
-      </div>
+    <div 
+      className="auth-container" 
+      style={{
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <LoginForm />
     </div>
   );
 }

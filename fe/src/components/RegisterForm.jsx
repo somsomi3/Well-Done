@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import AlertModal from './AlertModal';
+import '../styles/AuthForm.css';
+import logo from '../assets/logo.png';
 
 function RegisterForm({ 
   onSubmit, 
@@ -62,8 +64,12 @@ function RegisterForm({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h2 className="text-lg font-bold mb-4">회원가입</h2>
+      <form onSubmit={handleSubmit} className="auth-form">
+        <div className="flex flex-col items-center mb-6">
+          <img src={logo} alt="Well-Done Logo" className="h-16 mb-2" />
+          <h1 className="text-3xl font-bold app-title">Well-Done</h1>
+          <h2 className="text-xl text-gray-600">회원가입</h2>
+        </div>
         
         {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
         
@@ -108,7 +114,7 @@ function RegisterForm({
           />
         </div>
         
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
             비밀번호
           </label>
