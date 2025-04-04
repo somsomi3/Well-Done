@@ -9,14 +9,18 @@ import heapq
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid, Odometry, Path
-from std_msgs.msg import Bool
+from ssafy_msgs.msg import StatusStamped
 
+from warehouse_bot.utils.msg_utils import make_status_msg
 from warehouse_bot.utils.sim_config import params_map
+from warehouse_bot.utils.logger_utils import print_log
 
 
 class AStarPlanner(Node):
     def __init__(self):
         super().__init__("a_star_planner")
+
+        self.file_tag = "a_star"
 
         # 맵 파라미터 로드
         self.resolution = params_map["MAP_RESOLUTION"]
@@ -46,8 +50,8 @@ class AStarPlanner(Node):
             PoseStamped, "/goal_pose", self.goal_callback, 1
         )
         self.pub_path = self.create_publisher(Path, "/global_path", 1)
-        self.plan_success_pub = self.create_publisher(Bool, "/plan_success", 1)
-        self.plan_failed_pub = self.create_publisher(Bool, "/plan_failed", 1)
+        self.plan_success_pub = self.create_publisher(StatusStamped, "/plan_success", 1)
+        self.plan_failed_pub = self.create_publisher(StatusStamped, "/plan_failed", 1)
 
     def map_callback(self, msg):
         self.map = (
@@ -61,45 +65,76 @@ class AStarPlanner(Node):
 
     def goal_callback(self, msg):
         if msg.header.frame_id != "map":
-            self.get_logger().warn("Goal frame must be 'map'")
+            print_log(
+                "warn",
+                self.get_logger(),
+                "Goal frame must be 'map'",
+                file_tag=self.file_tag,
+            )
             return
 
         if self.map is None or self.odom is None:
-            self.get_logger().warn("Waiting for map and odom...")
+            print_log(
+                "warn",
+                self.get_logger(),
+                "Waiting for map and odom...",
+                file_tag=self.file_tag,
+            )
             return
+
+        stamp = self.get_clock().now().to_msg()
 
         goal_x = msg.pose.position.x
         goal_y = msg.pose.position.y
         self.goal_cell = self.world_to_grid(goal_x, goal_y)
 
+        print_log(
+            "info",
+            self.get_logger(),
+            f"📍 Received goal at (x={goal_x:.2f}, y={goal_y:.2f}) → Grid cell {self.goal_cell}",
+            file_tag=self.file_tag,
+        )
+
+        if not self.valid_cell(self.goal_cell):
+            print_log(
+                "warn", self.get_logger(), "Path not found.", file_tag=self.file_tag
+            )
+            self.plan_failed_pub.publish(make_status_msg(self, "A_STAR", True, stamp))
+            return
+        
         start_x = self.odom.pose.pose.position.x
         start_y = self.odom.pose.pose.position.y
         start_cell = self.world_to_grid(start_x, start_y)
 
-        if not self.valid_cell(self.goal_cell):
-            self.get_logger().warn("Invalid goal cell.")
-            self.plan_failed_pub.publish(Bool(data=True))
-            return
-
-        # ✅ start_cell은 100(장애물)만 아니면 통과
-        sx, sy = start_cell
-        if (
-            not (0 <= sx < self.map_width and 0 <= sy < self.map_height)
-            or self.map[sx][sy] == 100
-        ):
-            self.get_logger().warn("Invalid start cell.")
-            self.plan_failed_pub.publish(Bool(data=True))
-            return
+        if self.map[start_cell[0]][start_cell[1]] != 0:
+            new_start = self.find_nearest_free_cell(start_cell)
+            if new_start is None:
+                print_log(
+                    "warn", self.get_logger(), "No free start cell found.", file_tag=self.file_tag
+                )
+                self.plan_failed_pub.publish(make_status_msg(self, "A_STAR", True, stamp))
+                return
+            print_log(
+                "info", self.get_logger(),
+                f"Adjusted start cell from {start_cell} to nearest free {new_start}",
+                file_tag=self.file_tag
+            )
+            start_cell = new_start
 
         path = self.a_star(start_cell, self.goal_cell)
         if not path:
-            self.get_logger().warn("Path not found.")
-            self.plan_failed_pub.publish(Bool(data=True))
+            print_log(
+                "warn",
+                self.get_logger(),
+                "Path not found.",
+                file_tag=self.file_tag,
+            )
+            self.plan_failed_pub.publish(make_status_msg(self, "A_STAR", True, stamp))
             return
 
         path_msg = Path()
         path_msg.header.frame_id = "map"
-        path_msg.header.stamp = self.get_clock().now().to_msg()
+        path_msg.header.stamp = stamp
 
         for cell in path:
             pose = PoseStamped()
@@ -111,8 +146,33 @@ class AStarPlanner(Node):
             path_msg.poses.append(pose)
 
         self.pub_path.publish(path_msg)
-        self.get_logger().info(f"Published global path with {len(path)} points.")
-        self.plan_success_pub.publish(Bool(data=True))
+        print_log(
+            "info",
+            self.get_logger(),
+            f"Published global path with {len(path)} points.",
+            file_tag=self.file_tag,
+        )
+        self.plan_success_pub.publish(make_status_msg(self, "A_STAR", True, stamp))
+
+    def find_nearest_free_cell(self, start):
+        visited = set()
+        queue = deque()
+        queue.append(start)
+        visited.add(start)
+
+        while queue:
+            x, y = queue.popleft()
+
+            if self.map[x][y] == 0:
+                return (x, y)
+
+            for dx, dy in zip(self.dx, self.dy):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.map_width and 0 <= ny < self.map_height:
+                    if (nx, ny) not in visited and self.map[nx][ny] != 100:
+                        visited.add((nx, ny))
+                        queue.append((nx, ny))
+        return None
 
     def world_to_grid(self, x, y):
         gx = int((x - self.offset_x) / self.resolution)
@@ -127,7 +187,10 @@ class AStarPlanner(Node):
     def valid_cell(self, cell):
         x, y = cell
         return (
-            0 <= x < self.map_width and 0 <= y < self.map_height and self.map[x][y] < 80
+            0 <= x < self.map_width
+            and 0 <= y < self.map_height
+            and self.map[x][y] < 80
+            and self.map[x][y] >= 0
         )
 
     def a_star(self, start, goal):
@@ -156,6 +219,14 @@ class AStarPlanner(Node):
             for i in range(8):
                 nx, ny = current[0] + self.dx[i], current[1] + self.dy[i]
                 neighbor = (nx, ny)
+
+                # 대각선 이동일 경우, 양 옆 방향 셀도 모두 valid해야 함
+                if self.dx[i] != 0 and self.dy[i] != 0:
+                    if not (
+                        self.valid_cell((current[0], ny))
+                        and self.valid_cell((nx, current[1]))
+                    ):
+                        continue
 
                 if not self.valid_cell(neighbor):
                     continue
