@@ -1,0 +1,25 @@
+<annotation>
+	<folder>welldone</folder>
+	<filename>005.png</filename>
+	<path>/welldone/005.png</path>
+	<source>
+		<database>Unspecified</database>
+	</source>
+	<size>
+		<width>361</width>
+		<height>420</height>
+		<depth>3</depth>
+	</size>
+	<object>
+		<name>Rack</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>32</xmin>
+			<ymin>62</ymin>
+			<xmax>299</xmax>
+			<ymax>387</ymax>
+		</bndbox>
+	</object>
+</annotation>
