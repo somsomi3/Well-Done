@@ -98,7 +98,7 @@ const useAuth = () => {
           username,
           email,
           password,
-          companyId,
+          company_id: companyId,
         });
 
         console.log('회원가입 성공:', response.data);
