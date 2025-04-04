@@ -2,6 +2,7 @@ import os
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
+from ssafy_msgs.msg import MappingDone
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid, Odometry
 from ssafy_msgs.msg import StatusStamped
@@ -44,6 +45,8 @@ class AutoMappingFSM(Node):
 
         self.last_goal_reach_time = None
 
+        self.raw_map_msg = None
+
         # 종료 조건 파라미터
         self.MAP_CHANGE_THRESHOLD = 0.01
         self.MAP_COVERAGE_THRESHOLD = 0.60
@@ -51,11 +54,14 @@ class AutoMappingFSM(Node):
 
         # 퍼블리셔/서브스크라이버
         self.pub_goal = self.create_publisher(PoseStamped, "/goal_pose", 10)
-        self.done_pub = self.create_publisher(Bool, "/mapping_done", 1)
+        self.done_pub = self.create_publisher(MappingDone, "/mapping_done", 1)
         self.pub_reset = self.create_publisher(Bool, "/reset_mapping", 1)
 
         self.sub_start = self.create_subscription(
             Bool, "/start_auto_map", self.start_callback, 1
+        )
+        self.sub_raw_map = self.create_subscription(
+            OccupancyGrid, "/map", self.raw_map_callback, 10
         )
         self.sub_map = self.create_subscription(
             OccupancyGrid, "/map_inflated", self.map_callback, 10
@@ -78,7 +84,6 @@ class AutoMappingFSM(Node):
         self.sub_stop = self.create_subscription(
             Bool, "/stop_auto_map", self.stop_callback, 1
         )
-
 
         # 상태 전이 확인용 타이머
         self.running = False
@@ -115,7 +120,7 @@ class AutoMappingFSM(Node):
             self.running = False
 
             self.state = "FRONTIER_SEARCH"
-            
+
     def stop_callback(self, msg):
         if msg.data:
             print_log(
@@ -132,6 +137,9 @@ class AutoMappingFSM(Node):
         y = msg.pose.pose.position.y
         theta = get_heading(msg)
         self.current_pose = [x, y, theta]
+
+    def raw_map_callback(self, msg):
+        self.raw_map_msg = msg
 
     def map_callback(self, msg):
         self.map_info = msg.info
@@ -172,7 +180,15 @@ class AutoMappingFSM(Node):
                         "✅ Mapping complete by coverage/stability. Sending done signal.",
                         file_tag=self.file_tag,
                     )
-                    self.done_pub.publish(Bool(data=True))
+                    # ✅ 매핑 완료 메시지 구성
+                    done_msg = MappingDone()
+                    done_msg.header.stamp = self.get_clock().now().to_msg()
+                    done_msg.header.frame_id = "map"
+                    done_msg.map = self.raw_map_msg  # /map
+                    done_msg.map_inflated = msg  # /map_inflated (현재 콜백 메시지)
+
+                    self.done_pub.publish(done_msg)
+
                     self.state = "WAIT_FOR_COMMAND"
                 elif duration > self.MAP_IDLE_DURATION:
                     print_log(
