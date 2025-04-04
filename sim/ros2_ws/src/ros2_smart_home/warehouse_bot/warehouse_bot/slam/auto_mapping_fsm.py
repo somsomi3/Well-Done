@@ -184,6 +184,7 @@ class AutoMappingFSM(Node):
                     done_msg = MappingDone()
                     done_msg.header.stamp = self.get_clock().now().to_msg()
                     done_msg.header.frame_id = "map"
+                    done_msg.success = True
                     done_msg.map = self.raw_map_msg  # /map
                     done_msg.map_inflated = msg  # /map_inflated (현재 콜백 메시지)
 
@@ -336,7 +337,18 @@ class AutoMappingFSM(Node):
                         "✅ No frontiers left. Mapping complete.",
                         file_tag=self.file_tag,
                     )
-                    self.done_pub.publish(Bool(data=True))
+                    done_msg = MappingDone()
+                    done_msg.header.stamp = self.get_clock().now().to_msg()
+                    done_msg.header.frame_id = "map"
+                    done_msg.success = True
+                    done_msg.map = self.raw_map_msg
+                    done_msg.map_inflated = OccupancyGrid()
+                    done_msg.map_inflated.header.frame_id = "map"
+                    done_msg.map_inflated.header.stamp = self.get_clock().now().to_msg()
+                    done_msg.map_inflated.info = self.map_info
+                    done_msg.map_inflated.data = self.map_data.flatten().tolist()
+
+                    self.done_pub.publish(done_msg)
                     self.state = "WAIT_FOR_COMMAND"
                     return
 
