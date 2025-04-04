@@ -1,3 +1,4 @@
+# ros node
 # 파일 상단에 다음 임포트 구문 추가
 import rclpy
 from rclpy.node import Node
@@ -45,8 +46,10 @@ class RobotBridgeNode(Node):
         self.queue_lock = threading.Lock()
         self.command_timer = self.create_timer(0.1, self.process_commands)
 
+        # self.publishers = {}
+
         # Spring 서버 URL 및 인증
-        self.spring_server_url = "http://localhost:8080"
+        self.spring_server_url = "http://172.26.15.101:8080"
         self.jwt_token = None
         self.token_refresh_timer = None
         self.attempt_jwt_token_acquisition()
@@ -102,7 +105,20 @@ class RobotBridgeNode(Node):
         self.scan_publisher = self.create_publisher(ScanWithPose, '/scan_with_pose', self.qos_profile)
         self.map_publisher = self.create_publisher(OccupancyGrid, '/map', self.qos_profile)
         self.start_auto_map_publisher = self.create_publisher(Bool, '/start_auto_map', self.qos_profile)
+        self.stop_auto_map_publisher = self.create_publisher(Bool, '/stop_auto_map', self.qos_profile)
         
+        # 딕셔너리 업데이트
+        # self.publishers.update({
+        #     'cmd_vel': self.cmd_vel_publisher,
+        #     'global_path': self.global_path_publisher,
+        #     'local_path': self.local_path_publisher,
+        #     'odom': self.odom_publisher,
+        #     'scan': self.scan_publisher,
+        #     'map': self.map_publisher,
+        #     'start_auto_map': self.start_auto_map_publisher,
+        #     'stop_auto_map': self.stop_auto_map_publisher
+        # })
+
         self.get_logger().info("모든 발행자가 성공적으로 설정되었습니다.")
     def setup_subscribers(self):
         """Set up all subscribers"""

@@ -1,7 +1,7 @@
 # command_handlers.py
 from geometry_msgs.msg import Twist, PoseStamped, Pose, Point, Quaternion
 from nav_msgs.msg import Path, Odometry, OccupancyGrid, MapMetaData
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Bool
 
 # SSAFY 메시지 타입 임포트 시도
 try:
@@ -22,21 +22,41 @@ def register_all_command_handlers(node):
     node.execute_scan_command = lambda cmd: execute_scan_command(node, cmd)
     node.execute_map_command = lambda cmd: execute_map_command(node, cmd)
     node.execute_start_auto_map_command = lambda cmd: execute_start_auto_map_command(node, cmd)
+    node.execute_stop_auto_map_command = lambda cmd: execute_stop_auto_map_command(node, cmd)
 
 def execute_move_command(node, command):
     """이동 명령 실행"""
     try:
-        twist = Twist()
-        twist.linear.x = command.get('linear_x', 0.0)
-        twist.angular.z = command.get('angular_z', 0.0)
+        # 명령 타입 및 내용 로깅
+        node.get_logger().info(f"Move command received: {command}")
         
-        # 수정: publishers 딕셔너리를 통해 발행자에 접근
-        node.publishers['cmd_vel'].publish(twist)
+        twist = Twist()
+        
+        # 명령이 딕셔너리인지 확인
+        if isinstance(command, dict):
+            twist.linear.x = command.get('linear_x', 0.0)
+            twist.angular.z = command.get('angular_z', 0.0)
+        else:
+            # 딕셔너리가 아닌 경우 명시적으로 딕셔너리로 변환 시도
+            try:
+                # 제너레이터나 이터러블인 경우 리스트로 변환 후 접근
+                command_dict = dict(command)
+                twist.linear.x = command_dict.get('linear_x', 0.0)
+                twist.angular.z = command_dict.get('angular_z', 0.0)
+            except (TypeError, ValueError):
+                # 변환 실패 시 기본값 사용
+                node.get_logger().warning(f"Command cannot be converted to dictionary: {type(command)}")
+                twist.linear.x = 0.0
+                twist.angular.z = 0.0
+        
+        # 메시지 발행
+        node.cmd_vel_publisher.publish(twist)
         node.get_logger().info(f"Move command executed: linear_x={twist.linear.x}, angular_z={twist.angular.z}")
-    except KeyError:
-        node.get_logger().error("cmd_vel publisher not found in publishers dictionary")
     except Exception as e:
         node.get_logger().error(f"Error executing move command: {str(e)}")
+        # 스택 트레이스 출력 (더 자세한 오류 정보)
+        import traceback
+        node.get_logger().error(traceback.format_exc())
 
 def execute_grab_command(node, command):
     """잡기/놓기 명령 실행"""
@@ -85,7 +105,7 @@ def execute_global_path_command(node, command):
             path_msg.poses.append(pose_stamped)
         
         # Path 메시지 발행
-        node.publishers['global_path'].publish(path_msg)
+        node.global_path_publisher.publish(path_msg)
         node.get_logger().info(f"Global path command executed with {len(poses)} poses")
         
     except KeyError:
@@ -130,7 +150,7 @@ def execute_local_path_command(node, command):
             path_msg.poses.append(pose_stamped)
         
         # Path 메시지 발행
-        node.publishers['local_path'].publish(path_msg)
+        node.local_path_publisher.publish(path_msg)
         node.get_logger().info(f"Local path command executed with {len(poses)} poses")
         
     except KeyError:
@@ -195,7 +215,7 @@ def execute_odom_command(node, command):
                 odom_msg.twist.covariance[i] = val
         
         # Odometry 메시지 발행
-        node.publishers['odom'].publish(odom_msg)
+        node.odom_publisher.publish(odom_msg)
         node.get_logger().info(f"Odometry command executed from {odom_msg.header.frame_id} to {odom_msg.child_frame_id}")
         
     except KeyError:
@@ -312,7 +332,7 @@ def execute_map_command(node, command):
         map_msg.data = map_data
         
         # OccupancyGrid 메시지 발행
-        node.publishers['map'].publish(map_msg)
+        node.map_publisher.publish(map_msg)
         node.get_logger().info(f"Map command executed, created {map_info.width}x{map_info.height} map")
         
     except KeyError:
@@ -370,7 +390,7 @@ def execute_scan_command(node, command):
         scan_msg.intensities = intensities
         
         # ScanWithPose 메시지 발행
-        node.publishers['scan'].publish(scan_msg)
+        node.scan_publisher.publish(scan_msg)
         node.get_logger().info(f"Scan command executed with {len(ranges)} range points")
         
     except KeyError:
@@ -382,11 +402,35 @@ def execute_start_auto_map_command(node, command):
     """자동 매핑 시작 명령 실행"""
     try:
         # Bool 메시지 생성
+        from std_msgs.msg import Bool
+        bool_msg = Bool()
+        bool_msg.data = command.get('data', True)  # 기본값은 True
+        
+        # 발행자가 딕셔너리로 존재하는지 확인
+        if hasattr(node, 'publishers') and 'start_auto_map' in node.publishers:
+            node.start_auto_map_publisher.publish(bool_msg)
+        # 개별 발행자로 존재하는지 확인
+        elif hasattr(node, 'start_auto_map_publisher'):
+            node.start_auto_map_publisher.publish(bool_msg)
+        else:
+            node.get_logger().error("Cannot find start_auto_map publisher")
+            return
+            
+        node.get_logger().info(f"Auto mapping command executed: data={bool_msg.data}")
+    except Exception as e:
+        node.get_logger().error(f"Error executing auto mapping command: {str(e)}")
+        import traceback
+        node.get_logger().error(traceback.format_exc())
+
+def execute_stop_auto_map_command(node, command):
+    """자동 매핑 끄기 명령 실행"""
+    try:
+        # Bool 메시지 생성
         bool_msg = Bool()
         bool_msg.data = command.get('data', True)  # 기본값은 True
         
         # 메시지 발행
-        node.start_auto_map_publisher.publish(bool_msg)
+        node.stop_auto_map_publisher.publish(bool_msg)
         node.get_logger().info(f"Auto mapping command executed: data={bool_msg.data}")
     except Exception as e:
         node.get_logger().error(f"Error executing auto mapping command: {str(e)}")
