@@ -344,12 +344,11 @@ class Mapper(Node):
         # start = self.get_clock().now().nanoseconds / 1e9
         # self.get_logger().info("Starting map publish...")
 
-        
         np_map = self.mapping.map
         np_map_data = np_map.reshape(1, self.map_size)
 
         # 현재 업데이트된 셀은 explored로 표시
-        self.explored_mask |= (np_map != 0.5)  # 0.5는 미개척 상태 (float)
+        self.explored_mask |= np_map != 0.5  # 0.5는 미개척 상태 (float)
 
         list_map_data = []
         for idx, val in enumerate(np_map_data[0]):
@@ -359,11 +358,11 @@ class Mapper(Node):
             if not self.explored_mask[y, x]:
                 list_map_data.append(-1)  # 아직도 미개척
             elif val >= 1.0:
-                list_map_data.append(0)   # 자유 공간
+                list_map_data.append(0)  # 자유 공간
             elif val <= 0.0:
-                list_map_data.append(100) # 장애물
+                list_map_data.append(100)  # 장애물
             else:
-                list_map_data.append(0)   # 기타는 자유 공간 처리
+                list_map_data.append(0)  # 기타는 자유 공간 처리
 
         self.map_msg.header.stamp = self.get_clock().now().to_msg()
         self.map_msg.data = list_map_data
