@@ -7,7 +7,7 @@ import math
 # 프론티어 셀 탐색 함수
 def find_frontiers(occupancy_grid):
     """
-    OccupancyGrid 맵 상에서 프론티어 셀(known(0) 주변에 unknown(50)이 있는 셀)을 찾음.
+    OccupancyGrid 맵 상에서 프론티어 셀(known(0) 주변에 unknown(-1)이 있는 셀)을 찾음.
     """
     height, width = occupancy_grid.shape
     frontiers = set()
@@ -15,7 +15,7 @@ def find_frontiers(occupancy_grid):
         for x in range(1, width - 1):
             if occupancy_grid[y, x] == 0:
                 neighbors = occupancy_grid[y - 1 : y + 2, x - 1 : x + 2].flatten()
-                if 50 in neighbors:
+                if -1 in neighbors:
                     frontiers.add((x, y))
     return list(frontiers)
 
@@ -39,3 +39,17 @@ def normalize_angle(angle):
     while angle < -math.pi:
         angle += 2 * math.pi
     return angle
+
+def grid_to_world(x, y, map_info):
+    world_x = map_info.origin.position.x + (x + 0.5) * map_info.resolution
+    world_y = map_info.origin.position.y + (y + 0.5) * map_info.resolution
+    return world_x, world_y
+
+def world_to_grid(x, y, map_info):
+    res = map_info.resolution
+    origin_x = map_info.origin.position.x
+    origin_y = map_info.origin.position.y
+
+    gx = int((x - origin_x) / res)
+    gy = int((y - origin_y) / res)
+    return (gx, gy)

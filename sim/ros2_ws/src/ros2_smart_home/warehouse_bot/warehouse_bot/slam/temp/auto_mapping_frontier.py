@@ -71,7 +71,7 @@ class FrontierExplorer(Node):
             Bool, "/goal_failed", self.goal_failed_callback, 10
         )
         self.sub_goal_reached = self.create_subscription(
-            Bool, "/goal_reached", self.goal_reached_callback, 10
+            Bool, "/goal_reached", self.goal_reached_callback, 1
         )
         self.sub_plan_failed = self.create_subscription(
             Bool, "/plan_failed", self.plan_failed_callback, 10
@@ -94,9 +94,9 @@ class FrontierExplorer(Node):
                 "[FAIL] Received goal failure signal from path_tracking."
             )
             self.goal_failed = True
-            self.goal_reached = True  # ✅ 실패도 도달로 처리
+            self.goal_reached = True
 
-    def goal_reached_callback(self, msg):  # ✅ 경로 도달 콜백 추가
+    def goal_reached_callback(self, msg):
         if msg.data and not self.goal_reached:
             self.get_logger().info("✅ [RESULT] Goal reached signal received.")
             self.goal_reached = True
@@ -169,10 +169,16 @@ class FrontierExplorer(Node):
         if self.map_data is None or self.map_info is None or self.current_pose is None:
             self.get_logger().warn("[TIMER] Waiting for map and pose...")
             return
-
+        
+        if not self.goal_reached:
+            # TODO: goal_reached가 켜졌을 때, 정확한 위치정보를 위해 odom을 한번 받을 때 까지 대기할 필요가 있을까?
+            self.get_logger().info("[TIMER] Goal in progress. Skipping frontier exploration.")
+            return
+        
         # 1. 프론티어 셀 찾기
         frontiers = find_frontiers(self.map_data)
         if not frontiers:
+            #TODO: 프론티어가 없다면 매핑이 끝났다는 신호를 보내야 하지 않을까?
             self.get_logger().warn("[TIMER] No frontiers found.")
             return
 
@@ -200,6 +206,7 @@ class FrontierExplorer(Node):
         ]
 
         if not far_enough_frontiers:
+            #TODO: 여기도 프론티어가 없으면 매핑을 종료시킬까?
             self.get_logger().warn("[GOAL] No frontiers far enough. Skipping publish.")
             return
 

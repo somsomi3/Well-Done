@@ -32,6 +32,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/HandControl.msg"
   "msg/CustomObjectInfo.msg"
   "msg/ScanWithPose.msg"
+  "msg/StatusStamped.msg"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs sensor_msgs
  )
 
