@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import RegisterForm from '../components/RegisterForm';
+import '../styles/AuthForm.css';
+import bgImage from '../assets/bgimage.png'; // 배경 이미지 임포트
 
-function Register() {
+function RegisterPage() {
   const { register, checkUsername, loading, error } = useAuth();
   const navigate = useNavigate();
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
@@ -34,24 +36,33 @@ function Register() {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen p-4">
-      <div className="w-full max-w-md">
-        {registrationSuccess ? (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-            <strong className="font-bold">회원가입 성공!</strong>
-            <p className="block sm:inline">잠시 후 로그인 페이지로 이동합니다.</p>
+    <div 
+      className="auth-container" 
+      style={{
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {registrationSuccess ? (
+        <div className="auth-form bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+          <div className="flex flex-col items-center mb-6">
+            <h1 className="text-3xl font-bold app-title">Well-Done</h1>
+            <h2 className="text-xl text-green-700">회원가입 성공!</h2>
           </div>
-        ) : (
-          <RegisterForm
-            onSubmit={handleSubmit}
-            onCheckUsername={handleCheckUsername}
-            loading={loading}
-            error={error}
-          />
-        )}
-      </div>
+          <p className="text-center mb-4">잠시 후 로그인 페이지로 이동합니다.</p>
+        </div>
+      ) : (
+        <RegisterForm
+          onSubmit={handleSubmit}
+          onCheckUsername={handleCheckUsername}
+          loading={loading}
+          error={error}
+        />
+      )}
     </div>
   );
 }
 
-export default Register;
+export default RegisterPage;
