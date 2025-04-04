@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import AlertModal from './AlertModal';
+import '../styles/AuthForm.css';
+import logo from '../assets/logo.png';
 
 function RegisterForm({ 
   onSubmit, 
@@ -62,13 +64,18 @@ function RegisterForm({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h2 className="text-lg font-bold mb-4">회원가입</h2>
+      <form onSubmit={handleSubmit} className="auth-form">
+        <div className="flex flex-col items-center mb-6">
+          <img src={logo} alt="Well-Done Logo" className="h-16 mb-2" />
+          <h1 className="text-3xl font-bold app-title">Well-Done</h1>
+          <h2 className="text-xl text-gray-600">회원가입</h2>
+        </div>
         
         {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
         
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+        {/* 아이디 입력 폼 그룹 */}
+        <div className="form-group">
+          <label className="block text-gray-700 font-bold mb-2" htmlFor="username">
             아이디
           </label>
           <div className="flex">
@@ -84,7 +91,7 @@ function RegisterForm({
             />
             <button
               type="button"
-              className="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="ml-2 btn-small bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded focus:outline-none focus:shadow-outline username-check-button"
               onClick={handleCheckUsername}
               disabled={isCheckingUsername || !username || username.length < 3}
             >
@@ -93,8 +100,9 @@ function RegisterForm({
           </div>
         </div>
         
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+        {/* 이메일 입력 폼 그룹 */}
+        <div className="form-group">
+          <label className="block text-gray-700 font-bold mb-2" htmlFor="email">
             이메일
           </label>
           <input
@@ -108,12 +116,13 @@ function RegisterForm({
           />
         </div>
         
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+        {/* 비밀번호 입력 폼 그룹 */}
+        <div className="form-group">
+          <label className="block text-gray-700 font-bold mb-2" htmlFor="password">
             비밀번호
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             type="password"
             name="password"
             value={password}
@@ -124,12 +133,13 @@ function RegisterForm({
           />
         </div>
         
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="companyId">
+        {/* 회사 코드 입력 폼 그룹 */}
+        <div className="form-group">
+          <label className="block text-gray-700 font-bold mb-2" htmlFor="companyId">
             회사 코드
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             type="text"
             name="companyId"
             value={companyId}
@@ -139,16 +149,17 @@ function RegisterForm({
           />
         </div>
         
-        <div className="flex items-center justify-between">
+        {/* 버튼 그룹 */}
+        <div className="button-group">
           <button
-            className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${loading || !usernameChecked || !isUsernameAvailable ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`btn-large bg-blue-500 hover:bg-blue-700 text-white font-bold rounded focus:outline-none focus:shadow-outline ${loading || !usernameChecked || !isUsernameAvailable ? 'opacity-50 cursor-not-allowed' : ''}`}
             type="submit"
             disabled={loading || !usernameChecked || !isUsernameAvailable}
           >
             {loading ? '처리 중...' : '회원가입'}
           </button>
           <button
-            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="btn-small bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded focus:outline-none focus:shadow-outline"
             type="button"
             onClick={() => window.location.href = '/login'}
           >
