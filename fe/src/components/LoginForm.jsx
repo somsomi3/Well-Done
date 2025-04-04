@@ -32,6 +32,18 @@ function LoginForm() {
     }
   };
 
+  // ID 찾기 기능 (추후 구현 예정)
+  const handleFindId = () => {
+    setModalMessage('ID 찾기 기능은 현재 개발 중입니다.');
+    setIsModalOpen(true);
+  };
+
+  // 비밀번호 찾기 기능 (추후 구현 예정)
+  const handleFindPassword = () => {
+    setModalMessage('비밀번호 찾기 기능은 현재 개발 중입니다.');
+    setIsModalOpen(true);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="auth-form">
       <div className="flex flex-col items-center mb-6">
@@ -40,8 +52,9 @@ function LoginForm() {
         <h2 className="text-xl text-gray-600">로그인</h2>
       </div>
       
-      <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+      {/* 아이디 입력 폼 그룹 */}
+      <div className="form-group">
+        <label className="block text-gray-700 font-bold mb-2" htmlFor="username">
           아이디
         </label>
         <input
@@ -54,12 +67,13 @@ function LoginForm() {
         />
       </div>
       
-      <div className="mb-6">
-        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+      {/* 비밀번호 입력 폼 그룹 */}
+      <div className="form-group">
+        <label className="block text-gray-700 font-bold mb-2" htmlFor="password">
           비밀번호
         </label>
         <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           id="password"
           type="password"
           placeholder="비밀번호"
@@ -68,23 +82,37 @@ function LoginForm() {
         />
       </div>
       
-      {/* 로그인 폼에 추가 공간을 만들어 레지스터 폼과 높이 맞추기 */}
-      <div className="mb-6">
-        <div className="h-12"></div> {/* 빈 공간 추가 */}
-      </div>
-      
-      <div className="flex items-center justify-between">
+      {/* 로그인 버튼 그룹 */}
+      <div className="form-group flex justify-center">
         <button
-          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className="btn-large bg-blue-500 hover:bg-blue-700 text-white font-bold rounded focus:outline-none focus:shadow-outline"
           type="submit"
           disabled={loading}
         >
           {loading ? '로그인 중...' : '로그인'}
         </button>
+      </div>
+      
+      {/* ID 찾기, PW 찾기, 회원가입 버튼 그룹 */}
+      <div className="form-group flex flex-wrap justify-center gap-2">
         <button
-          className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+          type="button"
+          onClick={handleFindId}
+          className="btn-small bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded focus:outline-none focus:shadow-outline"
+        >
+          ID 찾기
+        </button>
+        <button
+          type="button"
+          onClick={handleFindPassword}
+          className="btn-small bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded focus:outline-none focus:shadow-outline"
+        >
+          PW 찾기
+        </button>
+        <button
           type="button"
           onClick={() => navigate('/register')}
+          className="btn-small bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded focus:outline-none focus:shadow-outline"
         >
           회원가입
         </button>

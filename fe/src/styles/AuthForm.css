@@ -1,92 +1,151 @@
-/* 인증 폼 관련 스타일 */
+/* AuthForm.css */
 
+/* 인증 폼 컨테이너 스타일 */
 .auth-container {
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-end;
-    min-height: 100vh;
-    padding: 1rem;
-    /* 배경 이미지는 각 페이지에서 직접 설정 */
-  }
-  
-  .auth-form {
-    background-color: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border-radius: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  min-height: 100vh;
+  padding: 1rem;
+  /* 배경 이미지는 각 페이지에서 직접 설정 */
+}
+
+/* 인증 폼 스타일 */
+.auth-form {
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 30rem; /* 폼 최대 너비 */
+  margin-bottom: 1rem;
+  min-height: 31.5vh; /* 최소 높이 설정 */
+  max-height: 80vh; /* 최대 높이 제한 */
+  overflow-y: auto; /* 내용이 넘칠 경우 스크롤 표시 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 앱 타이틀 스타일 */
+.app-title {
+  font-family: 'Poppins', 'Roboto', sans-serif;
+  font-weight: 700;
+  color: #3B82F6;
+  margin-bottom: 0.5rem;
+  font-size: clamp(28px, 6vw, 36px); /* 반응형 폰트 크기 */
+}
+
+/* 입력 필드 라벨 스타일 */
+.auth-form label {
+  font-size: clamp(16px, 4vw, 22px); /* 입력 폼과 유사한 크기로 설정 */
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+/* 입력 필드 스타일 */
+.auth-form input {
+  font-size: clamp(16px, 3.5vw, 20px); /* 폰트 크기 70% 수준으로 조정 */
+  padding: 0.75rem 1rem; /* 입력 필드 내부 여백 */
+  height: 50px; /* 입력 폼 높이 고정 */
+}
+
+/* 폼 그룹 스타일 - 라벨과 입력 필드를 묶는 컨테이너 */
+.form-group {
+  margin-bottom: 1rem; /* 폼 그룹 간 간격 줄임 */
+}
+
+/* 입력 필드 포커스 스타일 */
+.auth-form input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+}
+
+/* 버튼 공통 스타일 */
+.auth-form button {
+  transition: all 0.2s ease-in-out;
+  font-size: clamp(16px, 3.5vw, 20px); /* 폰트 크기 조정 */
+  padding: 0; /* 패딩 제거 */
+  display: flex; /* Flexbox 사용 */
+  justify-content: center; /* 가로 중앙 정렬 */
+  align-items: center; /* 세로 중앙 정렬 */
+}
+
+/* 큰 버튼 스타일 (로그인, 회원가입) */
+.btn-large {
+  width: auto; /* 내용에 맞게 자동 조절 */
+  min-width: 120px; /* 최소 너비 */
+  max-width: 200px; /* 최대 너비 제한 */
+  height: 50px; /* 입력 폼과 동일한 높이 */
+  padding: 0 1.5rem; /* 좌우 패딩 추가 */
+}
+
+/* 작은 버튼 스타일 (ID 찾기, PW 찾기, 로그인 페이지로) */
+.btn-small {
+  width: auto; /* 내용에 맞게 자동 조절 */
+  min-width: 90px; /* 최소 너비 */
+  height: 50px; /* 입력 폼과 동일한 높이 */
+  padding: 0 1rem; /* 좌우 패딩 추가 */
+}
+
+/* 버튼 그룹 스타일 */
+.button-group {
+  margin-top: 1rem; /* 버튼 그룹 위 간격 */
+  margin-bottom: 1rem; /* 버튼 그룹 아래 간격 */
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem; /* 버튼 사이 간격 */
+}
+
+/* 버튼 포커스 스타일 */
+.auth-form button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+}
+
+/* 성공 메시지 스타일 */
+.auth-form .success-message {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 0.25rem;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  font-size: clamp(16px, 3.5vw, 20px);
+}
+
+/* 에러 메시지 스타일 */
+.auth-form .error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 0.25rem;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  font-size: clamp(16px, 3.5vw, 20px);
+}
+
+/* 아이디 중복 확인 버튼 스타일 */
+.username-check-button {
+  white-space: nowrap; /* 버튼 텍스트가 한 줄로 표시되도록 설정 */
+  min-width: 90px; /* 버튼의 최소 너비 설정 */
+  padding: 0 0.75rem; /* 좌우 패딩 추가 */
+}
+
+/* 반응형 디자인 */
+@media (min-width: 640px) {
+  .auth-container {
     padding: 2rem;
-    width: 100%;
-    max-width: 30rem; /* 폼 너비 */
-    margin-bottom: 1rem;
-    height: 45vh; /* 화면 높이의 66.67%로 고정 */
-    overflow-y: auto; /* 내용이 넘칠 경우 스크롤 표시 */
-    display: flex;
-    flex-direction: column;
   }
-  
-  .app-title {
-    font-family: 'Poppins', 'Roboto', sans-serif;
-    font-weight: 700;
-    color: #3B82F6;
-    margin-bottom: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .auth-container {
+    padding: 3rem;
   }
-  
-  /* 반응형 디자인 */
-  @media (min-width: 640px) {
-    .auth-container {
-      padding: 2rem;
-    }
+}
+
+@media (min-width: 1024px) {
+  .auth-container {
+    padding: 4rem;
   }
-  
-  @media (min-width: 768px) {
-    .auth-container {
-      padding: 3rem;
-    }
-  }
-  
-  @media (min-width: 1024px) {
-    .auth-container {
-      padding: 4rem;
-    }
-  }
-  
-  /* 입력 필드 포커스 스타일 */
-  .auth-form input:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
-  }
-  
-  /* 버튼 스타일 */
-  .auth-form button {
-    transition: all 0.2s ease-in-out;
-  }
-  
-  .auth-form button:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
-  }
-  
-  /* 성공 및 에러 메시지 스타일 */
-  .auth-form .success-message {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-    border-radius: 0.25rem;
-    padding: 0.75rem 1.25rem;
-    margin-bottom: 1rem;
-  }
-  
-  .auth-form .error-message {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-    border-radius: 0.25rem;
-    padding: 0.75rem 1.25rem;
-    margin-bottom: 1rem;
-  }
-  
-  /* 아이디 중복 확인 버튼 스타일 */
-  .username-check-button {
-    white-space: nowrap; /* 버튼 텍스트가 한 줄로 표시되도록 설정 */
-    min-width: 90px; /* 버튼의 최소 너비 설정 */
-  }
-  
+}
