@@ -27,7 +27,7 @@ setup(
         "console_scripts": [
             "main_launch = warehouse_bot.main_launch:main",
             "run_mapping = warehouse_bot.slam.run_mapping:main",
-            "auto_mapping = warehouse_bot.slam.auto_mapping_frontier:main",
+            "auto_mapping = warehouse_bot.slam.auto_mapping_fsm:main",
             "odom = warehouse_bot.slam.odom:main",
             "a_star = warehouse_bot.navigation.a_star:main",
             "a_star_local_path = warehouse_bot.navigation.a_star_local_path:main",
