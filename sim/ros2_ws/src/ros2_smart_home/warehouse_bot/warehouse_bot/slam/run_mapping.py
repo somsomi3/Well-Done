@@ -5,11 +5,13 @@ import rclpy
 from rclpy.node import Node
 from math import pi, cos, sin
 from geometry_msgs.msg import Pose
+from std_msgs.msg import Bool
 from ssafy_msgs.msg import ScanWithPose
 from nav_msgs.msg import Odometry, OccupancyGrid, MapMetaData
 from squaternion import Quaternion
 import warehouse_bot.slam.utils as utils
 from warehouse_bot.utils.sim_config import params_map, MAP_PATH
+from warehouse_bot.utils.logger_utils import print_log
 
 
 def createLineIterator(P1, P2, img):
@@ -88,12 +90,24 @@ class Mapping:
 
         if not reset_map:
             if self.load_map():
-                self.logger.info("Loaded previous map.")
+                print_log(
+                    "info", self.logger, "Loaded previous map.", file_tag="mapping"
+                )
             else:
-                self.logger.warn("Failed to load previous map. Creating new map.")
+                print_log(
+                    "warn",
+                    self.logger,
+                    "Failed to load previous map. Creating new map.",
+                    file_tag="mapping",
+                )
                 self.map = np.ones(self.map_size) * 0.5
         else:
-            self.logger.info("Creating new map from scratch.")
+            print_log(
+                "info",
+                self.logger,
+                "Creating new map from scratch.",
+                file_tag="mapping",
+            )
             self.map = np.ones(self.map_size) * 0.5
 
     def load_map(self):
@@ -109,7 +123,12 @@ class Mapping:
             return True
         except Exception as e:
             if self.logger:
-                self.logger.error(f"[MAP] Failed to load map: {e}")
+                print_log(
+                    "error",
+                    self.logger,
+                    f"[MAP] Failed to load map: {e}",
+                    file_tag="mapping",
+                )
             return False
 
     def update(self, pose, laser):
@@ -156,7 +175,12 @@ class Mapping:
                     if 0 <= px < self.map.shape[1] and 0 <= py < self.map.shape[0]:
                         self.map[py, px] -= self.occu_up
         if self.logger:
-            self.logger.info(f"Skipped {num_skipped}/{laser.shape[1]} laser points")
+            print_log(
+                "info",
+                self.logger,
+                f"Skipped {num_skipped}/{laser.shape[1]} laser points",
+                file_tag="mapping",
+            )
         # occupancy 값 안정화 (0~1 범위로)
         self.map = np.clip(self.map, 0.0, 1.0)
         # self.show_pose_and_points(pose, laser_global)
@@ -220,6 +244,10 @@ class Mapper(Node):
                 self.scan_with_pose_callback_relative,
                 10,
             )
+        self.reset_sub = self.create_subscription(
+            Bool, "/reset_mapping", self.reset_callback, 1
+        )
+
         self.map_pub = self.create_publisher(OccupancyGrid, "/map", 1)
         self.map_inflated_pub = self.create_publisher(OccupancyGrid, "/map_inflated", 1)
 
@@ -243,7 +271,15 @@ class Mapper(Node):
         self.mapping = Mapping(
             params_map, reset_map=reset_map, logger=self.get_logger()
         )
-        self.get_logger().info("Mapper initialized. Waiting for scan_with_pose...")
+
+        self.explored_mask = np.zeros(self.mapping.map.shape, dtype=bool)
+
+        print_log(
+            "info",
+            self.get_logger(),
+            "Mapper initialized. Waiting for scan_with_pose...",
+            file_tag="mapper",
+        )
 
     def odom_callback(self, msg):
         q = msg.pose.pose.orientation
@@ -254,7 +290,12 @@ class Mapper(Node):
         )
 
     def scan_with_pose_callback_absolute(self, msg):
-        self.get_logger().info("Received scan_with_pose. Processing...")
+        print_log(
+            "info",
+            self.get_logger(),
+            "Received scan_with_pose. Processing...",
+            file_tag="mapper",
+        )
         pose = np.array([[msg.pose_x], [msg.pose_y], [msg.pose_theta]])
 
         distance = np.array(msg.ranges)
@@ -266,11 +307,16 @@ class Mapper(Node):
         self.mapping.update(pose, laser)
 
         self.publish_map()
-        self.get_logger().info("Map updated.")
+        print_log("info", self.get_logger(), "Map updated.", file_tag="mapper")
 
     def scan_with_pose_callback_relative(self, msg):
         if self.latest_pose is None:
-            self.get_logger().warn("No odometry yet. Skipping scan.")
+            print_log(
+                "warn",
+                self.get_logger(),
+                "No odometry yet. Skipping scan.",
+                file_tag="mapper",
+            )
             return
 
         distance = np.array(msg.ranges)
@@ -283,21 +329,41 @@ class Mapper(Node):
 
         self.publish_map()
 
+    def reset_callback(self, msg):
+        if msg.data:
+            print_log(
+                "warn",
+                self.get_logger(),
+                "🧼 Resetting the map by external request.",
+                file_tag="mapper",
+            )
+            self.explored_mask = np.zeros(self.mapping.map.shape, dtype=bool)
+            self.mapping = Mapping(params_map, reset_map=True, logger=self.get_logger())
+
     def publish_map(self):
         # start = self.get_clock().now().nanoseconds / 1e9
         # self.get_logger().info("Starting map publish...")
+
         
         np_map = self.mapping.map
         np_map_data = np_map.reshape(1, self.map_size)
 
+        # 현재 업데이트된 셀은 explored로 표시
+        self.explored_mask |= (np_map != 0.5)  # 0.5는 미개척 상태 (float)
+
         list_map_data = []
-        for val in np_map_data[0]:
-            if val >= 1.0:
-                list_map_data.append(0)        # 자유 공간 (흰색)
+        for idx, val in enumerate(np_map_data[0]):
+            y = idx // self.map_msg.info.width
+            x = idx % self.map_msg.info.width
+
+            if not self.explored_mask[y, x]:
+                list_map_data.append(-1)  # 아직도 미개척
+            elif val >= 1.0:
+                list_map_data.append(0)   # 자유 공간
             elif val <= 0.0:
-                list_map_data.append(100)      # 장애물 (검은색)
+                list_map_data.append(100) # 장애물
             else:
-                list_map_data.append(-1)       # 미개척 영역 (회색)
+                list_map_data.append(0)   # 기타는 자유 공간 처리
 
         self.map_msg.header.stamp = self.get_clock().now().to_msg()
         self.map_msg.data = list_map_data
@@ -324,15 +390,33 @@ def save_all_map(node, file_name_txt="map.txt", file_name_png="map.png"):
 
     # OccupancyGrid 데이터 -> .txt 저장
     full_txt_path = os.path.join(MAP_PATH, file_name_txt)
-    node.get_logger().info(f"Saving map data to: {full_txt_path}")
+    print_log(
+        "info",
+        node.get_logger(),
+        f"Saving map data to: {full_txt_path}",
+        file_tag="mapper",
+    )
     with open(full_txt_path, "w") as f:
         data = " ".join(str(pixel) for pixel in node.map_msg.data)
         f.write(data)
 
     # 2D 맵 이미지 -> .png 저장
     full_png_path = os.path.join(MAP_PATH, file_name_png)
-    node.get_logger().info(f"Saving map image to: {full_png_path}")
-    map_image = (node.mapping.map.copy() * 255).astype(np.uint8)
+    print_log(
+        "info",
+        node.get_logger(),
+        f"Saving map image to: {full_png_path}",
+        file_tag="mapper",
+    )
+
+    # 기본 float 맵 가져오기 (0~1 사이)
+    np_map = node.mapping.map.copy()
+
+    # OccupancyGrid 기준으로 -1인 곳은 회색으로 표시
+    data_np = np.array(node.map_msg.data).reshape(np_map.shape)
+    np_map[data_np == -1] = 0.5  # 회색 (미탐색)
+
+    map_image = (np_map * 255).astype(np.uint8)
     cv2.imwrite(full_png_path, map_image)
 
 
@@ -344,11 +428,18 @@ def main(args=None):
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        node.get_logger().info("KeyboardInterrupt detected.")
+        print_log(
+            "info", node.get_logger(), "KeyboardInterrupt detected.", file_tag="mapper"
+        )
     except Exception as e:
-        node.get_logger().error(f"Exception occurred in main(): {e}")
+        print_log(
+            "error",
+            node.get_logger(),
+            f"Exception occurred in main(): {e}",
+            file_tag="mapper",
+        )
     finally:
-        node.get_logger().info("Saving map...")
+        print_log("info", node.get_logger(), "Saving map...", file_tag="mapper")
         save_all_map(
             node,
             file_name_txt=params_map["MAP_FILENAME"] + ".txt",
