@@ -53,10 +53,6 @@ public class RobotController {
     // 압축된 JPEG 이미지 데이터를 위한 변수
     private Map<String, Object> latestCompressedImage = new HashMap<>();
 
-    public RobotController(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
-
     @PostMapping("/envir-status")
     public ResponseEntity<?> receiveEnvirStatus(@RequestBody Map<String, Object> data) {
         // 환경 상태 데이터 추출
