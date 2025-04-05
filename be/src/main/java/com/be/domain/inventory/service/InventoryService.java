@@ -1,6 +1,7 @@
 package com.be.domain.inventory.service;
 
 import com.be.db.entity.Inventory;
+import com.be.db.entity.InventoryHistory;
 import com.be.db.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import java.util.List;
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryHistoryService inventoryHistoryService;
 
     public List<Inventory> findAll() {
         return inventoryRepository.findAll();
@@ -22,10 +24,14 @@ public class InventoryService {
                 .orElseThrow(() -> new RuntimeException("재고를 찾을 수 없습니다."));
     }
 
-    public Inventory updateStock(Long id, int amount) {
+    public Inventory updateStock(Long id, int amount, String updatedBy) {
         Inventory inventory = findById(id);
         inventory.setQuantity(inventory.getQuantity() + amount);
-        return inventoryRepository.save(inventory);
+        Inventory updated = inventoryRepository.save(inventory);
+        // ⬇️ 재고 변경 이력 저장
+        inventoryHistoryService.saveHistory(updated, amount, (amount > 0 ? "INCREASE" : "DECREASE"), updatedBy);
+
+        return updated;
     }
 
     public Inventory save(Inventory inventory) {

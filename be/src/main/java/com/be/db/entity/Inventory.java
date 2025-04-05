@@ -1,9 +1,10 @@
 package com.be.db.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "inventory")
@@ -23,7 +24,15 @@ public class Inventory extends BaseEntity {
     @Column(nullable = false)
     private int minThreshold; // 재고 부족 기준 수량
 
+    @Column(nullable = false)
+    private int warehouseQuantity; // 창고 수량
+
+
     // 필요하면 창고 위치, 카테고리 등도 추가 가능
     // @Column
     // private String location;
+
+
+    @OneToMany(mappedBy = "inventory", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<InventoryHistory> historyList = new ArrayList<>();
 }
