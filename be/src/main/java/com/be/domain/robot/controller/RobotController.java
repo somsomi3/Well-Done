@@ -36,6 +36,15 @@ public class RobotController {
     // 장애물 감지 데이터 저장용 변수
     private Map<String, Object> latestObstacleAlert = new HashMap<>();
 
+    // 목표 도달 상태 데이터 저장용 변수
+    private Map<String, Object> latestGoalStatus = new HashMap<>();
+
+    // 물건 집기 완료 데이터 저장용 변수
+    private Map<String, Object> latestPickDone = new HashMap<>();
+
+    // 전시 완료 데이터 저장용 변수
+    private Map<String, Object> latestPlaceDone = new HashMap<>();
+
     public RobotController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -220,6 +229,36 @@ public class RobotController {
         }
     }
 
+    @PostMapping("/stop-auto-map")
+    public ResponseEntity<?> stopAutoMap(@RequestBody(required = false) Map<String, Object> command) {
+        // 명령 데이터 준비 (command가 null인 경우 기본값 설정)
+        boolean dataValue = true;
+        if (command != null && command.containsKey("data")) {
+            dataValue = Boolean.parseBoolean(command.get("data").toString());
+        }
+
+        log.info("자동 맵핑 정지 명령: data={}", dataValue);
+
+        // 브릿지 서버로 명령 전송
+        Map<String, Object> requestData = new HashMap<>();
+        requestData.put("command", "stop_auto_map");
+        requestData.put("data", dataValue);
+
+        try {
+            // 주입된 RestTemplate 사용 및 멤버 변수 bridgeUrl 사용
+            ResponseEntity<Map> response = this.restTemplate.postForEntity(
+                    this.bridgeUrl + "/command", requestData, Map.class);
+
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            log.error("자동 맵핑 정지 명령 전송 실패: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "자동 맵핑 정지 명령을 전송하는 데 실패했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
     @PostMapping("/mapping-done")
     public ResponseEntity<?> receiveMappingDone(@RequestBody Map<String, Object> data) {
         // 데이터 로깅
@@ -278,6 +317,108 @@ public class RobotController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/goal-status")
+    public ResponseEntity<?> receiveGoalStatus(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        boolean reached = (boolean) data.get("reached");
+        double timeTakenSec = ((Number) data.get("time_taken_sec")).doubleValue();
+
+        if (reached) {
+            log.info("목표 도달: 소요 시간 {}초", timeTakenSec);
+        } else {
+            log.info("목표 미달: 진행 시간 {}초", timeTakenSec);
+        }
+
+        // 최신 데이터 저장
+        this.latestGoalStatus = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "목표 도달 상태 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/pick-done")
+    public ResponseEntity<?> receivePickDone(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        boolean success = (boolean) data.get("success");
+        String productId = (String) data.get("product_id");
+        String timestamp = (String) data.get("timestamp");
+
+        if (success) {
+            log.info("물건 집기 성공: 상품 ID {}, 시간 {}", productId, timestamp);
+        } else {
+            log.info("물건 집기 실패: 상품 ID {}, 시간 {}", productId, timestamp);
+        }
+
+        // 최신 데이터 저장
+        this.latestPickDone = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "물건 집기 완료 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/place-done")
+    public ResponseEntity<?> receivePlaceDone(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        boolean success = (boolean) data.get("success");
+        int displaySpot = ((Number) data.get("display_spot")).intValue();
+        String productId = (String) data.get("product_id");
+
+        if (success) {
+            log.info("전시 완료: 상품 ID {}, 진열 위치 {}", productId, displaySpot);
+        } else {
+            log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, displaySpot);
+        }
+
+        // 최신 데이터 저장
+        this.latestPlaceDone = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "전시 완료 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/goal-pose")
+    public ResponseEntity<?> setGoalPose(@RequestBody Map<String, Object> command) {
+        try {
+            // 명령 데이터 추출
+            Map<String, Object> position = (Map<String, Object>) command.get("position");
+            double x = ((Number) position.get("x")).doubleValue();
+            double y = ((Number) position.get("y")).doubleValue();
+            double orientation = ((Number) command.getOrDefault("orientation", 0.0)).doubleValue();
+
+            log.info("목적지 설정 명령: x={}, y={}, orientation={}", x, y, orientation);
+
+            // 브릿지 서버로 명령 전송
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("command", "goal_pose");
+            requestData.put("position", position);
+            requestData.put("orientation", orientation);
+
+            // 주입된 RestTemplate 사용 및 멤버 변수 bridgeUrl 사용
+            ResponseEntity<Map> response = this.restTemplate.postForEntity(
+                    this.bridgeUrl + "/command", requestData, Map.class);
+
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            log.error("목적지 설정 명령 전송 실패: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "목적지 설정 명령을 전송하는 데 실패했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
     // ----- 데이터 조회용 GET 엔드포인트 -----
 
     @GetMapping("/global-path")
@@ -318,5 +459,20 @@ public class RobotController {
     @GetMapping("/obstacle-alert")
     public ResponseEntity<?> getObstacleAlert() {
         return ResponseEntity.ok(this.latestObstacleAlert);
+    }
+
+    @GetMapping("/goal-status")
+    public ResponseEntity<?> getGoalStatus() {
+        return ResponseEntity.ok(this.latestGoalStatus);
+    }
+
+    @GetMapping("/pick-done")
+    public ResponseEntity<?> getPickDone() {
+        return ResponseEntity.ok(this.latestPickDone);
+    }
+
+    @GetMapping("/place-done")
+    public ResponseEntity<?> getPlaceDone() {
+        return ResponseEntity.ok(this.latestPlaceDone);
     }
 }
