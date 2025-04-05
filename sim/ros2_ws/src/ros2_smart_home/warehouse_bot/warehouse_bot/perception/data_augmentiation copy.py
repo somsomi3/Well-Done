@@ -92,7 +92,7 @@ def augment_with_labels(image, boxes, labels):
     # 1. 랜덤 밝기 조정 (바운딩 박스에 영향 없음)
     image = tf.cond(
         tf.random.uniform(()) > 0.5,
-        lambda: tf.image.random_brightness(image, max_delta=0.2),
+        lambda: tf.image.random_brightness(image, max_delta=0.1),
         lambda: image
     )
     
