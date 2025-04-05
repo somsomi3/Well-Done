@@ -45,6 +45,9 @@ public class RobotController {
     // 전시 완료 데이터 저장용 변수
     private Map<String, Object> latestPlaceDone = new HashMap<>();
 
+    // 압축된 JPEG 이미지 데이터를 위한 변수
+    private Map<String, Object> latestCompressedImage = new HashMap<>();
+
     public RobotController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -419,6 +422,52 @@ public class RobotController {
         }
     }
 
+    @PostMapping("/image-jpeg-compressed")
+    public ResponseEntity<?> receiveCompressedImage(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅 (필요시 주석 해제)
+        // log.info("압축된 JPEG 이미지 데이터 수신: {} bytes", ((String) data.get("data")).length());
+
+        // 최신 데이터 저장
+        this.latestCompressedImage = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "압축된 JPEG 이미지 데이터를 성공적으로 수신했습니다");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/pick-place")
+    public ResponseEntity<?> executePickPlaceCommand(@RequestBody Map<String, Object> command) {
+        try {
+            // 명령 데이터 추출
+            Map<String, Object> from = (Map<String, Object>) command.get("from");
+            Map<String, Object> to = (Map<String, Object>) command.get("to");
+            String productId = (String) command.get("product_id");
+            int displaySpot = ((Number) command.get("display_spot")).intValue();
+
+            log.info("Pick and Place 명령: from={}, to={}, productId={}, displaySpot={}", from, to, productId, displaySpot);
+
+            // 브릿지 서버로 명령 전송
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("command", "pick_place");
+            requestData.put("from", from);
+            requestData.put("to", to);
+            requestData.put("product_id", productId);
+            requestData.put("display_spot", displaySpot);
+
+            ResponseEntity<Map> response = this.restTemplate.postForEntity(
+                    this.bridgeUrl + "/command", requestData, Map.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            log.error("Pick and Place 명령 전송 실패: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "Pick and Place 명령을 전송하는 데 실패했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
     // ----- 데이터 조회용 GET 엔드포인트 -----
 
     @GetMapping("/global-path")
@@ -474,5 +523,10 @@ public class RobotController {
     @GetMapping("/place-done")
     public ResponseEntity<?> getPlaceDone() {
         return ResponseEntity.ok(this.latestPlaceDone);
+    }
+
+    @GetMapping("/image-jpeg-compressed")
+    public ResponseEntity<?> getCompressedImage() {
+        return ResponseEntity.ok(this.latestCompressedImage);
     }
 }
