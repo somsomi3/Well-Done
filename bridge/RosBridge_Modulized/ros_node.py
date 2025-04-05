@@ -12,13 +12,14 @@ from std_msgs.msg import Header, Bool
 from geometry_msgs.msg import Twist, PoseStamped, Pose, Point, Quaternion
 from geometry_msgs.msg import PoseWithCovariance, TwistWithCovariance
 from nav_msgs.msg import Path, Odometry, OccupancyGrid, MapMetaData
+from sensor_msgs.msg import CompressedImage
 
 # SSAFY 메시지 타입 임포트 시도
 try:
-    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone
+    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
 except ImportError:
     # 없으면 message_types.py에서 가져옴
-    from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone
+    from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
 
 # 내부 모듈 임포트
 from .handlers.topic_callbacks import register_all_callbacks
@@ -107,6 +108,7 @@ class RobotBridgeNode(Node):
         self.start_auto_map_publisher = self.create_publisher(Bool, '/start_auto_map', self.qos_profile)
         self.stop_auto_map_publisher = self.create_publisher(Bool, '/stop_auto_map', self.qos_profile)
         self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', self.qos_profile)
+        self.pick_place_command_publisher = self.create_publisher(PickPlaceCommand, '/pick_place_command', self.qos_profile)
         
         # 딕셔너리 업데이트
         # self.publishers.update({
@@ -167,6 +169,9 @@ class RobotBridgeNode(Node):
             ),
             'place_done': self.create_subscription(
                 PlaceDone, "/place_done", self.place_done_callback, self.qos_profile
+            ),
+            'image_jpeg_compressed': self.create_subscription(
+                CompressedImage, "/image_jpeg/compressed", self.image_jpeg_compressed_callback, self.qos_profile
             )
         }
 

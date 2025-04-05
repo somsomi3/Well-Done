@@ -19,6 +19,7 @@ def register_all_callbacks(node):
     node.goal_status_callback = lambda msg: goal_status_callback(node, msg)
     node.pick_done_callback = lambda msg: pick_done_callback(node, msg)
     node.place_done_callback = lambda msg: place_done_callback(node, msg)
+    node.image_jpeg_compressed_callback = lambda msg: image_jpeg_compressed_callback(node, msg)
 
 def envir_status_callback(node, msg):
     """환경 상태 토픽에서 데이터를 받아 Spring 서버로 전송"""
@@ -920,3 +921,52 @@ def place_done_callback(node, msg):
     
     except Exception as e:
         node.get_logger().error(f"Exception during place done processing: {str(e)}")
+
+def image_jpeg_compressed_callback(node, msg):
+    """압축된 JPEG 이미지 토픽에서 데이터를 받아 Spring 서버로 전송"""
+    current_time = time.time()
+    
+    if current_time - node.last_send_times.get('image_jpeg', 0) >= node.send_interval:
+        try:
+            # CompressedImage 메시지에서 데이터 추출
+            image_data = {
+                "header": {
+                    "frame_id": msg.header.frame_id,
+                    "stamp": {
+                        "sec": msg.header.stamp.sec,
+                        "nanosec": msg.header.stamp.nanosec
+                    }
+                },
+                "format": msg.format,
+                "data": base64.b64encode(msg.data).decode('utf-8')  # 바이트 배열을 base64로 인코딩
+            }
+            
+            node.get_logger().info(f"Compressed image data received: {len(msg.data)} bytes")
+            
+            # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
+            if node.jwt_token:
+                try:
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {node.jwt_token}"
+                    }
+                
+                    response = requests.post(
+                        f"{node.spring_server_url}/api/robot/image-jpeg-compressed", 
+                        json=image_data, 
+                        headers=headers,
+                        timeout=5.0  # 이미지 데이터가 클 수 있으므로 타임아웃을 좀 더 길게 설정
+                    )
+                
+                    if response.status_code == 200:
+                        node.get_logger().info("Compressed image data successfully sent to Spring server")
+                    else:
+                        node.get_logger().error(f"Spring server error: {response.status_code}, {response.text}")
+                except requests.exceptions.RequestException as e:
+                    node.get_logger().warning(f"Failed to send compressed image data to Spring server: {str(e)}")
+            
+            # 마지막 전송 시간 업데이트
+            node.last_send_times['image_jpeg'] = current_time
+        
+        except Exception as e:
+            node.get_logger().error(f"Exception during compressed image data processing: {str(e)}")

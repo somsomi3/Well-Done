@@ -24,6 +24,7 @@ def register_all_command_handlers(node):
     node.execute_start_auto_map_command = lambda cmd: execute_start_auto_map_command(node, cmd)
     node.execute_stop_auto_map_command = lambda cmd: execute_stop_auto_map_command(node, cmd)
     node.execute_goal_pose_command = lambda cmd: execute_goal_pose_command(node, cmd)
+    node.execute_pick_place_command = lambda cmd: execute_pick_place_command(node, cmd)
 
 def execute_move_command(node, command):
     """이동 명령 실행"""
@@ -489,3 +490,28 @@ def execute_goal_pose_command(node, command):
         node.get_logger().error(f"Error executing goal pose command: {str(e)}")
         import traceback
         node.get_logger().error(traceback.format_exc())
+
+def execute_pick_place_command(node, cmd):
+    """pick_place_command 실행"""
+    if 'pick_place_command' not in node.publishers:
+        return {"result": False, "message": "pick_place_command publisher not available"}
+
+    try:
+        from_ = cmd.get('from_', {})
+        to = cmd.get('to', {})
+        product_id = cmd.get('product_id', '')
+        display_spot = cmd.get('display_spot', 0)
+
+        msg = {
+            'from_': {'x': from_.get('x', 0.0), 'y': from_.get('y', 0.0)},
+            'to': {'x': to.get('x', 0.0), 'y': to.get('y', 0.0)},
+            'product_id': product_id,
+            'display_spot': display_spot
+        }
+
+        node.publishers['pick_place_command'].publish(str(msg))
+        node.get_logger().info(f"Published pick_place_command: {msg}")
+        return {"result": True, "message": "Pick and place command published successfully"}
+    except Exception as e:
+        node.get_logger().error(f"Error executing pick_place_command: {str(e)}")
+        return {"result": False, "message": f"Error: {str(e)}"}
