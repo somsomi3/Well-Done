@@ -27,6 +27,15 @@ public class RobotController {
     private Map<String, Object> latestScan = new HashMap<>();
     private Map<String, Object> latestMap = new HashMap<>();
 
+    // 맵핑 완료 데이터 저장용 변수
+    private Map<String, Object> latestMappingDoneResult = new HashMap<>();
+
+    // 맵 상태 저장용 변수
+    private Map<String, Object> latestMapStatus = new HashMap<>();
+
+    // 장애물 감지 데이터 저장용 변수
+    private Map<String, Object> latestObstacleAlert = new HashMap<>();
+
     public RobotController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -211,6 +220,64 @@ public class RobotController {
         }
     }
 
+    @PostMapping("/mapping-done")
+    public ResponseEntity<?> receiveMappingDone(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        log.info("맵핑 완료 데이터 수신: success={}", data.get("success"));
+
+        // 최신 데이터 저장
+        this.latestMappingDoneResult = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "맵핑 완료 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/map-status")
+    public ResponseEntity<?> receiveMapStatus(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        Double coverage = ((Number) data.get("coverage")).doubleValue();
+        Double mapChangeRate = ((Number) data.get("map_change_rate")).doubleValue();
+        Integer frontierCount = ((Number) data.get("frontier_count")).intValue();
+
+        log.info("맵 상태 데이터 수신: coverage={}%, change_rate={}, frontiers={}",
+                coverage, mapChangeRate, frontierCount);
+
+        // 최신 데이터 저장
+        this.latestMapStatus = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "맵 상태 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/obstacle-alert")
+    public ResponseEntity<?> receiveObstacleAlert(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        boolean detected = (boolean) data.get("detected");
+        double distance = ((Number) data.get("distance")).doubleValue();
+
+        if (detected) {
+            log.info("장애물 감지 알림: 거리 {}m", distance);
+        }
+
+        // 최신 데이터 저장
+        this.latestObstacleAlert = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "장애물 감지 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
     // ----- 데이터 조회용 GET 엔드포인트 -----
 
     @GetMapping("/global-path")
@@ -236,5 +303,20 @@ public class RobotController {
     @GetMapping("/map")
     public ResponseEntity<?> getMap() {
         return ResponseEntity.ok(this.latestMap);
+    }
+
+    @GetMapping("/mapping-done")
+    public ResponseEntity<?> getMappingDoneResult() {
+        return ResponseEntity.ok(this.latestMappingDoneResult);
+    }
+
+    @GetMapping("/map-status")
+    public ResponseEntity<?> getMapStatus() {
+        return ResponseEntity.ok(this.latestMapStatus);
+    }
+
+    @GetMapping("/obstacle-alert")
+    public ResponseEntity<?> getObstacleAlert() {
+        return ResponseEntity.ok(this.latestObstacleAlert);
     }
 }
