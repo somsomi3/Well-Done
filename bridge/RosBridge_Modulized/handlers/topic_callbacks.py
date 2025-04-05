@@ -13,6 +13,9 @@ def register_all_callbacks(node):
     node.odom_callback = lambda msg: odom_callback(node, msg)
     node.scan_callback = lambda msg: scan_callback(node, msg)
     node.map_callback = lambda msg: map_callback(node, msg)
+    node.mapping_done_callback = lambda msg: mapping_done_callback(node, msg)
+    node.map_status_callback = lambda msg: map_status_callback(node, msg)
+    node.obstacle_alert_callback = lambda msg: obstacle_alert_callback(node, msg)
 
 def envir_status_callback(node, msg):
     """환경 상태 토픽에서 데이터를 받아 Spring 서버로 전송"""
@@ -618,3 +621,165 @@ def scan_callback(node, msg):
             node.get_logger().error(
                 f"Exception during scan data processing: {str(e)}"
             )
+
+def mapping_done_callback(node, msg):
+    """매핑 완료 토픽에서 데이터를 받아 Spring 서버로 전송"""
+    current_time = time.time()
+    
+    try:
+        # 매핑 데이터 준비
+        mapping_data = {
+            "success": True,
+            "map": {
+                "info": {
+                    "width": msg.map.info.width,
+                    "height": msg.map.info.height,
+                    "resolution": msg.map.info.resolution,
+                    "origin": {
+                        "position": {
+                            "x": msg.map.info.origin.position.x,
+                            "y": msg.map.info.origin.position.y,
+                            "z": msg.map.info.origin.position.z
+                        },
+                        "orientation": {
+                            "x": msg.map.info.origin.orientation.x,
+                            "y": msg.map.info.origin.orientation.y,
+                            "z": msg.map.info.origin.orientation.z,
+                            "w": msg.map.info.origin.orientation.w
+                        }
+                    }
+                },
+                "data": list(msg.map.data)  # 바이트 배열을 리스트로 변환
+            },
+            "map_inflated": {
+                # inflated 맵 데이터가 있다면 여기에 추가
+            }
+        }
+        
+        node.get_logger().info("Mapping completed data received")
+        
+        # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
+        if node.jwt_token:
+            try:
+                # JWT 토큰을 헤더에 추가
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {node.jwt_token}"
+                }
+            
+                # Spring 서버로 POST 요청 (타임아웃 설정)
+                response = requests.post(
+                    f"{node.spring_server_url}/api/robot/mapping-done", 
+                    json=mapping_data, 
+                    headers=headers,
+                    timeout=5.0  # 맵 데이터가 클 수 있으므로 타임아웃을 좀 더 길게
+                )
+            
+                if response.status_code == 200:
+                    node.get_logger().info(
+                        "Mapping completed data successfully sent to Spring server"
+                    )
+                else:
+                    node.get_logger().error(
+                        f"Spring server error: {response.status_code}, {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
+                node.get_logger().warning(
+                    f"Failed to send mapping completed data to Spring server: {str(e)}"
+                )
+    
+    except Exception as e:
+        node.get_logger().error(
+            f"Exception during mapping completed data processing: {str(e)}"
+        )
+
+def map_status_callback(node, msg):
+    """맵 상태 토픽에서 데이터를 받아 Spring 서버로 전송"""
+    current_time = time.time()
+    
+    try:
+        # 맵 상태 데이터 준비
+        map_status_data = {
+            "coverage": msg.coverage,
+            "map_change_rate": msg.map_change_rate,
+            "frontier_count": msg.frontier_count
+        }
+        
+        node.get_logger().info(f"Map status data received: coverage={msg.coverage}%, change_rate={msg.map_change_rate}, frontiers={msg.frontier_count}")
+        
+        # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
+        if node.jwt_token:
+            try:
+                # JWT 토큰을 헤더에 추가
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {node.jwt_token}"
+                }
+            
+                # Spring 서버로 POST 요청 (타임아웃 설정)
+                response = requests.post(
+                    f"{node.spring_server_url}/api/robot/map-status", 
+                    json=map_status_data, 
+                    headers=headers,
+                    timeout=2.0
+                )
+            
+                if response.status_code == 200:
+                    node.get_logger().info(
+                        "Map status data successfully sent to Spring server"
+                    )
+                else:
+                    node.get_logger().error(
+                        f"Spring server error: {response.status_code}, {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
+                node.get_logger().warning(
+                    f"Failed to send map status data to Spring server: {str(e)}"
+                )
+    
+    except Exception as e:
+        node.get_logger().error(
+            f"Exception during map status data processing: {str(e)}"
+        )
+
+def obstacle_alert_callback(node, msg):
+    """장애물 감지 알림 토픽에서 데이터를 받아 Spring 서버로 전송"""
+    try:
+        # 장애물 감지 데이터 준비
+        obstacle_data = {
+            "detected": msg.detected,
+            "distance": msg.distance
+        }
+        
+        node.get_logger().info(f"Obstacle alert: detected={msg.detected}, distance={msg.distance}")
+        
+        # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
+        if node.jwt_token:
+            try:
+                # JWT 토큰을 헤더에 추가
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {node.jwt_token}"
+                }
+            
+                # Spring 서버로 POST 요청
+                response = requests.post(
+                    f"{node.spring_server_url}/api/robot/obstacle-alert", 
+                    json=obstacle_data, 
+                    headers=headers,
+                    timeout=2.0
+                )
+            
+                if response.status_code == 200:
+                    node.get_logger().info("Obstacle alert data successfully sent to Spring server")
+                else:
+                    node.get_logger().error(
+                        f"Spring server error: {response.status_code}, {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
+                node.get_logger().warning(
+                    f"Failed to send obstacle alert data to Spring server: {str(e)}"
+                )
+    
+    except Exception as e:
+        node.get_logger().error(f"Exception during obstacle alert processing: {str(e)}")
