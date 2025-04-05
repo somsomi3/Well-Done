@@ -11,7 +11,7 @@ sys.path.append(
 )
 # SSAFY 메시지 타입 임포트 시도
 try:
-    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert
+    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone
     CUSTOM_IMPORTS_AVAILABLE = True
 except ImportError:
     # 패키지를 가져올 수 없을 경우 대체 클래스 정의
@@ -23,7 +23,7 @@ except ImportError:
             self.minute = 0
             self.temperature = 0
             self.weather = ""
-   
+    
     class TurtlebotStatus:
         def __init__(self):
             self.twist = None
@@ -32,7 +32,7 @@ except ImportError:
             self.can_use_hand = False
             self.can_put = False
             self.can_lift = False
-           
+            
     class ScanWithPose:
         def __init__(self):
             self.header = None
@@ -58,15 +58,32 @@ except ImportError:
     
     class MapStatus:
         def __init__(self):
-            self.coverage = 0.0        # 맵 커버리지 (%)
-            self.map_change_rate = 0.0 # 최근 맵 변화율
-            self.frontier_count = 0    # 탐색 가능한 경계 수
-
+            self.coverage = 0.0  # 맵 커버리지 (%)
+            self.map_change_rate = 0.0  # 최근 맵 변화율
+            self.frontier_count = 0  # 탐색 가능한 경계 수
+    
     class ObstacleAlert:
         def __init__(self):
             self.detected = False
             self.distance = 0.0
-   
+    
+    class GoalStatus:
+        def __init__(self):
+            self.reached = False
+            self.time_taken_sec = 0.0
+    
+    class PickDone:
+        def __init__(self):
+            self.success = False
+            self.product_id = ""
+            self.timestamp = ""
+            
+    class PlaceDone:
+        def __init__(self):
+            self.success = False
+            self.display_spot = 0
+            self.product_id = ""
+            
     CUSTOM_IMPORTS_AVAILABLE = False
 
 def import_all_message_types():

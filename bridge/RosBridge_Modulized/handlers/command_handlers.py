@@ -23,6 +23,7 @@ def register_all_command_handlers(node):
     node.execute_map_command = lambda cmd: execute_map_command(node, cmd)
     node.execute_start_auto_map_command = lambda cmd: execute_start_auto_map_command(node, cmd)
     node.execute_stop_auto_map_command = lambda cmd: execute_stop_auto_map_command(node, cmd)
+    node.execute_goal_pose_command = lambda cmd: execute_goal_pose_command(node, cmd)
 
 def execute_move_command(node, command):
     """이동 명령 실행"""
@@ -426,11 +427,65 @@ def execute_stop_auto_map_command(node, command):
     """자동 매핑 끄기 명령 실행"""
     try:
         # Bool 메시지 생성
+        from std_msgs.msg import Bool
         bool_msg = Bool()
         bool_msg.data = command.get('data', True)  # 기본값은 True
         
-        # 메시지 발행
-        node.stop_auto_map_publisher.publish(bool_msg)
-        node.get_logger().info(f"Auto mapping command executed: data={bool_msg.data}")
+        # 발행자가 딕셔너리로 존재하는지 확인
+        if hasattr(node, 'publishers') and 'stop_auto_map' in node.publishers:
+            node.stop_auto_map_publisher.publish(bool_msg)
+        # 개별 발행자로 존재하는지 확인
+        elif hasattr(node, 'stop_auto_map_publisher'):
+            node.stop_auto_map_publisher.publish(bool_msg)
+        else:
+            node.get_logger().error("Cannot find stop_auto_map publisher")
+            return
+            
+        node.get_logger().info(f"Auto mapping stop command executed: data={bool_msg.data}")
     except Exception as e:
-        node.get_logger().error(f"Error executing auto mapping command: {str(e)}")
+        node.get_logger().error(f"Error executing auto mapping stop command: {str(e)}")
+        import traceback
+        node.get_logger().error(traceback.format_exc())
+
+def execute_goal_pose_command(node, command):
+    """목적지 설정 명령 실행"""
+    try:
+        # 명령 데이터 추출
+        position_data = command.get('position', {})
+        position_x = position_data.get('x', 0.0)
+        position_y = position_data.get('y', 0.0)
+        orientation = command.get('orientation', 0.0)
+        
+        node.get_logger().info(f"Goal pose command received: x={position_x}, y={position_y}, orientation={orientation}")
+        
+        # PoseStamped 메시지 생성
+        from geometry_msgs.msg import PoseStamped
+        pose_msg = PoseStamped()
+        
+        # Header 설정
+        pose_msg.header.stamp = node.get_clock().now().to_msg()
+        pose_msg.header.frame_id = "map"  # 맵 프레임 기준
+        
+        # Position 설정
+        pose_msg.pose.position.x = position_x
+        pose_msg.pose.position.y = position_y
+        pose_msg.pose.position.z = 0.0  # 일반적으로 2D 네비게이션에서는 z=0
+        
+        # Orientation 설정 (Quaternion으로 변환)
+        import math
+        yaw = orientation  # 라디안 단위로 가정
+        pose_msg.pose.orientation.x = 0.0
+        pose_msg.pose.orientation.y = 0.0
+        pose_msg.pose.orientation.z = math.sin(yaw / 2.0)
+        pose_msg.pose.orientation.w = math.cos(yaw / 2.0)
+        
+        # 발행자가 있는지 확인
+        if hasattr(node, 'goal_pose_publisher'):
+            node.goal_pose_publisher.publish(pose_msg)
+            node.get_logger().info(f"Goal pose command executed: x={position_x}, y={position_y}, orientation={orientation}")
+        else:
+            node.get_logger().error("Cannot find goal_pose publisher")
+    except Exception as e:
+        node.get_logger().error(f"Error executing goal pose command: {str(e)}")
+        import traceback
+        node.get_logger().error(traceback.format_exc())

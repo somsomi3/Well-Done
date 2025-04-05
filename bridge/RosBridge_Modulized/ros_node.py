@@ -15,10 +15,10 @@ from nav_msgs.msg import Path, Odometry, OccupancyGrid, MapMetaData
 
 # SSAFY 메시지 타입 임포트 시도
 try:
-    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert
+    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone
 except ImportError:
     # 없으면 message_types.py에서 가져옴
-    from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert
+    from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone
 
 # 내부 모듈 임포트
 from .handlers.topic_callbacks import register_all_callbacks
@@ -106,6 +106,7 @@ class RobotBridgeNode(Node):
         self.map_publisher = self.create_publisher(OccupancyGrid, '/map', self.qos_profile)
         self.start_auto_map_publisher = self.create_publisher(Bool, '/start_auto_map', self.qos_profile)
         self.stop_auto_map_publisher = self.create_publisher(Bool, '/stop_auto_map', self.qos_profile)
+        self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', self.qos_profile)
         
         # 딕셔너리 업데이트
         # self.publishers.update({
@@ -157,6 +158,15 @@ class RobotBridgeNode(Node):
             ),
             'obstacle_alert': self.create_subscription(
                 ObstacleAlert, "/obstacle_alert", self.obstacle_alert_callback, self.qos_profile
+            ),
+            'goal_status': self.create_subscription(
+                GoalStatus, "/goal_status", self.goal_status_callback, self.qos_profile
+            ),
+            'pick_done': self.create_subscription(
+                PickDone, "/pick_done", self.pick_done_callback, self.qos_profile
+            ),
+            'place_done': self.create_subscription(
+                PlaceDone, "/place_done", self.place_done_callback, self.qos_profile
             )
         }
 

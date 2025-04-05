@@ -16,6 +16,9 @@ def register_all_callbacks(node):
     node.mapping_done_callback = lambda msg: mapping_done_callback(node, msg)
     node.map_status_callback = lambda msg: map_status_callback(node, msg)
     node.obstacle_alert_callback = lambda msg: obstacle_alert_callback(node, msg)
+    node.goal_status_callback = lambda msg: goal_status_callback(node, msg)
+    node.pick_done_callback = lambda msg: pick_done_callback(node, msg)
+    node.place_done_callback = lambda msg: place_done_callback(node, msg)
 
 def envir_status_callback(node, msg):
     """환경 상태 토픽에서 데이터를 받아 Spring 서버로 전송"""
@@ -783,3 +786,137 @@ def obstacle_alert_callback(node, msg):
     
     except Exception as e:
         node.get_logger().error(f"Exception during obstacle alert processing: {str(e)}")
+
+def goal_status_callback(node, msg):
+    """목표 도달 상태 토픽에서 데이터를 받아 Spring 서버로 전송"""
+    try:
+        # 목표 도달 데이터 준비
+        goal_data = {
+            "reached": msg.reached,
+            "time_taken_sec": msg.time_taken_sec
+        }
+        
+        node.get_logger().info(f"Goal status: reached={msg.reached}, time_taken={msg.time_taken_sec}s")
+        
+        # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
+        if node.jwt_token:
+            try:
+                # JWT 토큰을 헤더에 추가
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {node.jwt_token}"
+                }
+            
+                # Spring 서버로 POST 요청
+                response = requests.post(
+                    f"{node.spring_server_url}/api/robot/goal-status", 
+                    json=goal_data, 
+                    headers=headers,
+                    timeout=2.0
+                )
+            
+                if response.status_code == 200:
+                    node.get_logger().info("Goal status data successfully sent to Spring server")
+                else:
+                    node.get_logger().error(
+                        f"Spring server error: {response.status_code}, {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
+                node.get_logger().warning(
+                    f"Failed to send goal status data to Spring server: {str(e)}"
+                )
+    
+    except Exception as e:
+        node.get_logger().error(f"Exception during goal status processing: {str(e)}")
+
+def pick_done_callback(node, msg):
+    """물건 집기 완료 토픽에서 데이터를 받아 Spring 서버로 전송"""
+    try:
+        # 물건 집기 완료 데이터 준비
+        pick_data = {
+            "success": msg.success,
+            "product_id": msg.product_id,
+            "timestamp": msg.timestamp
+        }
+        
+        if msg.success:
+            node.get_logger().info(f"물건 집기 성공: product_id={msg.product_id}, timestamp={msg.timestamp}")
+        else:
+            node.get_logger().info(f"물건 집기 실패: product_id={msg.product_id}, timestamp={msg.timestamp}")
+        
+        # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
+        if node.jwt_token:
+            try:
+                # JWT 토큰을 헤더에 추가
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {node.jwt_token}"
+                }
+            
+                # Spring 서버로 POST 요청
+                response = requests.post(
+                    f"{node.spring_server_url}/api/robot/pick-done", 
+                    json=pick_data, 
+                    headers=headers,
+                    timeout=2.0
+                )
+            
+                if response.status_code == 200:
+                    node.get_logger().info("Pick done data successfully sent to Spring server")
+                else:
+                    node.get_logger().error(
+                        f"Spring server error: {response.status_code}, {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
+                node.get_logger().warning(
+                    f"Failed to send pick done data to Spring server: {str(e)}"
+                )
+    
+    except Exception as e:
+        node.get_logger().error(f"Exception during pick done processing: {str(e)}")
+
+def place_done_callback(node, msg):
+    """전시 완료 알림 토픽에서 데이터를 받아 Spring 서버로 전송"""
+    try:
+        # 전시 완료 데이터 준비
+        place_data = {
+            "success": msg.success,
+            "display_spot": msg.display_spot,
+            "product_id": msg.product_id
+        }
+        
+        if msg.success:
+            node.get_logger().info(f"전시 완료: product_id={msg.product_id}, display_spot={msg.display_spot}")
+        else:
+            node.get_logger().info(f"전시 실패: product_id={msg.product_id}, display_spot={msg.display_spot}")
+        
+        # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
+        if node.jwt_token:
+            try:
+                # JWT 토큰을 헤더에 추가
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {node.jwt_token}"
+                }
+            
+                # Spring 서버로 POST 요청
+                response = requests.post(
+                    f"{node.spring_server_url}/api/robot/place-done", 
+                    json=place_data, 
+                    headers=headers,
+                    timeout=2.0
+                )
+            
+                if response.status_code == 200:
+                    node.get_logger().info("Place done data successfully sent to Spring server")
+                else:
+                    node.get_logger().error(
+                        f"Spring server error: {response.status_code}, {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
+                node.get_logger().warning(
+                    f"Failed to send place done data to Spring server: {str(e)}"
+                )
+    
+    except Exception as e:
+        node.get_logger().error(f"Exception during place done processing: {str(e)}")
