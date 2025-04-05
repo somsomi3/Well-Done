@@ -1,5 +1,7 @@
 package com.be.domain.robot.controller;
 
+import com.be.domain.robot.service.RobotService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/robot")
 public class RobotController {
@@ -26,6 +29,8 @@ public class RobotController {
     private Map<String, Object> latestOdometry = new HashMap<>();
     private Map<String, Object> latestScan = new HashMap<>();
     private Map<String, Object> latestMap = new HashMap<>();
+
+    private final RobotService robotService;
 
     // 맵핑 완료 데이터 저장용 변수
     private Map<String, Object> latestMappingDoneResult = new HashMap<>();
@@ -47,10 +52,6 @@ public class RobotController {
 
     // 압축된 JPEG 이미지 데이터를 위한 변수
     private Map<String, Object> latestCompressedImage = new HashMap<>();
-
-    public RobotController(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
 
     @PostMapping("/envir-status")
     public ResponseEntity<?> receiveEnvirStatus(@RequestBody Map<String, Object> data) {
@@ -157,10 +158,26 @@ public class RobotController {
     @PostMapping("/odometry")
     public ResponseEntity<?> receiveOdometry(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-        // log.info("오도메트리 데이터 수신: {}", data);
+         log.info("오도메트리 데이터 수신: {}", data);
 
         // 최신 데이터 저장
         this.latestOdometry = data;
+
+        try {
+            // 오도메트리 구조에서 좌표 추출
+            Map<String, Object> poseWrapper = (Map<String, Object>) data.get("pose");
+            Map<String, Object> pose = (Map<String, Object>) poseWrapper.get("pose");
+            Map<String, Object> position = (Map<String, Object>) pose.get("position");
+
+            double x = ((Number) position.get("x")).doubleValue();
+            double y = ((Number) position.get("y")).doubleValue();
+
+            // ✅ 좌표 Redis 저장 + WebSocket 실시간 전송
+            robotService.sendCurrentPosition("room1", x, y);
+
+        } catch (Exception e) {
+            log.error("오도메트리 좌표 파싱 실패", e);
+        }
 
         // 응답 생성
         Map<String, Object> response = new HashMap<>();

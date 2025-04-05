@@ -4,6 +4,8 @@ import com.be.db.entity.Inventory;
 import com.be.domain.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,9 +33,13 @@ public class InventoryController {
 
     // 수량 조정
     @PostMapping("/{id}/adjust")
-    public ResponseEntity<Inventory> adjustInventory(@PathVariable Long id,
-                                                     @RequestParam int amount) {
-        Inventory updated = inventoryService.updateStock(id, amount);
+    public ResponseEntity<Inventory> adjustInventory(
+            @PathVariable Long id,
+            @RequestParam int amount,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        String updatedBy = userDetails.getUsername(); // 로그인한 유저 이름 가져오기
+        Inventory updated = inventoryService.updateStock(id, amount, updatedBy);
         return ResponseEntity.ok(updated);
     }
 
