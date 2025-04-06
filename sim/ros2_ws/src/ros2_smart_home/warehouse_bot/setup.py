@@ -33,6 +33,7 @@ setup(
             "a_star_local_path = warehouse_bot.navigation.a_star_local_path:main",
             "path_tracking = warehouse_bot.controller.path_tracking:main",
             "load_map = warehouse_bot.slam.load_map:main",
+            "object_detector = warehouse_bot.perception.object_detector:main",
         ],
     },
 )
