@@ -398,3 +398,8 @@ item {
   id: 90
   display_name: "toothbrush"
 }
+item { 
+  name: "/m/m/0rack"
+  id: 91
+  display_name: "rack"
+}
