@@ -1,5 +1,6 @@
 package com.be.domain.robot.controller;
 
+import com.be.domain.robot.UserSocketHandler;
 import com.be.domain.robot.service.RobotService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -17,11 +19,12 @@ import java.util.List;
 @RequestMapping("/api/robot")
 public class RobotController {
 
+    private final UserSocketHandler userSocketHandler;
     private final Logger log = LoggerFactory.getLogger(RobotController.class);
     private final RestTemplate restTemplate;
 
     // 브릿지 서버 URL 설정
-    private final String bridgeUrl = "http://10.0.0.2:5000";
+    private final String bridgeUrl = "http://localhost:5000";
 
     // 최신 데이터 저장용 변수들
     private Map<String, Object> latestGlobalPath = new HashMap<>();
@@ -205,19 +208,43 @@ public class RobotController {
 
     @PostMapping("/map")
     public ResponseEntity<?> receiveMap(@RequestBody Map<String, Object> data) {
-        // 데이터 로깅 (필요시 주석 해제)
-        // log.info("맵 데이터 수신: {}", data);
+        log.info("맵 데이터 수신: {}", data);
 
-        // 최신 데이터 저장
-        this.latestMap = data;
+        // 1. 맵 info
+        Map<String, Object> info = (Map<String, Object>) data.get("info");
+        int width = (int) info.get("width");
+        int height = (int) info.get("height");
 
-        // 응답 생성
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "맵 데이터를 성공적으로 수신했습니다");
+        // 2. 전체 맵 -1로 초기화
+        int[][] map = new int[height][width];
+        for (int y = 0; y < height; y++) {
+            Arrays.fill(map[y], -1);
+        }
 
-        return ResponseEntity.ok(response);
+        // 3. 점유 셀 적용
+        List<Map<String, Object>> occupiedCells = (List<Map<String, Object>>) data.get("occupied_cells");
+        for (Map<String, Object> cell : occupiedCells) {
+            int x = (int) cell.get("x");
+            int y = (int) cell.get("y");
+            int value = (int) cell.get("value");
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                map[y][x] = value;
+            }
+        }
+
+        // 4. 전송용 객체 구성
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "map");
+        payload.put("width", width);
+        payload.put("height", height);
+        payload.put("map", map);
+
+        // 5. WebSocket 사용자들에게 실시간 전송
+        userSocketHandler.broadcastMap(payload);
+
+        return ResponseEntity.ok(Map.of("status", "success", "message", "맵 수신 및 전송 완료"));
     }
+
 
     @PostMapping("/auto-map")
     public ResponseEntity<?> startAutoMap(@RequestBody(required = false) Map<String, Object> command) {
@@ -439,13 +466,16 @@ public class RobotController {
         }
     }
 
+
+    // 시뮬브릿지 에서 백으로.
     @PostMapping("/image-jpeg-compressed")
     public ResponseEntity<?> receiveCompressedImage(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-        // log.info("압축된 JPEG 이미지 데이터 수신: {} bytes", ((String) data.get("data")).length());
+         log.info("압축된 JPEG 이미지 데이터 수신: {} bytes", ((String) data.get("data")).length());
 
         // 최신 데이터 저장
         this.latestCompressedImage = data;
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!여기는 브릿지에서 가져오기만함!!!db저장 구현할것
 
         // 응답 생성
         Map<String, Object> response = new HashMap<>();
@@ -543,6 +573,7 @@ public class RobotController {
     }
 
     @GetMapping("/image-jpeg-compressed")
+    //프론트에서 하고 싶은거... 실기간 연결??? 소켓사용해서 백 -> 프론 구현
     public ResponseEntity<?> getCompressedImage() {
         return ResponseEntity.ok(this.latestCompressedImage);
     }
