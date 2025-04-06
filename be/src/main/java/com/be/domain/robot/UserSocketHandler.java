@@ -94,5 +94,16 @@ public class UserSocketHandler extends TextWebSocketHandler {
         sessions.remove(session);
         log.info("사용자 WebSocket 연결 종료: {}", session.getId());
     }
+
+
+    //맵데이터를 실시간으로 WebSocket으로 브로드캐스트하기
+    public void broadcastMap(Object mapData) {
+        try {
+            String message = objectMapper.writeValueAsString(mapData);
+            broadcastAll(new TextMessage(message));
+        } catch (Exception e) {
+            log.error("맵 데이터 전송 실패", e);
+        }
+    }
 }
 
