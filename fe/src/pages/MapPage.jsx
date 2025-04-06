@@ -25,17 +25,18 @@ const MapPage = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [path, setPath] = useState([]);
   const {token} = useAuthStore();
+  const [mapData, setMapData] = useState(null);
 
   useEffect(() => {
     if (!token) return;
 
     // const socket = new WebSocket(`ws://localhost:8080/ws/user?token=${token}`);
-    const socket = new WebSocket(`ws://j12e102.p.ssafy.io:8080/ws/user?token=${token}`);
+    const socket = new WebSocket(`ws://j12e102.p.ssafy.io/ws/user?token=${token}`);
 
     socketRef.current = socket;
 
     socket.onopen = () => {
-      console.log("✅ WebSocket 연결됨");
+      console.log("WebSocket 연결됨");
       socket.send(
         JSON.stringify({
           type: "join",
@@ -47,6 +48,15 @@ const MapPage = () => {
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("📍 현재 위치 수신:", data);
+
+      if (data.type === "map") {
+        console.log("🗺️ 실시간 맵 수신됨:", data.map);
+        setMapData({
+          map: data.map,
+          width: data.width,
+          height: data.height,
+        });
+      }
 
       if (data.x !== undefined && data.y !== undefined) {
         setPosition(data);
@@ -126,6 +136,34 @@ const MapPage = () => {
           </li>
         ))}
       </ul>
+
+      {/* 여기에 맵 렌더링 추가 */}
+      {mapData && (
+        <div style={{ marginTop: "2rem" }}>
+          <h3>🗺️ 실시간 맵</h3>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${mapData.width}, 4px)`,
+              gridTemplateRows: `repeat(${mapData.height}, 4px)`,
+              gap: "1px",
+              backgroundColor: "#ddd",
+            }}
+          >
+            {mapData.map.flat().map((value, idx) => (
+              <div
+                key={idx}
+                style={{
+                  width: "4px",
+                  height: "4px",
+                  backgroundColor:
+                    value === 100 ? "#333" : value === 0 ? "#eee" : "transparent",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
     </Layout>
   );
