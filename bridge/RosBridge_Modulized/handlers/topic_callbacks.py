@@ -3,6 +3,7 @@ import time
 import requests
 import json
 import math  # 스캔 데이터 처리에 필요
+import base64  # 이미지 데이터 인코딩에 필요
 
 def register_all_callbacks(node):
     """모든 콜백 메서드를 노드에 등록"""
