@@ -15,6 +15,6 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "인증이 필요합니다.");
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, "접근 권한이 없습니다.");
     }
 }
