@@ -165,26 +165,30 @@ public class RobotService {
     }
 
     public void sendCurrentPosition(String roomId, double x, double y) {
-        try {
-            // 위치 데이터에 type 필드 추가
-            Map<String, Object> positionData = new HashMap<>();
-            positionData.put("type", "position");  // 타입 필드 추가
-            positionData.put("x", x);
-            positionData.put("y", y);
+        // 위치 데이터에 type 필드 추가
+        Map<String, Object> positionData = new HashMap<>();
+        positionData.put("type", "position");
+        positionData.put("x", x);
+        positionData.put("y", y);
 
+        try {
             // ObjectMapper로 JSON 변환
             String json = objectMapper.writeValueAsString(positionData);
 
-            // ✅ RedisService 통해 저장
-            redisService.saveRobotPosition(roomId, json);
+            // Redis 저장 시도 (오류가 발생해도 계속 진행)
+            try {
+                redisService.saveRobotPosition(roomId, json);
+                log.info("Redis에 좌표 저장 완료: {}", json);
+            } catch (Exception redisError) {
+                log.error("Redis 저장 실패 (무시하고 계속 진행): {}", redisError.getMessage());
+            }
 
-            // ✅ 프론트로 전송 (TextMessage 객체 생성)
+            // WebSocket으로 전송 (Redis 오류와 관계없이 실행됨)
             userSocketHandler.broadcastAll(new TextMessage(json));
+            log.info("WebSocket으로 좌표 전송 완료: {}", json);
 
-            log.info("좌표 저장 및 전송 완료 (room: {}): {}", roomId, json);
         } catch (Exception e) {
-            log.error("좌표 저장/전송 중 오류 발생", e);
+            log.error("좌표 처리 중 심각한 오류 발생", e);
         }
     }
-
 }
