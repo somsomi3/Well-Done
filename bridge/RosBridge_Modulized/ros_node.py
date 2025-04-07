@@ -38,7 +38,14 @@ class RobotBridgeNode(Node):
             'local_path': 0.0,
             'odom': 0.0,
             'scan': 0.0,
-            'map': 0.0
+            'map': 0.0,
+            'mapping_done': 0.0,
+            'map_status': 0.0,
+            'obstacle_alert': 0.0,
+            'goal_status': 0.0,
+            'pick_done': 0.0,
+            'place_done': 0.0,
+            'image_jpeg': 0.0
         }
         self.send_interval = 1.0
 
