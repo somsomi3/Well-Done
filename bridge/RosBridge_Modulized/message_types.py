@@ -88,8 +88,8 @@ except ImportError:
     
     class PickPlaceCommand:
         def __init__(self):
-            self.from_ = Point()
-            self.to = Point()
+            self.from_pos = Point()
+            self.to_pos = Point()
             self.product_id = ""
             self.display_spot = 0
             

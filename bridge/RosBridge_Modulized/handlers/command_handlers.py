@@ -497,14 +497,14 @@ def execute_pick_place_command(node, cmd):
         return {"result": False, "message": "pick_place_command publisher not available"}
 
     try:
-        from_ = cmd.get('from_', {})
-        to = cmd.get('to', {})
+        from_pos = cmd.get('from_pos', {})
+        to_pos = cmd.get('to_pos', {})
         product_id = cmd.get('product_id', '')
         display_spot = cmd.get('display_spot', 0)
 
         msg = {
-            'from_': {'x': from_.get('x', 0.0), 'y': from_.get('y', 0.0)},
-            'to': {'x': to.get('x', 0.0), 'y': to.get('y', 0.0)},
+            'from_pos': {'x': from_pos.get('x', 0.0), 'y': from_pos.get('y', 0.0)},
+            'to_pos': {'x': to_pos.get('x', 0.0), 'y': to_pos.get('y', 0.0)},
             'product_id': product_id,
             'display_spot': display_spot
         }
