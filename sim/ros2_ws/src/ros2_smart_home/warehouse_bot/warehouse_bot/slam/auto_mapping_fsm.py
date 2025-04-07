@@ -4,6 +4,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool
 from ssafy_msgs.msg import MappingDone
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Twist
 from nav_msgs.msg import OccupancyGrid, Odometry
 from ssafy_msgs.msg import StatusStamped
 from squaternion import Quaternion
@@ -56,6 +57,7 @@ class AutoMappingFSM(Node):
         self.pub_goal = self.create_publisher(PoseStamped, "/goal_pose", 10)
         self.done_pub = self.create_publisher(MappingDone, "/mapping_done", 1)
         self.pub_reset = self.create_publisher(Bool, "/reset_mapping", 1)
+        self.cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
 
         self.sub_start = self.create_subscription(
             Bool, "/start_auto_map", self.start_callback, 1
@@ -131,6 +133,11 @@ class AutoMappingFSM(Node):
             )
             self.state = "WAIT_FOR_COMMAND"
             self.running = False
+            stop_twist = Twist()
+            stop_twist.linear.x = 0.0
+            stop_twist.angular.z = 0.0
+            self.cmd_pub.publish(stop_twist)
+            self.prev_goal = None
 
     def odom_callback(self, msg):
         x = msg.pose.pose.position.x
@@ -203,6 +210,8 @@ class AutoMappingFSM(Node):
         self.prev_map = self.map_data.copy()
 
     def plan_success_callback(self, msg):
+        if self.state == "WAIT_FOR_COMMAND":
+            return
         print_log(
             "info",
             self.get_logger(),
@@ -227,6 +236,8 @@ class AutoMappingFSM(Node):
             self.last_goal_reach_time = None
 
     def plan_failed_callback(self, msg):
+        if self.state == "WAIT_FOR_COMMAND":
+            return
         if self.state == "WAIT_FOR_PLAN_RESULT" and msg.status:
             print_log(
                 "warn",
@@ -245,6 +256,8 @@ class AutoMappingFSM(Node):
             self.state = "FRONTIER_SEARCH"
 
     def goal_reached_callback(self, msg):
+        if self.state == "WAIT_FOR_COMMAND":
+            return
         print_log(
             "info",
             self.get_logger(),
@@ -273,6 +286,8 @@ class AutoMappingFSM(Node):
             self.state = "FRONTIER_SEARCH"
 
     def goal_failed_callback(self, msg):
+        if self.state == "WAIT_FOR_COMMAND":
+            return
         if self.state == "WAIT_FOR_GOAL_RESULT" and msg.status:
             print_log(
                 "warn",
@@ -283,6 +298,8 @@ class AutoMappingFSM(Node):
             self.state = "FRONTIER_SEARCH"
 
     def fsm_step(self):
+        if self.state == "WAIT_FOR_COMMAND":
+            return
         print_log(
             "info",
             self.get_logger(),
