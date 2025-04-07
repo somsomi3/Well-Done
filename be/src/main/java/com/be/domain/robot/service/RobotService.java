@@ -166,12 +166,19 @@ public class RobotService {
 
     public void sendCurrentPosition(String roomId, double x, double y) {
         try {
-            String json = String.format("{\"x\": %.4f, \"y\": %.4f}", x, y);
+            // 위치 데이터에 type 필드 추가
+            Map<String, Object> positionData = new HashMap<>();
+            positionData.put("type", "position");  // 타입 필드 추가
+            positionData.put("x", x);
+            positionData.put("y", y);
+
+            // ObjectMapper로 JSON 변환
+            String json = objectMapper.writeValueAsString(positionData);
 
             // ✅ RedisService 통해 저장
             redisService.saveRobotPosition(roomId, json);
 
-            // ✅ 프론트로 전송
+            // ✅ 프론트로 전송 (TextMessage 객체 생성)
             userSocketHandler.broadcastAll(new TextMessage(json));
 
             log.info("좌표 저장 및 전송 완료 (room: {}): {}", roomId, json);
