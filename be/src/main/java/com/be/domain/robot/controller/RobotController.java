@@ -24,7 +24,7 @@ public class RobotController {
     private final RestTemplate restTemplate;
 
     // 브릿지 서버 URL 설정
-    private final String bridgeUrl = "http://localhost:5000";
+    private final String bridgeUrl = "http://10.0.0.2:5000";
 
     // 최신 데이터 저장용 변수들
     private Map<String, Object> latestGlobalPath = new HashMap<>();
