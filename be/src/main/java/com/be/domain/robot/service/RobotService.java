@@ -4,6 +4,7 @@ import com.be.domain.robot.RosBridgeClient;
 import com.be.domain.robot.UserSocketHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import jakarta.annotation.PostConstruct; // jakarta로 변경
 import java.util.HashMap;
 import java.util.Map;
 
+@RequiredArgsConstructor
 @Slf4j
 @Service
 public class RobotService {
@@ -20,13 +22,9 @@ public class RobotService {
     private final RosBridgeClient rosBridgeClient;
     private final UserSocketHandler userSocketHandler;
     private final ObjectMapper objectMapper;
+    private final RedisService redisService;
 
-    @Autowired
-    public RobotService(RosBridgeClient rosBridgeClient, UserSocketHandler userSocketHandler) {
-        this.rosBridgeClient = rosBridgeClient;
-        this.userSocketHandler = userSocketHandler;
-        this.objectMapper = new ObjectMapper();
-    }
+
 
     @PostConstruct
     private void initializeRosTopics() {
@@ -165,4 +163,21 @@ public class RobotService {
             log.error("명령 처리 중 오류 발생", e);
         }
     }
+
+    public void sendCurrentPosition(String roomId, double x, double y) {
+        try {
+            String json = String.format("{\"x\": %.4f, \"y\": %.4f}", x, y);
+
+            // ✅ RedisService 통해 저장
+            redisService.saveRobotPosition(roomId, json);
+
+            // ✅ 프론트로 전송
+            userSocketHandler.broadcastAll(new TextMessage(json));
+
+            log.info("좌표 저장 및 전송 완료 (room: {}): {}", roomId, json);
+        } catch (Exception e) {
+            log.error("좌표 저장/전송 중 오류 발생", e);
+        }
+    }
+
 }

@@ -1,19 +1,25 @@
 package com.be.domain.robot.controller;
 
+import com.be.domain.robot.UserSocketHandler;
+import com.be.domain.robot.service.RobotService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/robot")
 public class RobotController {
 
+    private final UserSocketHandler userSocketHandler;
     private final Logger log = LoggerFactory.getLogger(RobotController.class);
     private final RestTemplate restTemplate;
 
@@ -27,9 +33,28 @@ public class RobotController {
     private Map<String, Object> latestScan = new HashMap<>();
     private Map<String, Object> latestMap = new HashMap<>();
 
-    public RobotController(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
+    private final RobotService robotService;
+
+    // 맵핑 완료 데이터 저장용 변수
+    private Map<String, Object> latestMappingDoneResult = new HashMap<>();
+
+    // 맵 상태 저장용 변수
+    private Map<String, Object> latestMapStatus = new HashMap<>();
+
+    // 장애물 감지 데이터 저장용 변수
+    private Map<String, Object> latestObstacleAlert = new HashMap<>();
+
+    // 목표 도달 상태 데이터 저장용 변수
+    private Map<String, Object> latestGoalStatus = new HashMap<>();
+
+    // 물건 집기 완료 데이터 저장용 변수
+    private Map<String, Object> latestPickDone = new HashMap<>();
+
+    // 전시 완료 데이터 저장용 변수
+    private Map<String, Object> latestPlaceDone = new HashMap<>();
+
+    // 압축된 JPEG 이미지 데이터를 위한 변수
+    private Map<String, Object> latestCompressedImage = new HashMap<>();
 
     @PostMapping("/envir-status")
     public ResponseEntity<?> receiveEnvirStatus(@RequestBody Map<String, Object> data) {
@@ -136,10 +161,26 @@ public class RobotController {
     @PostMapping("/odometry")
     public ResponseEntity<?> receiveOdometry(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-        // log.info("오도메트리 데이터 수신: {}", data);
+         log.info("오도메트리 데이터 수신: {}", data);
 
         // 최신 데이터 저장
         this.latestOdometry = data;
+
+        try {
+            // 오도메트리 구조에서 좌표 추출
+            Map<String, Object> poseWrapper = (Map<String, Object>) data.get("pose");
+            Map<String, Object> pose = (Map<String, Object>) poseWrapper.get("pose");
+            Map<String, Object> position = (Map<String, Object>) pose.get("position");
+
+            double x = ((Number) position.get("x")).doubleValue();
+            double y = ((Number) position.get("y")).doubleValue();
+
+            // ✅ 좌표 Redis 저장 + WebSocket 실시간 전송
+            robotService.sendCurrentPosition("room1", x, y);
+
+        } catch (Exception e) {
+            log.error("오도메트리 좌표 파싱 실패", e);
+        }
 
         // 응답 생성
         Map<String, Object> response = new HashMap<>();
@@ -167,19 +208,43 @@ public class RobotController {
 
     @PostMapping("/map")
     public ResponseEntity<?> receiveMap(@RequestBody Map<String, Object> data) {
-        // 데이터 로깅 (필요시 주석 해제)
-        // log.info("맵 데이터 수신: {}", data);
+        log.info("맵 데이터 수신: {}", data);
 
-        // 최신 데이터 저장
-        this.latestMap = data;
+        // 1. 맵 info
+        Map<String, Object> info = (Map<String, Object>) data.get("info");
+        int width = (int) info.get("width");
+        int height = (int) info.get("height");
 
-        // 응답 생성
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "맵 데이터를 성공적으로 수신했습니다");
+        // 2. 전체 맵 -1로 초기화
+        int[][] map = new int[height][width];
+        for (int y = 0; y < height; y++) {
+            Arrays.fill(map[y], -1);
+        }
 
-        return ResponseEntity.ok(response);
+        // 3. 점유 셀 적용
+        List<Map<String, Object>> occupiedCells = (List<Map<String, Object>>) data.get("occupied_cells");
+        for (Map<String, Object> cell : occupiedCells) {
+            int x = (int) cell.get("x");
+            int y = (int) cell.get("y");
+            int value = (int) cell.get("value");
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                map[y][x] = value;
+            }
+        }
+
+        // 4. 전송용 객체 구성
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "map");
+        payload.put("width", width);
+        payload.put("height", height);
+        payload.put("map", map);
+
+        // 5. WebSocket 사용자들에게 실시간 전송
+        userSocketHandler.broadcastMap(payload);
+
+        return ResponseEntity.ok(Map.of("status", "success", "message", "맵 수신 및 전송 완료"));
     }
+
 
     @PostMapping("/auto-map")
     public ResponseEntity<?> startAutoMap(@RequestBody(required = false) Map<String, Object> command) {
@@ -211,6 +276,245 @@ public class RobotController {
         }
     }
 
+    @PostMapping("/stop-auto-map")
+    public ResponseEntity<?> stopAutoMap(@RequestBody(required = false) Map<String, Object> command) {
+        // 명령 데이터 준비 (command가 null인 경우 기본값 설정)
+        boolean dataValue = true;
+        if (command != null && command.containsKey("data")) {
+            dataValue = Boolean.parseBoolean(command.get("data").toString());
+        }
+
+        log.info("자동 맵핑 정지 명령: data={}", dataValue);
+
+        // 브릿지 서버로 명령 전송
+        Map<String, Object> requestData = new HashMap<>();
+        requestData.put("command", "stop_auto_map");
+        requestData.put("data", dataValue);
+
+        try {
+            // 주입된 RestTemplate 사용 및 멤버 변수 bridgeUrl 사용
+            ResponseEntity<Map> response = this.restTemplate.postForEntity(
+                    this.bridgeUrl + "/command", requestData, Map.class);
+
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            log.error("자동 맵핑 정지 명령 전송 실패: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "자동 맵핑 정지 명령을 전송하는 데 실패했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    @PostMapping("/mapping-done")
+    public ResponseEntity<?> receiveMappingDone(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        log.info("맵핑 완료 데이터 수신: success={}", data.get("success"));
+
+        // 최신 데이터 저장
+        this.latestMappingDoneResult = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "맵핑 완료 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/map-status")
+    public ResponseEntity<?> receiveMapStatus(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        Double coverage = ((Number) data.get("coverage")).doubleValue();
+        Double mapChangeRate = ((Number) data.get("map_change_rate")).doubleValue();
+        Integer frontierCount = ((Number) data.get("frontier_count")).intValue();
+
+        log.info("맵 상태 데이터 수신: coverage={}%, change_rate={}, frontiers={}",
+                coverage, mapChangeRate, frontierCount);
+
+        // 최신 데이터 저장
+        this.latestMapStatus = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "맵 상태 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/obstacle-alert")
+    public ResponseEntity<?> receiveObstacleAlert(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        boolean detected = (boolean) data.get("detected");
+        double distance = ((Number) data.get("distance")).doubleValue();
+
+        if (detected) {
+            log.info("장애물 감지 알림: 거리 {}m", distance);
+        }
+
+        // 최신 데이터 저장
+        this.latestObstacleAlert = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "장애물 감지 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/goal-status")
+    public ResponseEntity<?> receiveGoalStatus(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        boolean reached = (boolean) data.get("reached");
+        double timeTakenSec = ((Number) data.get("time_taken_sec")).doubleValue();
+
+        if (reached) {
+            log.info("목표 도달: 소요 시간 {}초", timeTakenSec);
+        } else {
+            log.info("목표 미달: 진행 시간 {}초", timeTakenSec);
+        }
+
+        // 최신 데이터 저장
+        this.latestGoalStatus = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "목표 도달 상태 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/pick-done")
+    public ResponseEntity<?> receivePickDone(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        boolean success = (boolean) data.get("success");
+        String productId = (String) data.get("product_id");
+        String timestamp = (String) data.get("timestamp");
+
+        if (success) {
+            log.info("물건 집기 성공: 상품 ID {}, 시간 {}", productId, timestamp);
+        } else {
+            log.info("물건 집기 실패: 상품 ID {}, 시간 {}", productId, timestamp);
+        }
+
+        // 최신 데이터 저장
+        this.latestPickDone = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "물건 집기 완료 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/place-done")
+    public ResponseEntity<?> receivePlaceDone(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅
+        boolean success = (boolean) data.get("success");
+        int displaySpot = ((Number) data.get("display_spot")).intValue();
+        String productId = (String) data.get("product_id");
+
+        if (success) {
+            log.info("전시 완료: 상품 ID {}, 진열 위치 {}", productId, displaySpot);
+        } else {
+            log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, displaySpot);
+        }
+
+        // 최신 데이터 저장
+        this.latestPlaceDone = data;
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "전시 완료 데이터를 성공적으로 수신했습니다");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/goal-pose")
+    public ResponseEntity<?> setGoalPose(@RequestBody Map<String, Object> command) {
+        try {
+            // 명령 데이터 추출
+            Map<String, Object> position = (Map<String, Object>) command.get("position");
+            double x = ((Number) position.get("x")).doubleValue();
+            double y = ((Number) position.get("y")).doubleValue();
+            double orientation = ((Number) command.getOrDefault("orientation", 0.0)).doubleValue();
+
+            log.info("목적지 설정 명령: x={}, y={}, orientation={}", x, y, orientation);
+
+            // 브릿지 서버로 명령 전송
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("command", "goal_pose");
+            requestData.put("position", position);
+            requestData.put("orientation", orientation);
+
+            // 주입된 RestTemplate 사용 및 멤버 변수 bridgeUrl 사용
+            ResponseEntity<Map> response = this.restTemplate.postForEntity(
+                    this.bridgeUrl + "/command", requestData, Map.class);
+
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            log.error("목적지 설정 명령 전송 실패: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "목적지 설정 명령을 전송하는 데 실패했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+
+    // 시뮬브릿지 에서 백으로.
+    @PostMapping("/image-jpeg-compressed")
+    public ResponseEntity<?> receiveCompressedImage(@RequestBody Map<String, Object> data) {
+        // 데이터 로깅 (필요시 주석 해제)
+         log.info("압축된 JPEG 이미지 데이터 수신: {} bytes", ((String) data.get("data")).length());
+
+        // 최신 데이터 저장
+        this.latestCompressedImage = data;
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!여기는 브릿지에서 가져오기만함!!!db저장 구현할것
+
+        // 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "압축된 JPEG 이미지 데이터를 성공적으로 수신했습니다");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/pick-place")
+    public ResponseEntity<?> executePickPlaceCommand(@RequestBody Map<String, Object> command) {
+        try {
+            // 명령 데이터 추출
+            Map<String, Object> from = (Map<String, Object>) command.get("from");
+            Map<String, Object> to = (Map<String, Object>) command.get("to");
+            String productId = (String) command.get("product_id");
+            int displaySpot = ((Number) command.get("display_spot")).intValue();
+
+            log.info("Pick and Place 명령: from={}, to={}, productId={}, displaySpot={}", from, to, productId, displaySpot);
+
+            // 브릿지 서버로 명령 전송
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("command", "pick_place");
+            requestData.put("from", from);
+            requestData.put("to", to);
+            requestData.put("product_id", productId);
+            requestData.put("display_spot", displaySpot);
+
+            ResponseEntity<Map> response = this.restTemplate.postForEntity(
+                    this.bridgeUrl + "/command", requestData, Map.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            log.error("Pick and Place 명령 전송 실패: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "Pick and Place 명령을 전송하는 데 실패했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
     // ----- 데이터 조회용 GET 엔드포인트 -----
 
     @GetMapping("/global-path")
@@ -236,5 +540,41 @@ public class RobotController {
     @GetMapping("/map")
     public ResponseEntity<?> getMap() {
         return ResponseEntity.ok(this.latestMap);
+    }
+
+    @GetMapping("/mapping-done")
+    public ResponseEntity<?> getMappingDoneResult() {
+        return ResponseEntity.ok(this.latestMappingDoneResult);
+    }
+
+    @GetMapping("/map-status")
+    public ResponseEntity<?> getMapStatus() {
+        return ResponseEntity.ok(this.latestMapStatus);
+    }
+
+    @GetMapping("/obstacle-alert")
+    public ResponseEntity<?> getObstacleAlert() {
+        return ResponseEntity.ok(this.latestObstacleAlert);
+    }
+
+    @GetMapping("/goal-status")
+    public ResponseEntity<?> getGoalStatus() {
+        return ResponseEntity.ok(this.latestGoalStatus);
+    }
+
+    @GetMapping("/pick-done")
+    public ResponseEntity<?> getPickDone() {
+        return ResponseEntity.ok(this.latestPickDone);
+    }
+
+    @GetMapping("/place-done")
+    public ResponseEntity<?> getPlaceDone() {
+        return ResponseEntity.ok(this.latestPlaceDone);
+    }
+
+    @GetMapping("/image-jpeg-compressed")
+    //프론트에서 하고 싶은거... 실기간 연결??? 소켓사용해서 백 -> 프론 구현
+    public ResponseEntity<?> getCompressedImage() {
+        return ResponseEntity.ok(this.latestCompressedImage);
     }
 }
