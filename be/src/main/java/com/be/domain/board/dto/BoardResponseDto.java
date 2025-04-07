@@ -27,6 +27,10 @@ public class BoardResponseDto {
         dto.setCreatedAt(board.getCreatedAt());
         dto.setUpdatedAt(board.getUpdatedAt());
         dto.setExpirationDate(board.getExpirationDate());
+        
+        System.out.println("Board 엔티티의 만료일: " + board.getExpirationDate());
+        System.out.println("DTO로 변환된 만료일: " + dto.getExpirationDate());
+        
         return dto;
     }
 } 
