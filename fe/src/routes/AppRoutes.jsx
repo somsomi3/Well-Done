@@ -11,6 +11,7 @@ const MapPage = lazy(() => import('../pages/MapPage'));
 const RobotPage = lazy(() => import('../pages/RobotPage'));
 const LogPage = lazy(() => import('../pages/LogPage'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
+const RobotCamera = lazy(() => import('../pages/RobotCamera'));
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -117,6 +118,16 @@ function AppRoutes() {
               <ProtectedRoute>
                 <ErrorBoundary>
                   <SettingsPage />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/camera" 
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <RobotCamera />
                 </ErrorBoundary>
               </ProtectedRoute>
             } 
