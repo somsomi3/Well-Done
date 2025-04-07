@@ -471,11 +471,13 @@ public class RobotController {
     @PostMapping("/image-jpeg-compressed")
     public ResponseEntity<?> receiveCompressedImage(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-         log.info("압축된 JPEG 이미지 데이터 수신: {} bytes", ((String) data.get("data")).length());
+        log.info("압축된 JPEG 이미지 데이터 수신: {} bytes", ((String) data.get("data")).length());
 
         // 최신 데이터 저장
         this.latestCompressedImage = data;
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!여기는 브릿지에서 가져오기만함!!!db저장 구현할것
+
+        // RobotService를 통해 이미지 처리 및 WebSocket 브로드캐스트
+        robotService.processCameraImage(data);
 
         // 응답 생성
         Map<String, Object> response = new HashMap<>();
@@ -575,6 +577,14 @@ public class RobotController {
     @GetMapping("/image-jpeg-compressed")
     //프론트에서 하고 싶은거... 실기간 연결??? 소켓사용해서 백 -> 프론 구현
     public ResponseEntity<?> getCompressedImage() {
-        return ResponseEntity.ok(this.latestCompressedImage);
+        // RobotService에서 최신 이미지 가져오기 (또는 직접 저장한 이미지 사용)
+        Map<String, Object> latestImage = robotService.getLatestCameraImage();
+
+        // latestImage가 null이면 직접 저장한 이미지 사용
+        if (latestImage == null) {
+            latestImage = this.latestCompressedImage;
+        }
+
+        return ResponseEntity.ok(latestImage);
     }
 }
