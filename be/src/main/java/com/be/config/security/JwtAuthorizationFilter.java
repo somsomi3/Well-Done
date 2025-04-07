@@ -47,32 +47,34 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     private static final String ACCESS_TOKEN_HEADER_KEY = "Authorization";
     private static final String REFRESH_TOKEN_HEADER_KEY = "x-refresh-token";
     private static final List<String> WHITELIST_PREFIXES = List.of(
-            "/api/swagger-ui/index.html",
-            "/swagger-ui/index.html",
-            "/api/auth/login",
-            "/auth/login",
-            "/api/auth/register",
-            "/auth/register",
-            "/api/auth/refresh",
-            "/auth/refresh",
-            "/api/v3/api-docs",
-            "/v3/api-docs",
-            "/api/swagger-ui",
-            "/swagger-ui",
-            "/api/swagger-ui/**",
-            "/swagger-ui/**",
-            "/api/swagger-resources/**",
-            "/swagger-resources/**",
-            "/api/webjars/**",
-            "/webjars/**",
-            "/api/auth/test-login",
-            "/auth/test-login",
-            "/api/auth/check-username",
-            "/auth/check-username",
-            "/api/auth/logout",
-            "/auth/logout",
-            "/ws/**",
-            "/api/ws/**"
+        "/api/swagger-ui/index.html",
+        "/swagger-ui/index.html",
+        "/api/auth/login",
+        "/auth/login",
+        "/api/auth/register",
+        "/auth/register",
+        "/api/auth/refresh",
+        "/auth/refresh",
+        "/api/v3/api-docs",
+        "/v3/api-docs",
+        "/api/swagger-ui",
+        "/swagger-ui",
+        "/api/swagger-ui/**",
+        "/swagger-ui/**",
+        "/api/swagger-resources/**",
+        "/swagger-resources/**",
+        "/api/webjars/**",
+        "/webjars/**",
+        "/api/auth/test-login",
+        "/auth/test-login",
+        "/api/auth/check-username",
+        "/auth/check-username",
+        "/api/auth/logout",
+        "/auth/logout",
+        "/ws/**",
+        "/api/ws/**",
+        "/api/boards/announcements/*/view",
+        "/api/boards/announcements/view"
     );
 
     public JwtAuthorizationFilter(TokenUtils tokenUtils, UserRepository userRepository) {
@@ -84,9 +86,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     //검증에 성공하면 SecurityContext에 인증 정보를 저장
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain chain)
-            throws IOException, ServletException {
+        @NonNull HttpServletResponse response,
+        @NonNull FilterChain chain)
+        throws IOException, ServletException {
 
         String requestURI = request.getRequestURI();
 
@@ -124,11 +126,24 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
                 // DB 조회로 UserDto 구성
                 User user = userRepository.findById(userIdLong)
-                        .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                    .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
                 UserDto userDto = new UserDto(user);
+                // 디버깅용 로그 추가
+                log.info("사용자 역할: {}", userDto.getRoles());
+
                 List<SimpleGrantedAuthority> authorities = userDto.getRoles().stream()
-                    .map(SimpleGrantedAuthority::new)
+                    .map(role -> {
+                        log.info("역할 변환: {}", role);
+                        return new SimpleGrantedAuthority(role);
+                    })
                     .toList();
+
+                // List<SimpleGrantedAuthority> authorities = userDto.getRoles().stream()
+                //     .map(SimpleGrantedAuthority::new)
+                //     .toList(); >>디버깅용 지우고 다시 이거 하면됨.
+
+                // 디버깅용 로그 추가
+                log.info("생성된 권한 객체: {}", authorities);
                 UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDto, null, authorities);
 
@@ -140,7 +155,16 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                     ValidTokenDto refTokenValidDto = tokenUtils.isValidToken(paramRefreshToken);
                     if (refTokenValidDto.isValid()) {
                         UserDto claimsToUserDto = tokenUtils.getClaimsToUserDto(paramRefreshToken, false);
-                        String token = tokenUtils.generateJwt(claimsToUserDto);
+
+                        // [수정] 리프레시 토큰으로 새 액세스 토큰 생성 시 역할 정보를 포함시키기 위해
+                        // DB에서 최신 사용자 정보와 역할 정보를 가져와 UserDto를 다시 생성
+                        User user = userRepository.findById(claimsToUserDto.getUserid())
+                            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                        UserDto userDtoWithRoles = new UserDto(user);  // 역할 정보가 포함된 완전한 UserDto
+
+                        // 역할 정보가 포함된 새 액세스 토큰 생성
+                        String token = tokenUtils.generateJwt(userDtoWithRoles);
+
                         sendToClientAccessToken(token, response);
                         chain.doFilter(request, response);
                     } else {
@@ -161,6 +185,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     //인증이 필요 없는 경로인지 확인하는 메서드
     private boolean isWhitelisted(String uri) {
         log.info("현재 URI 경로: {}", uri);
+
+        // 조회수 증가 API 경로 패턴 확인
+        if (uri.matches(".*/api/boards/announcements/\\d+/view")) {
+            log.info("조회수 증가 API 인식: {}", uri);
+            return true;
+        }
+
         boolean isWhitelisted = WHITELIST_PREFIXES.stream().anyMatch(uri::startsWith);
         log.info("화이트리스트 검사 결과: {} (경로: {})", isWhitelisted, uri);
 
@@ -215,6 +246,5 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         } catch (IOException e) {
             log.error("[-] 결과값 생성에 실패 : {}", e);
         }
-
     }
 }
