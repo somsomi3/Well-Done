@@ -3,6 +3,7 @@ package com.be.domain.inventory.service;
 import com.be.db.entity.Inventory;
 import com.be.db.entity.InventoryHistory;
 import com.be.db.repository.InventoryRepository;
+import com.be.domain.inventory.dto.InventoryDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +16,17 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final InventoryHistoryService inventoryHistoryService;
 
-    public List<Inventory> findAll() {
-        return inventoryRepository.findAll();
+
+    public List<InventoryDto> findAllDto() {
+        return inventoryRepository.findAll().stream()
+                .map(i -> InventoryDto.builder()
+                        .id(i.getId())
+                        .itemName(i.getItemName())
+                        .quantity(i.getQuantity())
+                        .warehouseQuantity(i.getWarehouseQuantity())
+                        .minThreshold(i.getMinThreshold())
+                        .build())
+                .toList();
     }
 
     public Inventory findById(Long id) {
