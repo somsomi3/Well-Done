@@ -1,6 +1,7 @@
 package com.be.domain.robot.controller;
 
 import com.be.domain.robot.UserSocketHandler;
+import com.be.domain.robot.service.RedisService;
 import com.be.domain.robot.service.RobotService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ public class RobotController {
     private final UserSocketHandler userSocketHandler;
     private final Logger log = LoggerFactory.getLogger(RobotController.class);
     private final RestTemplate restTemplate;
+    private final RedisService redisService;
 
     // 브릿지 서버 URL 설정
     private final String bridgeUrl = "http://10.0.0.2:5000";
@@ -314,6 +316,9 @@ public class RobotController {
         // 최신 데이터 저장
         this.latestMappingDoneResult = data;
 
+        // 데이터 처리 및 Redis 저장
+        robotService.processMappingDoneData(data);
+
         // 응답 생성
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
@@ -546,6 +551,14 @@ public class RobotController {
 
     @GetMapping("/mapping-done")
     public ResponseEntity<?> getMappingDoneResult() {
+        // Redis에서 맵핑 완료 데이터 조회 시도
+        Object redisData = redisService.getMappingDoneData();
+
+        if (redisData != null) {
+            return ResponseEntity.ok(redisData);
+        }
+
+        // Redis에 없는 경우 컨트롤러 변수에서 반환
         return ResponseEntity.ok(this.latestMappingDoneResult);
     }
 
@@ -586,5 +599,16 @@ public class RobotController {
         }
 
         return ResponseEntity.ok(latestImage);
+    }
+    @GetMapping("/map-processed")
+    public ResponseEntity<?> getProcessedMap() {
+        Object mapData = redisService.getMapData(false);
+        return ResponseEntity.ok(mapData);
+    }
+
+    @GetMapping("/map-inflated")
+    public ResponseEntity<?> getInflatedMap() {
+        Object mapData = redisService.getMapData(true);
+        return ResponseEntity.ok(mapData);
     }
 }
