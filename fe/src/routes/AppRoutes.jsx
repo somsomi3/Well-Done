@@ -1,16 +1,32 @@
-import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import ErrorBoundary from '../components/ErrorBoundary';
+import MainPage from '../pages/MainPage';
+import LoginPage from '../pages/LoginPage';
+import RegisterPage from '../pages/RegisterPage';
+import MapPage from '../pages/MapPage';
+import RobotPage from '../pages/RobotPage';
+import LogPage from '../pages/LogPage';
+import SettingsPage from '../pages/SettingsPage';
+import AnnouncementDetail from '../components/board/AnnouncementDetail';
+import AnnouncementList from '../components/board/AnnouncementList';
+import AnnouncementForm from '../components/board/AnnouncementForm';
 
 // 지연 로딩을 사용한 페이지 컴포넌트 임포트
-const LoginPage = lazy(() => import('../pages/LoginPage'));
-const RegisterPage = lazy(() => import('../pages/RegisterPage'));
-const MainPage = lazy(() => import('../pages/MainPage'));
-const MapPage = lazy(() => import('../pages/MapPage'));
-const RobotPage = lazy(() => import('../pages/RobotPage'));
-const LogPage = lazy(() => import('../pages/LogPage'));
-const SettingsPage = lazy(() => import('../pages/SettingsPage'));
+const LoginPageComponent = lazy(() => import('../pages/LoginPage'));
+const RegisterPageComponent = lazy(() => import('../pages/RegisterPage'));
+const MainPageComponent = lazy(() => import('../pages/MainPage'));
+const MapPageComponent = lazy(() => import('../pages/MapPage'));
+const RobotPageComponent = lazy(() => import('../pages/RobotPage'));
+const LogPageComponent = lazy(() => import('../pages/LogPage'));
+const SettingsPageComponent = lazy(() => import('../pages/SettingsPage'));
+const AnnouncementDetailComponent = lazy(() =>
+  import('../components/board/AnnouncementDetail')
+);
+const AnnouncementListComponent = lazy(() =>
+  import('../components/board/AnnouncementList')
+);
 
 // 로딩 컴포넌트
 const LoadingFallback = () => (
@@ -22,24 +38,46 @@ const LoadingFallback = () => (
 // 보호된 라우트 컴포넌트
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
-  
+  const navigate = useNavigate();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated() && !isRedirecting) {
+      setIsRedirecting(true);
+      // 약간의 지연을 주어 네비게이션 제한 문제를 방지
+      setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 100);
+    }
+  }, [isAuthenticated, navigate, isRedirecting]);
+
   if (!isAuthenticated()) {
-    // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
-    return <Navigate to="/login" replace />;
+    return <LoadingFallback />;
   }
-  
+
   return children;
 };
 
 // 공개 라우트 컴포넌트 - 이미 인증된 사용자는 메인 페이지로 리다이렉트 (선택적)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
-  
-  // 이미 인증된 사용자가 로그인/회원가입 페이지에 접근하면 메인 페이지로 리다이렉트
+  const navigate = useNavigate();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated() && !isRedirecting) {
+      setIsRedirecting(true);
+      // 약간의 지연을 주어 네비게이션 제한 문제를 방지
+      setTimeout(() => {
+        navigate('/main', { replace: true });
+      }, 100);
+    }
+  }, [isAuthenticated, navigate, isRedirecting]);
+
   if (isAuthenticated()) {
-    return <Navigate to="/main" replace />;
+    return <LoadingFallback />;
   }
-  
+
   return children;
 };
 
@@ -49,95 +87,135 @@ function AppRoutes() {
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           {/* 공개 라우트 - 인증이 필요하지 않음 */}
-          <Route 
-            path="/login" 
+          <Route
+            path="/login"
             element={
               <PublicRoute>
                 <ErrorBoundary>
-                  <LoginPage />
+                  <LoginPageComponent />
                 </ErrorBoundary>
               </PublicRoute>
-            } 
+            }
           />
-          <Route 
-            path="/register" 
+          <Route
+            path="/register"
             element={
               <PublicRoute>
                 <ErrorBoundary>
-                  <RegisterPage />
+                  <RegisterPageComponent />
                 </ErrorBoundary>
               </PublicRoute>
-            } 
+            }
           />
-          
+
           {/* 보호된 라우트 - 인증이 필요함 */}
-          <Route 
-            path="/main" 
+          <Route
+            path="/main"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <MainPage />
+                  <MainPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/map" 
+          <Route
+            path="/map"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <MapPage />
+                  <MapPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/robot" 
+          <Route
+            path="/robot"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <RobotPage />
+                  <RobotPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/log" 
+          <Route
+            path="/log"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <LogPage />
+                  <LogPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/settings" 
+          <Route
+            path="/settings"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <SettingsPage />
+                  <SettingsPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
-            } 
+            }
           />
-          
+
+          <Route
+            path="/announcements"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementListComponent />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/announcements/:id"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementDetailComponent />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/announcements/write"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementForm />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
           {/* 기본 및 404 리다이렉션 */}
           <Route path="/" element={<Navigate to="/main" replace />} />
-          <Route path="*" element={
-            <ErrorBoundary>
-              <div className="flex flex-col items-center justify-center h-screen">
-                <h1 className="text-3xl font-bold text-gray-700 mb-4">404 - 페이지를 찾을 수 없습니다</h1>
-                <p className="text-gray-600 mb-6">요청하신 페이지가 존재하지 않습니다.</p>
-                <button 
-                  onClick={() => window.location.href = '/main'}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  메인 페이지로 이동
-                </button>
-              </div>
-            </ErrorBoundary>
-          } />
+          <Route
+            path="*"
+            element={
+              <ErrorBoundary>
+                <div className="flex flex-col items-center justify-center h-screen">
+                  <h1 className="text-3xl font-bold text-gray-700 mb-4">
+                    404 - 페이지를 찾을 수 없습니다
+                  </h1>
+                  <p className="text-gray-600 mb-6">
+                    요청하신 페이지가 존재하지 않습니다.
+                  </p>
+                  <button
+                    onClick={() => (window.location.href = '/main')}
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    메인 페이지로 이동
+                  </button>
+                </div>
+              </ErrorBoundary>
+            }
+          />
         </Routes>
       </Suspense>
     </ErrorBoundary>
