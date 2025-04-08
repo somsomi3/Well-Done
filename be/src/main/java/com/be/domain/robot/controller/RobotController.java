@@ -502,16 +502,55 @@ public class RobotController {
 
             log.info("Pick and Place 명령: from={}, to={}, productId={}, displaySpot={}", from, to, productId, displaySpot);
 
-            // 브릿지 서버로 명령 전송
+            // 브릿지 노드가 요구하는 형식으로 데이터 변환
             Map<String, Object> requestData = new HashMap<>();
             requestData.put("command", "pick_place");
-            requestData.put("from", from);
-            requestData.put("to", to);
+
+            // from_pos 구조 설정
+            Map<String, Object> fromPos = new HashMap<>();
+
+            // position 구조 설정
+            Map<String, Object> fromPosition = new HashMap<>();
+            fromPosition.put("x", ((Number) from.get("x")).doubleValue());
+            fromPosition.put("y", ((Number) from.get("y")).doubleValue());
+            fromPosition.put("z", 0.0); // 기본값으로 0.0 설정
+
+            // theta를 라디안으로 설정
+            double fromTheta = from.containsKey("theta") ?
+                    ((Number) from.get("theta")).doubleValue() : 0.0;
+
+            fromPos.put("position", fromPosition);
+            fromPos.put("theta", fromTheta);
+
+            // to_pos 구조 설정
+            Map<String, Object> toPos = new HashMap<>();
+
+            // position 구조 설정
+            Map<String, Object> toPosition = new HashMap<>();
+            toPosition.put("x", ((Number) to.get("x")).doubleValue());
+            toPosition.put("y", ((Number) to.get("y")).doubleValue());
+            toPosition.put("z", 0.0); // 기본값으로 0.0 설정
+
+            // theta를 라디안으로 설정
+            double toTheta = to.containsKey("theta") ?
+                    ((Number) to.get("theta")).doubleValue() : 0.0;
+
+            toPos.put("position", toPosition);
+            toPos.put("theta", toTheta);
+
+            // 요청 데이터에 추가
+            requestData.put("from_pos", fromPos);
+            requestData.put("to_pos", toPos);
             requestData.put("product_id", productId);
             requestData.put("display_spot", displaySpot);
 
+            // 디버깅을 위한 최종 요청 데이터 로깅
+            log.info("브릿지 서버로 전송할 Pick and Place 명령: {}", requestData);
+
+            // 브릿지 서버로 명령 전송
             ResponseEntity<Map> response = this.restTemplate.postForEntity(
                     this.bridgeUrl + "/command", requestData, Map.class);
+
             return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
             log.error("Pick and Place 명령 전송 실패: {}", e.getMessage());
