@@ -17,6 +17,11 @@ public class RedisService {
     // 데이터 만료 시간 (분)
     private static final long CAMERA_EXPIRE_TIME = 5;
 
+    // 레디스 맵 저장 키 상수
+    private static final String MAPPING_DONE_KEY = "robot:mapping:done";
+    private static final String MAP_KEY = "robot:map";
+    private static final String MAP_INFLATED_KEY = "robot:map:inflated";
+
     @Autowired
     public RedisService(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -70,6 +75,60 @@ public class RedisService {
         } catch (Exception e) {
             // 로깅 또는 예외 처리
             System.err.println("Redis에서 카메라 이미지 조회 중 오류: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 맵핑 완료 데이터 저장
+     * @param mappingDoneData JSON 형태의 맵핑 완료 데이터
+     */
+    public void saveMappingDoneData(String mappingDoneData) {
+        try {
+            redisTemplate.opsForValue().set(MAPPING_DONE_KEY, mappingDoneData);
+        } catch (Exception e) {
+            System.err.println("Redis에 맵핑 완료 데이터 저장 중 오류: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 맵 데이터 저장
+     * @param mapData JSON 형태의 맵 데이터
+     * @param isInflated 인플레이트된 맵 여부
+     */
+    public void saveMapData(String mapData, boolean isInflated) {
+        try {
+            String key = isInflated ? MAP_INFLATED_KEY : MAP_KEY;
+            redisTemplate.opsForValue().set(key, mapData);
+        } catch (Exception e) {
+            System.err.println("Redis에 맵 데이터 저장 중 오류: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 맵핑 완료 데이터 조회
+     * @return 맵핑 완료 데이터
+     */
+    public Object getMappingDoneData() {
+        try {
+            return redisTemplate.opsForValue().get(MAPPING_DONE_KEY);
+        } catch (Exception e) {
+            System.err.println("Redis에서 맵핑 완료 데이터 조회 중 오류: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 맵 데이터 조회
+     * @param isInflated 인플레이트된 맵 여부
+     * @return 맵 데이터
+     */
+    public Object getMapData(boolean isInflated) {
+        try {
+            String key = isInflated ? MAP_INFLATED_KEY : MAP_KEY;
+            return redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            System.err.println("Redis에서 맵 데이터 조회 중 오류: " + e.getMessage());
             return null;
         }
     }
