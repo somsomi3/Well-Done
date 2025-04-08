@@ -14,7 +14,7 @@ sys.path.append(
 # SSAFY 메시지 타입 임포트 시도
 try:
     # from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
-    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand
+    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand, PlaceDone
     CUSTOM_IMPORTS_AVAILABLE = True
 except ImportError:
     # 패키지를 가져올 수 없을 경우 대체 클래스 정의

@@ -16,7 +16,7 @@ from sensor_msgs.msg import CompressedImage
 
 # SSAFY 메시지 타입 임포트 시도
 try:
-    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand
+    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand, PlaceDone, PlaceDone
     # from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
     print("성공적으로 ssafy_msgs를 임포트했습니다!")
     CUSTOM_IMPORTS_AVAILABLE = True
@@ -24,7 +24,7 @@ except ImportError:
     print(f"ssafy_msgs 임포트 오류: {e}")
     # 없으면 message_types.py에서 가져옴
     # from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
-    # from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand
+    # from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand, PlaceDone
     
 # 내부 모듈 임포트
 from .handlers.topic_callbacks import register_all_callbacks
@@ -180,9 +180,9 @@ class RobotBridgeNode(Node):
             # 'pick_done': self.create_subscription(
             #     PickDone, "/pick_done", self.pick_done_callback, self.qos_profile
             # ),
-            # 'place_done': self.create_subscription(
-            #     PlaceDone, "/place_done", self.place_done_callback, self.qos_profile
-            # ),
+            'place_done': self.create_subscription(
+                PlaceDone, "/place_done", self.place_done_callback, self.qos_profile
+            ),
             'image_jpeg_compressed': self.create_subscription(
                 CompressedImage, "/image_jpeg/compressed", self.image_jpeg_compressed_callback, self.qos_profile
             )
