@@ -68,7 +68,7 @@ const CameraModal = ({ isOpen, onClose, robotId }) => {
 
         if (!response.ok) throw new Error(`HTTP 오류: ${response.status}`);
         const data = await response.json();
-
+ 
         if (data?.data) {
           setImageData(data.data);
           setLastUpdated(new Date());
