@@ -51,6 +51,10 @@ class PathTracking(Node):
         self.stuck_timeout = 30.0
         self.is_blocked = False
         self.goal_reach_time = None  # 도달 시간 저장 변수
+        self.recovery_stage = 0  # 0: 1단계 후진 반복, 1: 2단계 후진+회전 반복
+        self.backward_count = 0
+        self.recovery_phase_start = None
+        self.recovery_phase = "backward"
 
         # 메시지 초기화
         self.odom_msg = Odometry()
@@ -67,7 +71,7 @@ class PathTracking(Node):
         self.lfd_gain = 1.0
 
         # goal 도달 판별 기준
-        self.goal_reach_dist = 0.3
+        self.goal_reach_dist = 0.05
         self.goal_reached = False
 
         # 장애물 블로킹 지속 시간 측정
@@ -102,11 +106,11 @@ class PathTracking(Node):
             )
 
             return
-        
+
         if not self.is_same_path(msg):
             self.goal_reached = False
             self.goal_reach_time = None
-            
+
         self.path_msg = msg
         self.is_path = True
 
@@ -144,6 +148,10 @@ class PathTracking(Node):
             self.recovery_sent = False
             self.is_blocked = False
             self.recovery_direction = 0
+            self.backward_count = 0
+            self.recovery_stage = 0
+            self.recovery_phase = "backward"
+            self.recovery_phase_start = None
 
         # 경로 유효성 확인 및 goal 도달 여부 체크
         if self.check_path_validity_and_goal(robot_x, robot_y):
@@ -197,6 +205,10 @@ class PathTracking(Node):
         if self.blocked_start_time is None:
             self.blocked_start_time = now
             self.recovery_direction = random.choice([-1, 1])
+            self.recovery_stage = 0
+            self.backward_count = 0
+            self.recovery_phase = "backward"
+            self.recovery_phase_start = now
             print_log(
                 "warn",
                 self.get_logger(),
@@ -204,28 +216,72 @@ class PathTracking(Node):
                 file_tag=self.file_tag,
             )
 
-        blocked_duration = now - self.blocked_start_time
-
-        if blocked_duration < 2.0:
+        # -------------------------------
+        # 🔴 1단계: 후진만 여러 번
+        # -------------------------------
+        if self.recovery_stage == 0:
             print_log(
                 "info",
                 self.get_logger(),
-                "⬅️ 장애물 회피 1단계: 후진 중",
+                f"⬅️ 회피 1단계: 후진 {self.backward_count + 1}/5",
                 file_tag=self.file_tag,
             )
             self.cmd_msg.linear.x = -0.1
             self.cmd_msg.angular.z = 0.0
-        elif blocked_duration < 4.0:
-            print_log(
-                "info",
-                self.get_logger(),
-                "🔁 장애물 회피 2단계: 회전 중",
-                file_tag=self.file_tag,
-            )
-            self.cmd_msg.linear.x = 0.0
-            self.cmd_msg.angular.z = 0.3 * self.recovery_direction
-        else:
-            if not self.recovery_sent:
+            self.cmd_pub.publish(self.cmd_msg)
+            self.backward_count += 1
+
+            if self.backward_count >= 5:
+                self.recovery_stage = 1
+                self.recovery_phase = "backward"
+                self.recovery_phase_start = now
+                print_log(
+                    "info",
+                    self.get_logger(),
+                    "🔁 회피 2단계로 전환 (후진 + 회전 반복)",
+                    file_tag=self.file_tag,
+                )
+            return True
+
+        # -------------------------------
+        # 🔵 2단계: 후진 → 회전 반복
+        # -------------------------------
+        elif self.recovery_stage == 1:
+            phase_time = now - self.recovery_phase_start
+
+            if self.recovery_phase == "backward":
+                print_log(
+                    "info",
+                    self.get_logger(),
+                    "⬅️ 회피 2단계: 후진 중",
+                    file_tag=self.file_tag,
+                )
+                self.cmd_msg.linear.x = -0.1
+                self.cmd_msg.angular.z = 0.0
+                self.cmd_pub.publish(self.cmd_msg)
+
+                if phase_time > 1.0:
+                    self.recovery_phase = "rotate"
+                    self.recovery_phase_start = now
+
+            elif self.recovery_phase == "rotate":
+                print_log(
+                    "info",
+                    self.get_logger(),
+                    "🔁 회피 2단계: 회전 중",
+                    file_tag=self.file_tag,
+                )
+                self.cmd_msg.linear.x = 0.0
+                self.cmd_msg.angular.z = 0.3 * self.recovery_direction
+                self.cmd_pub.publish(self.cmd_msg)
+
+                if phase_time > 1.0:
+                    self.recovery_phase = "backward"
+                    self.recovery_phase_start = now
+
+            # 실패 판단 기준: 총 회피 시도 시간 초과 (예: 10초)
+            total_recovery_time = now - self.blocked_start_time
+            if total_recovery_time > 10.0 and not self.recovery_sent:
                 print_log(
                     "warn",
                     self.get_logger(),
@@ -238,11 +294,10 @@ class PathTracking(Node):
                     )
                 )
                 self.recovery_sent = True
-            self.stop_robot()
-            return True
+                self.stop_robot()
+                return True
 
-        self.cmd_pub.publish(self.cmd_msg)
-        return True
+            return True
 
     def check_path_validity_and_goal(self, robot_x, robot_y):
         if len(self.path_msg.poses) < 1:
@@ -330,6 +385,16 @@ class PathTracking(Node):
 
         vel = max(0.0, 1.0 * cos(theta))
         omega = max(-1.0, min(1.0, 1.5 * theta))
+
+        # 목표 지점과의 거리
+        goal = self.path_msg.poses[-1].pose.position
+        dist_to_goal = sqrt((goal.x - robot_x) ** 2 + (goal.y - robot_y) ** 2)
+
+        # 📉 속도 감소 적용 (가까울수록 더 천천히)
+        if dist_to_goal < 0.5:
+            vel *= 0.3
+        elif dist_to_goal < 1.0:
+            vel *= 0.6
 
         self.cmd_msg.linear.x = float(vel)
         self.cmd_msg.angular.z = float(omega)
