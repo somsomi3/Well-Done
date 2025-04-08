@@ -16,11 +16,16 @@ from sensor_msgs.msg import CompressedImage
 
 # SSAFY 메시지 타입 임포트 시도
 try:
-    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
+    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand, PlaceDone, PlaceDone
+    # from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
+    print("성공적으로 ssafy_msgs를 임포트했습니다!")
+    CUSTOM_IMPORTS_AVAILABLE = True
 except ImportError:
+    print(f"ssafy_msgs 임포트 오류: {e}")
     # 없으면 message_types.py에서 가져옴
-    from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
-
+    # from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
+    # from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand, PlaceDone
+    
 # 내부 모듈 임포트
 from .handlers.topic_callbacks import register_all_callbacks
 from .handlers.command_handlers import register_all_command_handlers
@@ -38,7 +43,14 @@ class RobotBridgeNode(Node):
             'local_path': 0.0,
             'odom': 0.0,
             'scan': 0.0,
-            'map': 0.0
+            'map': 0.0,
+            'mapping_done': 0.0,
+            'map_status': 0.0,
+            'obstacle_alert': 0.0,
+            'goal_status': 0.0,
+            'pick_done': 0.0,
+            'place_done': 0.0,
+            'image_jpeg': 0.0
         }
         self.send_interval = 1.0
 
@@ -51,6 +63,7 @@ class RobotBridgeNode(Node):
 
         # Spring 서버 URL 및 인증
         self.spring_server_url = "http://172.26.15.101:8080"
+        # self.spring_server_url = "http://localhost:8080"
         self.jwt_token = None
         self.token_refresh_timer = None
         self.attempt_jwt_token_acquisition()
@@ -155,18 +168,18 @@ class RobotBridgeNode(Node):
             'mapping_done': self.create_subscription(
                 MappingDone, "/mapping_done", self.mapping_done_callback, self.qos_profile
             ),
-            'map_status': self.create_subscription(
-                MapStatus, "/map_status", self.map_status_callback, self.qos_profile
-            ),
-            'obstacle_alert': self.create_subscription(
-                ObstacleAlert, "/obstacle_alert", self.obstacle_alert_callback, self.qos_profile
-            ),
-            'goal_status': self.create_subscription(
-                GoalStatus, "/goal_status", self.goal_status_callback, self.qos_profile
-            ),
-            'pick_done': self.create_subscription(
-                PickDone, "/pick_done", self.pick_done_callback, self.qos_profile
-            ),
+            # 'map_status': self.create_subscription(
+            #     MapStatus, "/map_status", self.map_status_callback, self.qos_profile
+            # ),
+            # 'obstacle_alert': self.create_subscription(
+            #     ObstacleAlert, "/obstacle_alert", self.obstacle_alert_callback, self.qos_profile
+            # ),
+            # 'goal_status': self.create_subscription(
+            #     GoalStatus, "/goal_status", self.goal_status_callback, self.qos_profile
+            # ),
+            # 'pick_done': self.create_subscription(
+            #     PickDone, "/pick_done", self.pick_done_callback, self.qos_profile
+            # ),
             'place_done': self.create_subscription(
                 PlaceDone, "/place_done", self.place_done_callback, self.qos_profile
             ),

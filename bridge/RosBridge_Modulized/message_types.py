@@ -9,11 +9,12 @@ from sensor_msgs.msg import CompressedImage
 
 # SSAFY 메시지 패키지 경로 추가
 sys.path.append(
-    "C:/Users/SSAFY/Desktop/ros/S12P21E102/sim/ros2_ws/install/ssafy_bridge/Lib/site-packages"
+    "C:/Users/SSAFY/Desktop/sim/S12P21E102/sim/ros2_ws/install/ssafy_bridge/Lib/site-packages"
 )
 # SSAFY 메시지 타입 임포트 시도
 try:
-    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
+    # from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
+    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand, PlaceDone
     CUSTOM_IMPORTS_AVAILABLE = True
 except ImportError:
     # 패키지를 가져올 수 없을 경우 대체 클래스 정의
@@ -88,8 +89,8 @@ except ImportError:
     
     class PickPlaceCommand:
         def __init__(self):
-            self.from_ = Point()
-            self.to = Point()
+            self.from_pos = Point()
+            self.to_pos = Point()
             self.product_id = ""
             self.display_spot = 0
             

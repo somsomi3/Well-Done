@@ -492,26 +492,69 @@ def execute_goal_pose_command(node, command):
         node.get_logger().error(traceback.format_exc())
 
 def execute_pick_place_command(node, cmd):
-    """pick_place_command 실행"""
-    if 'pick_place_command' not in node.publishers:
+    """pick_place_command 실행 - 세타값(각도)을 쿼터니언으로 변환"""
+    if not hasattr(node, 'pick_place_command_publisher'):
+        node.get_logger().error("pick_place_command publisher not available")
         return {"result": False, "message": "pick_place_command publisher not available"}
 
     try:
-        from_ = cmd.get('from_', {})
-        to = cmd.get('to', {})
+        # 백엔드에서 전달받은 데이터 추출
+        from_pos = cmd.get('from_pos', {})
+        to_pos = cmd.get('to_pos', {})
         product_id = cmd.get('product_id', '')
         display_spot = cmd.get('display_spot', 0)
-
-        msg = {
-            'from_': {'x': from_.get('x', 0.0), 'y': from_.get('y', 0.0)},
-            'to': {'x': to.get('x', 0.0), 'y': to.get('y', 0.0)},
-            'product_id': product_id,
-            'display_spot': display_spot
-        }
-
-        node.publishers['pick_place_command'].publish(str(msg))
-        node.get_logger().info(f"Published pick_place_command: {msg}")
+        
+        # 새 PickPlaceCommand 메시지 생성
+        msg = PickPlaceCommand()
+        
+        # 메시지 Header 설정
+        msg.header.stamp = node.get_clock().now().to_msg()
+        msg.header.frame_id = 'map'  # 또는 적절한 프레임 ID
+        
+        # from_pos 설정 (세타값을 쿼터니언으로 변환)
+        import math
+        
+        # from_pos의 위치 정보 설정
+        msg.from_pos.position.x = from_pos.get('position', {}).get('x', 0.0)
+        msg.from_pos.position.y = from_pos.get('position', {}).get('y', 0.0)
+        msg.from_pos.position.z = from_pos.get('position', {}).get('z', 0.0)
+        
+        # from_pos의 방향 정보 설정 (세타 -> 쿼터니언)
+        from_theta = from_pos.get('theta', 0.0)  # 세타 값(라디안)
+        msg.from_pos.orientation.x = 0.0
+        msg.from_pos.orientation.y = 0.0
+        msg.from_pos.orientation.z = math.sin(from_theta / 2.0)
+        msg.from_pos.orientation.w = math.cos(from_theta / 2.0)
+        
+        # to_pos 설정 (세타값을 쿼터니언으로 변환)
+        msg.to_pos.position.x = to_pos.get('position', {}).get('x', 0.0)
+        msg.to_pos.position.y = to_pos.get('position', {}).get('y', 0.0)
+        msg.to_pos.position.z = to_pos.get('position', {}).get('z', 0.0)
+        
+        # to_pos의 방향 정보 설정 (세타 -> 쿼터니언)
+        to_theta = to_pos.get('theta', 0.0)  # 세타 값(라디안)
+        msg.to_pos.orientation.x = 0.0
+        msg.to_pos.orientation.y = 0.0
+        msg.to_pos.orientation.z = math.sin(to_theta / 2.0)
+        msg.to_pos.orientation.w = math.cos(to_theta / 2.0)
+        
+        # 제품 ID와 진열대 번호 설정
+        msg.product_id = product_id
+        msg.display_spot = display_spot
+        
+        # 디버깅 정보 로깅
+        node.get_logger().debug(f"From position: x={msg.from_pos.position.x}, y={msg.from_pos.position.y}")
+        node.get_logger().debug(f"From theta: {from_theta} rad, converted to quaternion: z={msg.from_pos.orientation.z}, w={msg.from_pos.orientation.w}")
+        node.get_logger().debug(f"To position: x={msg.to_pos.position.x}, y={msg.to_pos.position.y}")
+        node.get_logger().debug(f"To theta: {to_theta} rad, converted to quaternion: z={msg.to_pos.orientation.z}, w={msg.to_pos.orientation.w}")
+        
+        # 메시지 발행
+        node.pick_place_command_publisher.publish(msg)
+        node.get_logger().info(f"Published pick_place_command for product {product_id} to display spot {display_spot}")
+        
         return {"result": True, "message": "Pick and place command published successfully"}
     except Exception as e:
         node.get_logger().error(f"Error executing pick_place_command: {str(e)}")
+        import traceback
+        node.get_logger().error(traceback.format_exc())
         return {"result": False, "message": f"Error: {str(e)}"}
