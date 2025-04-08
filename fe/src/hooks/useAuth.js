@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToastStore } from '../stores/toastStore';
 
-// 인증이 필요하지 않은 경로 목록 (App.jsx와 동일하게 유지)
+// 인증이 필요하지 않은 경로 목록
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password'];
 
 const useAuth = () => {
@@ -24,6 +24,13 @@ const useAuth = () => {
 
   // 현재 경로가 인증이 필요하지 않은 경로인지 확인
   const isPublicPath = PUBLIC_PATHS.includes(location.pathname);
+
+  // 인증 실패 시 처리 함수
+  const handleAuthFailure = useCallback(() => {
+    localStorage.removeItem('accessToken');
+    clearToken();
+    navigate('/login');
+  }, [clearToken, navigate]);
 
   // 로그인 함수
   const login = useCallback(
@@ -55,6 +62,9 @@ const useAuth = () => {
           throw new Error('서버 응답에 토큰이 없습니다.');
         }
 
+        // 토큰을 localStorage에 저장
+        localStorage.setItem('accessToken', accessToken);
+
         // 토큰을 스토어에 저장
         setToken(accessToken);
 
@@ -84,7 +94,7 @@ const useAuth = () => {
         return false;
       }
     },
-    [setToken, addToast]
+    [setToken, addToast, setLoading, setError]
   );
 
   // 회원가입 함수
@@ -121,34 +131,37 @@ const useAuth = () => {
         return false;
       }
     },
-    [addToast]
+    [addToast, setLoading, setError]
   );
 
   // 아이디 중복 확인 함수
-  const checkUsername = useCallback(async (username) => {
-    setError(null);
-    try {
-      // API 엔드포인트 확인 - check-id 또는 check-username
-      const response = await publicApi.get('/auth/check-username', {
-        params: { username },
-      });
+  const checkUsername = useCallback(
+    async (username) => {
+      setError(null);
+      try {
+        // API 엔드포인트 확인 - check-id 또는 check-username
+        const response = await publicApi.get('/auth/check-username', {
+          params: { username },
+        });
 
-      console.log('아이디 중복 확인 응답:', response.data);
-      return response.status === 200;
-    } catch (error) {
-      console.error('아이디 중복 확인 오류:', error);
-      if (error.response && error.response.status === 400) {
-        const errorMessage = '이미 사용 중인 사용자 이름입니다.';
+        console.log('아이디 중복 확인 응답:', response.data);
+        return response.status === 200;
+      } catch (error) {
+        console.error('아이디 중복 확인 오류:', error);
+        if (error.response && error.response.status === 400) {
+          const errorMessage = '이미 사용 중인 사용자 이름입니다.';
+          setError(errorMessage);
+          return false;
+        }
+        const errorMessage =
+          error.response?.data?.message ||
+          '사용자명 확인 중 오류가 발생했습니다.';
         setError(errorMessage);
         return false;
       }
-      const errorMessage =
-        error.response?.data?.message ||
-        '사용자명 확인 중 오류가 발생했습니다.';
-      setError(errorMessage);
-      return false;
-    }
-  }, []);
+    },
+    [setError]
+  );
 
   // 토큰 갱신 함수
   const refreshAccessToken = useCallback(async () => {
@@ -200,6 +213,9 @@ const useAuth = () => {
     setIsRefreshing,
     storeRefreshToken,
     addToast,
+    setLoading,
+    setError,
+    handleAuthFailure,
   ]);
 
   // 로그아웃 함수
@@ -217,6 +233,9 @@ const useAuth = () => {
         }
       );
 
+      // localStorage에서 토큰 제거
+      localStorage.removeItem('accessToken');
+
       // 토큰 상태 초기화
       clearToken();
 
@@ -232,6 +251,7 @@ const useAuth = () => {
       setError(errorMessage);
 
       // API 호출 실패해도 클라이언트에서는 로그아웃 처리
+      localStorage.removeItem('accessToken');
       clearToken();
 
       // 에러 알림
@@ -240,13 +260,7 @@ const useAuth = () => {
       setLoading(false);
       return false;
     }
-  }, [clearToken, addToast]);
-
-  // 인증 실패 시 처리 함수
-  const handleAuthFailure = useCallback(() => {
-    clearToken();
-    navigate('/login');
-  }, [clearToken, navigate]);
+  }, [clearToken, addToast, setLoading, setError]);
 
   return {
     login,
