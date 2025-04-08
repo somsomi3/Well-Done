@@ -24,12 +24,16 @@ class AStarLocalPath(Node):
         self.goal_sub = self.create_subscription(
             StatusStamped, "/goal_reached", self.goal_callback, 10
         )
+        self.goal_reached_pub = self.create_publisher(
+            StatusStamped, "/goal_reached", 10
+        )
 
         self.odom_msg = None
         self.global_path_msg = None
         self.is_odom = False
         self.is_path = False
         self.goal_reached = False
+        self.global_path_received_time = None
 
         self.local_path_size = 30
         self.timer = self.create_timer(0.05, self.timer_callback)
@@ -49,6 +53,7 @@ class AStarLocalPath(Node):
         self.global_path_msg = msg
         self.is_path = True
         self.goal_reached = False
+        self.global_path_received_time = self.get_clock().now()
         print_log(
             "info",
             self.get_logger(),
@@ -72,6 +77,29 @@ class AStarLocalPath(Node):
 
         if self.goal_reached:
             return  # 도달했으면 지역 경로 생성 안 함
+
+        if self.global_path_received_time:
+            now = self.get_clock().now()
+            elapsed = (
+                now - self.global_path_received_time
+            ).nanoseconds / 1e9  # 초 단위
+
+            if elapsed > 30.0:
+                print_log(
+                    "warn",
+                    self.get_logger(),
+                    f"⏰ 동일 경로 시도 시간 초과 ({elapsed:.1f}초) → 새로운 전역 경로 필요",
+                    file_tag=self.file_tag,
+                )
+                self.goal_reached = True  # 지역 경로 생성 멈추기
+
+                # 메시지 생성 및 퍼블리시
+                msg = StatusStamped()
+                msg.stamp = now.to_msg()
+                msg.tag = "timeout_reached"
+                msg.status = True
+                self.goal_reached_pub.publish(msg)
+                return
 
         x = self.odom_msg.pose.pose.position.x
         y = self.odom_msg.pose.pose.position.y

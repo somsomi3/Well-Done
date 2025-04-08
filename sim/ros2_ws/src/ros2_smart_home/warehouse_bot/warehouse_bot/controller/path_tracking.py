@@ -71,7 +71,7 @@ class PathTracking(Node):
         self.lfd_gain = 1.0
 
         # goal 도달 판별 기준
-        self.goal_reach_dist = 0.3
+        self.goal_reach_dist = 0.05
         self.goal_reached = False
 
         # 장애물 블로킹 지속 시간 측정
@@ -385,6 +385,16 @@ class PathTracking(Node):
 
         vel = max(0.0, 1.0 * cos(theta))
         omega = max(-1.0, min(1.0, 1.5 * theta))
+
+        # 목표 지점과의 거리
+        goal = self.path_msg.poses[-1].pose.position
+        dist_to_goal = sqrt((goal.x - robot_x) ** 2 + (goal.y - robot_y) ** 2)
+
+        # 📉 속도 감소 적용 (가까울수록 더 천천히)
+        if dist_to_goal < 0.5:
+            vel *= 0.3
+        elif dist_to_goal < 1.0:
+            vel *= 0.6
 
         self.cmd_msg.linear.x = float(vel)
         self.cmd_msg.angular.z = float(omega)
