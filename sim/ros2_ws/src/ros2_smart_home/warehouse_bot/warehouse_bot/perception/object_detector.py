@@ -7,12 +7,15 @@ from rclpy.node import Node
 import time
 from sensor_msgs.msg import CompressedImage, LaserScan
 from ssafy_msgs.msg import BBox
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
+
+import tensorflow as tf
+tf.compat.v1.enable_eager_execution()  # TF1.x 파일 최상단에 추가
+# import tensorflow.compat.v1 as tf
+# tf.disable_v2_behavior()
 
 import tensorflow as tf
 
-from ex_calib import *
+from .ex_calib import *
 
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
@@ -87,34 +90,33 @@ params_cam = {
 
 
 class detection_net_class():
-        def __init__(self, sess,graph, category_index):
-            self.sess = sess
-            self.detection_graph = graph
+        def __init__(self, model, category_index):
+            
+            self.model = model
             self.category_index = category_index
-            
-            # init tensor
-            self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
-            self.boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
-            self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
-            self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
-            self.num_detections = self.detection_graph.get_tensor_by_name('num_detections:0')
-    
-        def inference(self, image_np):
-            image_np_expanded = np.expand_dims(image_np, axis=0)
-            t_start = time.time()
-            
-            #추론 모델 시작 
-            (boxes, scores, classes, num_detections) = self.sess.run(
-                [self.boxes, self.scores, self.classes, self.num_detections],
-                feed_dict={self.image_tensor: image_np_expanded})
-            
+            self.infer = model.signatures['serving_default']
 
+        def inference(self, image_np):
+            t_start = time.time() 
+            image_np_expanded = np.expand_dims(image_np, axis=0).astype(np.uint8)
+            input_tensor = tf.convert_to_tensor(image_np_expanded)
+            
+            detections = self.infer(input_tensor)
+            
+            boxes = detections['detection_boxes'].numpy()[0]
+            scores = detections['detection_scores'].numpy()[0]
+            classes = detections['detection_classes'].numpy()[0].astype(np.int32)
+            
             #결과 처리
             image_process = np.copy(image_np)
+            print(f"Detected scores: {scores}")
+            print(f"Highest detection score: {np.max(scores) if len(scores) > 0 else 'No detections'}")
+
             # 점수가 0.5 이상인 객체만 선택
-            idx_detect = np.where(scores[0] > 0.5)[0]
-            boxes_detect = boxes[0, idx_detect, :]
-            classes_pick = classes[0, idx_detect]
+            idx_detect = np.where(scores > 0.4)[0]  # scores[0] 대신 scores 사용
+            boxes_detect = boxes[idx_detect, :]  # boxes[0, idx_detect, :] 대신 boxes[idx_detect, :] 사용
+            classes_pick = classes[idx_detect]  # classes[0, idx_detect] 대신 classes[idx_detect] 사용
+
             
             vis_util.visualize_boxes_and_labels_on_image_array(
                 image_process,
@@ -123,7 +125,7 @@ class detection_net_class():
                 np.squeeze(scores),
                 self.category_index,
                 use_normalized_coordinates=True,
-                min_score_thresh=0.5,
+                min_score_thresh=0.4,
                 line_thickness=8)
             
             infer_time = time.time() - t_start
@@ -189,21 +191,20 @@ def main(args=None):
 
     MODEL_NAME = 'ssd_mobilenet_v1_coco_2018_01_28'
 
-    PATH_TO_WEIGHT = os.path.join(CWD_PATH, 'model_weights', MODEL_NAME, 'frozen_inference_graph.pb' )   
+    # PATH_TO_WEIGHT = os.path.join(CWD_PATH, 'model_weights', 'exported_model', 'saved_model')
+
+    PATH_TO_WEIGHT = os.path.join(CWD_PATH, 'model_weights', 'exported_model', 'saved_model')
+
+    # 레이블 맵 로드 (먼저 실행)
     PATH_TO_LABELS = os.path.join(CWD_PATH, 'model_weights', 'data', 'mscoco_label_map.pbtxt')
-    
-    # print(f"CWD_PATH: {CWD_PATH}")
-    # print(f"PATH_TO_WEIGHT: {PATH_TO_WEIGHT} (Exists: {os.path.exists(PATH_TO_WEIGHT)})")
-    # print(f"PATH_TO_LABELS: {PATH_TO_LABELS} (Exists: {os.path.exists(PATH_TO_LABELS)})")
-
-    NUM_CLASSES = 90
-
-    # Load frozen graph
+    NUM_CLASSES = 1  # 실제 클래스 수에 맞춰 조정 (예: "Rack" 하나면 1)
     label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
-    categories = label_map_util.convert_label_map_to_categories(label_map,
-                                                              max_num_classes=NUM_CLASSES,
-                                                              use_display_name=True)
-    category_index = label_map_util.create_category_index(categories)
+    categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
+    category_index = label_map_util.create_category_index(categories)  # ✅ 먼저 정의
+
+    # 모델 로드 및 초기화
+    model = tf.saved_model.load(PATH_TO_WEIGHT)
+    ssd_net = detection_net_class(model, category_index)  # ✅ 정상 참조
 
     # # 직접 파일 읽기
     # with open(PATH_TO_LABELS, 'r', encoding='utf-8') as file:
@@ -221,13 +222,13 @@ def main(args=None):
     # 로직 3. detection model graph 생성
     # tf.Graph()를 하나 생성하고, 이전에 불러들인 pretrained file 안의 뉴럴넷 파라메터들을
     # 생성된 그래프 안에 덮어씌웁니다.    
-    detection_graph = tf.Graph()
-    with detection_graph.as_default():
-        od_graph_def = tf.compat.v1.GraphDef()  
-        with tf.io.gfile.GFile(PATH_TO_WEIGHT, 'rb') as fid: 
-            serialized_graph = fid.read()
-            od_graph_def.ParseFromString(serialized_graph)
-            tf.import_graph_def(od_graph_def, name='')
+    # detection_graph = tf.Graph()
+    # with detection_graph.as_default():
+    #     od_graph_def = tf.compat.v1.GraphDef()  
+    #     with tf.io.gfile.GFile(PATH_TO_WEIGHT, 'rb') as fid: 
+    #         serialized_graph = fid.read()
+    #         od_graph_def.ParseFromString(serialized_graph)
+    #         tf.import_graph_def(od_graph_def, name='')
 
     # 로직 4. gpu configuration 정의
     # 현재 머신에 사용되는 GPU의 memory fraction 등을 설정합니다.
@@ -252,14 +253,14 @@ def main(args=None):
 
     # 로직 5. session 생성
     # 위에 정의한 graph와 config로 세션을 생성합니다.
-    sess = tf.compat.v1.Session(graph=detection_graph, config=config)
+    # sess = tf.compat.v1.Session(graph=detection_graph, config=config)
 
     # TensorFlow 2.x에서는 세션을 사용하지 않음. 모델 로드 후 바로 추론 가능.
     # 추론은 infer 함수로 수행됩니다.
 
     # 로직 6. object detection 클래스 생성
     # detector model parameter를 load 하고 이를 세션으로 실행시켜 inference 하는 클래스를 생성합니다
-    ssd_net = detection_net_class(sess, detection_graph, category_index)
+    # ssd_net = detection_net_class(sess, detection_graph, category_index)
 
 
     

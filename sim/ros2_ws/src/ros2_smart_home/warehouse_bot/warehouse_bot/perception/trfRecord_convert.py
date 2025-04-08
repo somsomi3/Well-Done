@@ -8,9 +8,9 @@ from object_detection.utils import dataset_util
 
 # CSV에 기록된 클래스 이름을 정수 ID로 매핑하는 함수입니다.
 def class_text_to_int(row_label):
-    # CSV에는 "Rack"으로 표시되어 있으므로 이를 id 91로 매핑합니다.
+    
     if row_label == "Rack":
-        return 91
+        return 1
     else:
         return None
 
@@ -67,7 +67,7 @@ def create_tf_example(group, images_path):
 def main():
     # CSV 파일 경로, 이미지가 저장된 폴더, 그리고 출력할 TFRecord 파일 경로를 지정합니다.
     csv_input = "model_data_augmented_set/annotations.csv"
-    images_path = "augmented_images"
+    images_path = "augmented"
     output_path = "model_data_augmented_set/train.record"
 
     writer = tf.io.TFRecordWriter(output_path)

@@ -1,4 +1,3 @@
-from data_augmentiation import parse_xml
 import tensorflow as tf
 import os
 import numpy as np
@@ -6,15 +5,51 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 # 증강된 이미지 저장 디렉토리
-output_img_dir = 'augmented_images'
+output_img_dir = 'augmented'
 output_xml_dir = 'augmented_annotations'
 os.makedirs(output_img_dir, exist_ok=True)
 os.makedirs(output_xml_dir, exist_ok=True)
 
-# 이미지와 XML 파일이 있는 디렉토리 경로 지정
-image_dir = 'model_image'
-xml_dir = 'model_data_set'
-target_size = (300, 300)  # 목표 이미지 크기
+# data_augmentiation.py에서 필요한 함수만 가져옴
+def parse_xml(xml_path):
+    """XML 파일에서 바운딩 박스 정보 추출"""
+    # 텐서를 문자열로 변환
+    if isinstance(xml_path, tf.Tensor):
+        xml_path = xml_path.numpy().decode('utf-8', errors='ignore')
+    
+    # 빈 바운딩 박스와 라벨 반환 (오류 발생 시)
+    empty_boxes = np.zeros((0, 4), dtype=np.float32)
+    empty_labels = []
+    
+    try:
+        # 파일 존재 확인
+        if not os.path.exists(xml_path):
+            print(f"파일이 존재하지 않음: {xml_path}")
+            return empty_boxes, empty_labels
+        
+        # XML 파싱
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        
+        boxes = []
+        labels = []
+        
+        for obj in root.findall('object'):
+            label = obj.find('name').text
+            bbox = obj.find('bndbox')
+            xmin = float(bbox.find('xmin').text)
+            ymin = float(bbox.find('ymin').text)
+            xmax = float(bbox.find('xmax').text)
+            ymax = float(bbox.find('ymax').text)
+            
+            boxes.append([ymin, xmin, ymax, xmax])
+            labels.append(label)
+        
+        return np.array(boxes, dtype=np.float32), labels
+    
+    except Exception as e:
+        print(f"XML 파싱 오류: {e}, 경로: {xml_path}")
+        return empty_boxes, empty_labels
 
 # XML 파일 생성 함수
 def create_xml_annotation(filename, img_width, img_height, boxes, labels, folder="augmented"):
@@ -67,24 +102,32 @@ def resize_boxes(boxes, original_size, target_size):
 # 좌우 반전 시 바운딩 박스 조정
 def flip_boxes(boxes, width):
     flipped_boxes = np.zeros_like(boxes)
-    flipped_boxes[:, 0] = boxes[:, 0]                # ymin
-    flipped_boxes[:, 1] = width - boxes[:, 3]        # xmin = width - xmax
-    flipped_boxes[:, 2] = boxes[:, 2]                # ymax
-    flipped_boxes[:, 3] = width - boxes[:, 1]        # xmax = width - xmin
+    flipped_boxes[:, 0] = boxes[:, 0]          # ymin
+    flipped_boxes[:, 1] = width - boxes[:, 3]  # xmin = width - xmax
+    flipped_boxes[:, 2] = boxes[:, 2]          # ymax
+    flipped_boxes[:, 3] = width - boxes[:, 1]  # xmax = width - xmin
+    
     return flipped_boxes
 
 # 90도 회전 시 바운딩 박스 조정
 def rotate90_boxes(boxes, width, height):
     rotated_boxes = np.zeros_like(boxes)
-    rotated_boxes[:, 0] = boxes[:, 1]                # ymin = xmin
-    rotated_boxes[:, 1] = height - boxes[:, 2]       # xmin = height - ymax
-    rotated_boxes[:, 2] = boxes[:, 3]                # ymax = xmax
-    rotated_boxes[:, 3] = height - boxes[:, 0]       # xmax = height - ymin
+    rotated_boxes[:, 0] = boxes[:, 1]           # ymin = xmin
+    rotated_boxes[:, 1] = height - boxes[:, 2]  # xmin = height - ymax
+    rotated_boxes[:, 2] = boxes[:, 3]           # ymax = xmax
+    rotated_boxes[:, 3] = height - boxes[:, 0]  # xmax = height - ymin
+    
     return rotated_boxes
+
+# 이미지와 XML 파일이 있는 디렉토리 경로 지정
+image_dir = 'model_image'
+xml_dir = 'model_data_set'
+target_size = (300, 300)  # 목표 이미지 크기
 
 # 유효한 이미지-XML 쌍 찾기
 image_paths = []
 xml_paths = []
+
 for f in os.listdir(image_dir):
     if f.endswith(('.jpg', '.png')):
         img_path = os.path.join(image_dir, f)
@@ -105,7 +148,7 @@ print(f"처리할 이미지 수: {len(image_paths)}")
 for idx, (img_path, xml_path) in enumerate(zip(image_paths, xml_paths)):
     print(f"이미지 {idx+1}/{len(image_paths)} 처리 중: {os.path.basename(img_path)}")
     
-    # 이미지 로드 및 전처리
+    # 이미지 로드 (uint8 형식 유지)
     img = tf.io.read_file(img_path)
     img = tf.image.decode_png(img, channels=3)
     
@@ -118,14 +161,19 @@ for idx, (img_path, xml_path) in enumerate(zip(image_paths, xml_paths)):
     boxes, labels = parse_xml(xml_path)
     
     # 1. 원본 이미지 (리사이징만 적용)
-    img_resized = tf.image.resize(img, target_size)
-    img_resized = tf.cast(img_resized * 255, tf.uint8)
+    img_resized = tf.image.resize(img, target_size, 
+                                 method=tf.image.ResizeMethod.BICUBIC,
+                                 antialias=True)
+    # uint8로 변환 (중요!)
+    img_resized = tf.clip_by_value(img_resized, 0, 255)
+    img_resized = tf.cast(img_resized, tf.uint8)
     
     # 바운딩 박스 조정
     boxes_resized = resize_boxes(boxes, original_size, target_size)
     
-    # 저장
-    original_filename = f"orig_{idx}.png"
+    # 저장 - 원본 이미지 확인용 디버그 코드 추가
+    original_filename = f"aug_{idx}_0.png"
+    print(f"이미지 저장: {original_filename}, 형태: {img_resized.shape}, 최소/최대: {tf.reduce_min(img_resized)}/{tf.reduce_max(img_resized)}")
     tf.io.write_file(
         os.path.join(output_img_dir, original_filename),
         tf.io.encode_png(img_resized)
@@ -139,14 +187,16 @@ for idx, (img_path, xml_path) in enumerate(zip(image_paths, xml_paths)):
         boxes_resized,
         labels
     )
-    with open(os.path.join(output_xml_dir, f"orig_{idx}.xml"), 'w') as f:
+    
+    with open(os.path.join(output_xml_dir, f"aug_{idx}_0.xml"), 'w') as f:
         f.write(xml_content)
     
-    # 2. 밝기 증강
-    img_brightness = tf.image.adjust_brightness(img_resized, delta=0.1)
-    img_brightness = tf.cast(tf.clip_by_value(img_brightness, 0, 255), tf.uint8)
+    # 2. 밝기 증강 - 더 보수적인 값 사용
+    img_brightness = tf.image.adjust_brightness(img_resized, delta=0.05)
+    img_brightness = tf.clip_by_value(img_brightness, 0, 255)
+    img_brightness = tf.cast(img_brightness, tf.uint8)
     
-    brightness_filename = f"bright_{idx}.png"
+    brightness_filename = f"aug_{idx}_1.png"
     tf.io.write_file(
         os.path.join(output_img_dir, brightness_filename),
         tf.io.encode_png(img_brightness)
@@ -160,14 +210,16 @@ for idx, (img_path, xml_path) in enumerate(zip(image_paths, xml_paths)):
         boxes_resized,
         labels
     )
-    with open(os.path.join(output_xml_dir, f"bright_{idx}.xml"), 'w') as f:
+    
+    with open(os.path.join(output_xml_dir, f"aug_{idx}_1.xml"), 'w') as f:
         f.write(xml_content)
     
-    # 3. 대비 증강
-    img_contrast = tf.image.adjust_contrast(img_resized, 1.2)
-    img_contrast = tf.cast(tf.clip_by_value(img_contrast, 0, 255), tf.uint8)
+    # 3. 대비 증강 - 더 보수적인 값 사용
+    img_contrast = tf.image.adjust_contrast(img_resized, 1.03)
+    img_contrast = tf.clip_by_value(img_contrast, 0, 255)
+    img_contrast = tf.cast(img_contrast, tf.uint8)
     
-    contrast_filename = f"contrast_{idx}.png"
+    contrast_filename = f"aug_{idx}_2.png"
     tf.io.write_file(
         os.path.join(output_img_dir, contrast_filename),
         tf.io.encode_png(img_contrast)
@@ -181,13 +233,14 @@ for idx, (img_path, xml_path) in enumerate(zip(image_paths, xml_paths)):
         boxes_resized,
         labels
     )
-    with open(os.path.join(output_xml_dir, f"contrast_{idx}.xml"), 'w') as f:
+    
+    with open(os.path.join(output_xml_dir, f"aug_{idx}_2.xml"), 'w') as f:
         f.write(xml_content)
     
     # 4. 좌우 반전
     img_flipped = tf.image.flip_left_right(img_resized)
     
-    flipped_filename = f"flip_{idx}.png"
+    flipped_filename = f"aug_{idx}_3.png"
     tf.io.write_file(
         os.path.join(output_img_dir, flipped_filename),
         tf.io.encode_png(img_flipped)
@@ -204,13 +257,14 @@ for idx, (img_path, xml_path) in enumerate(zip(image_paths, xml_paths)):
         boxes_flipped,
         labels
     )
-    with open(os.path.join(output_xml_dir, f"flip_{idx}.xml"), 'w') as f:
+    
+    with open(os.path.join(output_xml_dir, f"aug_{idx}_3.xml"), 'w') as f:
         f.write(xml_content)
     
     # 5. 90도 회전
     img_rotated = tf.image.rot90(img_resized)
     
-    rotated_filename = f"rot90_{idx}.png"
+    rotated_filename = f"aug_{idx}_4.png"
     tf.io.write_file(
         os.path.join(output_img_dir, rotated_filename),
         tf.io.encode_png(img_rotated)
@@ -227,7 +281,8 @@ for idx, (img_path, xml_path) in enumerate(zip(image_paths, xml_paths)):
         boxes_rotated,
         labels
     )
-    with open(os.path.join(output_xml_dir, f"rot90_{idx}.xml"), 'w') as f:
+    
+    with open(os.path.join(output_xml_dir, f"aug_{idx}_4.xml"), 'w') as f:
         f.write(xml_content)
 
 print(f"모든 이미지 증강 완료. 총 {len(image_paths) * 5}개 이미지 생성됨")
