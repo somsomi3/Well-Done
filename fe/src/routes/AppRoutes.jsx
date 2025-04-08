@@ -2,19 +2,29 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import ErrorBoundary from '../components/ErrorBoundary';
+import MainPage from '../pages/MainPage';
+import LoginPage from '../pages/LoginPage';
+import RegisterPage from '../pages/RegisterPage';
+import MapPage from '../pages/MapPage';
+import RobotPage from '../pages/RobotPage';
+import LogPage from '../pages/LogPage';
+import SettingsPage from '../pages/SettingsPage';
+import AnnouncementDetail from '../components/board/AnnouncementDetail';
+import AnnouncementList from '../components/board/AnnouncementList';
+import AnnouncementForm from '../components/board/AnnouncementForm';
 
 // 지연 로딩을 사용한 페이지 컴포넌트 임포트
-const LoginPage = lazy(() => import('../pages/LoginPage'));
-const RegisterPage = lazy(() => import('../pages/RegisterPage'));
-const MainPage = lazy(() => import('../pages/MainPage'));
-const MapPage = lazy(() => import('../pages/MapPage'));
-const RobotPage = lazy(() => import('../pages/RobotPage'));
-const LogPage = lazy(() => import('../pages/LogPage'));
-const SettingsPage = lazy(() => import('../pages/SettingsPage'));
-const AnnouncementDetail = lazy(() =>
+const LoginPageComponent = lazy(() => import('../pages/LoginPage'));
+const RegisterPageComponent = lazy(() => import('../pages/RegisterPage'));
+const MainPageComponent = lazy(() => import('../pages/MainPage'));
+const MapPageComponent = lazy(() => import('../pages/MapPage'));
+const RobotPageComponent = lazy(() => import('../pages/RobotPage'));
+const LogPageComponent = lazy(() => import('../pages/LogPage'));
+const SettingsPageComponent = lazy(() => import('../pages/SettingsPage'));
+const AnnouncementDetailComponent = lazy(() =>
   import('../components/board/AnnouncementDetail')
 );
-const AnnouncementList = lazy(() =>
+const AnnouncementListComponent = lazy(() =>
   import('../components/board/AnnouncementList')
 );
 
@@ -82,7 +92,7 @@ function AppRoutes() {
             element={
               <PublicRoute>
                 <ErrorBoundary>
-                  <LoginPage />
+                  <LoginPageComponent />
                 </ErrorBoundary>
               </PublicRoute>
             }
@@ -92,7 +102,7 @@ function AppRoutes() {
             element={
               <PublicRoute>
                 <ErrorBoundary>
-                  <RegisterPage />
+                  <RegisterPageComponent />
                 </ErrorBoundary>
               </PublicRoute>
             }
@@ -104,7 +114,7 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <MainPage />
+                  <MainPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -114,7 +124,7 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <MapPage />
+                  <MapPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -124,7 +134,7 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <RobotPage />
+                  <RobotPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -134,7 +144,7 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <LogPage />
+                  <LogPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -144,7 +154,7 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <SettingsPage />
+                  <SettingsPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -155,7 +165,7 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <AnnouncementList />
+                  <AnnouncementListComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -166,7 +176,18 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <AnnouncementDetail />
+                  <AnnouncementDetailComponent />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/announcements/write"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementForm />
                 </ErrorBoundary>
               </ProtectedRoute>
             }

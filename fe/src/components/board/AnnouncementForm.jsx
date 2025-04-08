@@ -1,198 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './AnnouncementForm.css';
+import axios from 'axios';
+import Layout from '../Layout/Layout';
+import './AnnouncementForm.css'; // CSS 파일 import (별도로 생성 필요)
 
 function AnnouncementForm() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    writer: '',
-    expirationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 16),
-  });
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // 토큰에서 사용자 정보 추출
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        const decodedToken = JSON.parse(atob(token.split('.')[1]));
-        setFormData((prev) => ({
-          ...prev,
-          writer: decodedToken.username,
-        }));
-
-        // 사용자 역할 확인
-        const isUserAdmin = decodedToken.userId === 1;
-        setIsAdmin(isUserAdmin);
-
-        // 관리자가 아닌 경우 공지사항 목록 페이지로 리다이렉트
-        if (!isUserAdmin) {
-          console.error('관리자 권한이 필요합니다.');
-          navigate('/announcements');
-        }
-      } catch (error) {
-        console.error('토큰 디코딩 오류:', error);
-        navigate('/');
-      }
-    } else {
-      // 토큰이 없는 경우 로그인 페이지로 리다이렉트
-      navigate('/');
-    }
-
-    setIsLoading(false);
-  }, [navigate]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        console.error('토큰이 없습니다. 로그인이 필요합니다.');
-        navigate('/');
-        return;
+      setIsSubmitting(true);
+      const response = await axios.post('/api/announcements', {
+        title,
+        content,
+      });
+
+      if (response.status === 201) {
+        navigate('/announcements');
       }
-
-      const response = await axios.post(
-        'http://localhost:8080/api/boards/announcements',
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      console.log('공지사항 생성 성공:', response.data);
-
-      // 공지사항 목록을 다시 불러오기
-      try {
-        const listResponse = await axios.get(
-          'http://localhost:8080/api/boards/announcements',
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        console.log('공지사항 목록:', listResponse.data);
-      } catch (listError) {
-        console.error('공지사항 목록 조회 실패:', listError);
-      }
-
-      // 공지사항 목록 페이지로 리다이렉트
-      navigate('/announcements');
     } catch (error) {
-      console.error('공지사항 생성 실패:', error);
-      if (error.response?.status === 403) {
-        console.error('인증이 필요합니다. 로그인 페이지로 이동합니다.');
-        navigate('/');
-      }
+      console.error('공지사항 작성 중 오류 발생:', error);
+      alert('공지사항 작성에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // 로딩 중이거나 관리자가 아닌 경우 로딩 화면 표시
-  if (isLoading || !isAdmin) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="write-page">
-      <div className="write-container">
-        <div className="write-header">
-          <h1 className="write-title">
-            <span className="write-title-gradient">공지사항 작성</span>
-          </h1>
-        </div>
-
-        <div className="form-container">
-          <form onSubmit={handleSubmit}>
+    <Layout>
+      <div className="announcement-form-page">
+        <div className="announcement-form-container">
+          <div className="announcement-form-header">
+            <h1 className="announcement-form-title">새 물류 공지 작성</h1>
+            <p className="announcement-form-subtitle">
+              물류 관련 중요 공지사항을 작성하는 공간입니다
+            </p>
+          </div>
+          <form onSubmit={handleSubmit} className="announcement-form">
             <div className="form-group">
               <label htmlFor="title" className="form-label">
-                제목
+                제목 <span className="required">*</span>
               </label>
               <input
                 type="text"
                 id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="form-input"
-                placeholder="제목을 입력하세요"
+                placeholder="공지사항 제목을 입력하세요"
+                required
               />
             </div>
-
             <div className="form-group">
               <label htmlFor="content" className="form-label">
-                내용
+                내용 <span className="required">*</span>
               </label>
               <textarea
                 id="content"
-                name="content"
-                value={formData.content}
-                onChange={handleChange}
-                required
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows="15"
                 className="form-textarea"
-                placeholder="내용을 입력하세요"
+                placeholder="공지사항 내용을 작성하세요..."
+                required
               />
             </div>
-
-            <div className="form-group">
-              <label htmlFor="writer" className="form-label">
-                작성자
-              </label>
-              <input
-                type="text"
-                id="writer"
-                name="writer"
-                value={formData.writer}
-                readOnly
-                className="form-input readonly"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="expirationDate" className="form-label">
-                만료일
-              </label>
-              <input
-                type="datetime-local"
-                id="expirationDate"
-                name="expirationDate"
-                value={
-                  formData.expirationDate
-                    ? formData.expirationDate.slice(0, 16)
-                    : ''
-                }
-                onChange={handleChange}
-                className="form-input"
-              />
-              <small className="form-text text-muted">
-                만료일을 설정하지 않으면 공지사항이 계속 표시됩니다.
-              </small>
-            </div>
-
-            <div className="button-group">
+            <div className="form-actions">
               <button
                 type="button"
                 onClick={() => navigate('/announcements')}
@@ -200,14 +79,25 @@ function AnnouncementForm() {
               >
                 취소
               </button>
-              <button type="submit" className="submit-button">
-                작성
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="submit-button"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="spinner"></span>
+                    작성 중...
+                  </>
+                ) : (
+                  '공지사항 등록'
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 
