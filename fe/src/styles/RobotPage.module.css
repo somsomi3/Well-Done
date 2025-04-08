@@ -1,0 +1,159 @@
+/* RobotPage.module.css */
+
+.container {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 1280px; /* 6xl in Tailwind */
+  }
+  
+  .sectionHeader {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 2rem;
+    margin-top: 1.5rem;
+    text-align: center;
+  }
+  
+  .statusGrid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 4rem;
+  }
+  
+  .robotGrid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 4rem;
+  }
+  
+  .statusCard {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    padding: 1.5rem;
+    border-left-width: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 12rem;
+  }
+  
+  .statusCard:nth-child(1) {
+    border-left-color: #10b981; /* green-500 */
+  }
+  
+  .statusCard:nth-child(2) {
+    border-left-color: #f59e0b; /* yellow-500 */
+  }
+  
+  .statusCard:nth-child(3) {
+    border-left-color: #3b82f6; /* blue-500 */
+  }
+  
+  .iconContainer {
+    padding: 1rem;
+    border-radius: 9999px;
+    margin-bottom: 1rem;
+  }
+  
+  .statusCard:nth-child(1) .iconContainer {
+    background-color: #d1fae5; /* green-100 */
+  }
+  
+  .statusCard:nth-child(2) .iconContainer {
+    background-color: #fef3c7; /* yellow-100 */
+  }
+  
+  .statusCard:nth-child(3) .iconContainer {
+    background-color: #dbeafe; /* blue-100 */
+  }
+  
+  .icon {
+    height: 2.5rem;
+    width: 2.5rem;
+  }
+  
+  .statusCard:nth-child(1) .icon {
+    color: #059669; /* green-600 */
+  }
+  
+  .statusCard:nth-child(2) .icon {
+    color: #d97706; /* yellow-600 */
+  }
+  
+  .statusCard:nth-child(3) .icon {
+    color: #2563eb; /* blue-600 */
+  }
+  
+  .statusLabel {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+  }
+  
+  .statusValue {
+    font-size: 2.25rem;
+    font-weight: 600;
+    color: #111827;
+  }
+  
+  .gridItem {
+    height: 100%;
+  }
+  
+  .cardContainer {
+    height: 100%;
+  }
+  
+  .addRobotCard {
+    border: 2px dashed #d1d5db;
+    border-radius: 0.75rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  
+  .addRobotCard:hover {
+    border-color: #3b82f6;
+  }
+  
+  .addIconContainer {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 9999px;
+    background-color: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+  
+  .addIcon {
+    height: 2rem;
+    width: 2rem;
+    color: #6b7280;
+  }
+  
+  .addRobotText {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #4b5563;
+  }
+  
+  @media (min-width: 768px) {
+    .statusGrid, .robotGrid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  
