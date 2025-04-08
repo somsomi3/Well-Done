@@ -1,7 +1,7 @@
 package com.be.config.security;
 
-
 import java.util.List;
+import java.util.Arrays;
 
 import com.be.config.security.*;
 import com.be.db.repository.UserRepository;
@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
@@ -30,10 +31,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-
 @Slf4j
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true) // @PreAuthorize 사용을 위한 설정 추가
 public class SecurityConfig {
 	private final TokenUtils tokenUtils;
 	private final UserRepository userRepository;
@@ -110,11 +111,20 @@ public class SecurityConfig {
 								"/api/auth/check-username",
 								"/mqtt", // MQTT 엔드포인트는 인증 없이 접근 가능
 								"/ws/**", // WebSocket 경로 허용 추가
-								"/api/spring-data/**",  // 추가
-								"/api/ros-data/**"      // 추가
+								"/api/ws/**",
+								"/api/robot/**"
 						).permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 메소드 허용
 						.requestMatchers("/admin/**").hasRole("ADMIN") // /admin/** 경로에 접근하려면 관리자 권한이 필요
+						// 공지사항 관련 권한 설정
+						.requestMatchers(HttpMethod.GET, "/api/boards/announcements/**").authenticated() // 모든 사용자가 조회 가능
+						.requestMatchers(HttpMethod.POST, "/api/boards/announcements/**").hasRole("ADMIN") // 관리자만 생성 가능
+						.requestMatchers(HttpMethod.PUT, "/api/boards/announcements/**").hasRole("ADMIN") // 관리자만 수정 가능
+						.requestMatchers(HttpMethod.DELETE, "/api/boards/announcements/**").hasRole("ADMIN") // 관리자만 삭제 가능
+						.requestMatchers(HttpMethod.PATCH, "/api/boards/announcements/**").hasRole("ADMIN") // 관리자만 PATCH 가능
+						.requestMatchers(HttpMethod.PATCH, "/api/boards/announcements/*/expire").hasRole("ADMIN") // 관리자만 만료일 설정 가능
+						.requestMatchers(HttpMethod.POST, "/api/boards/announcements/*/view").permitAll() // 모든 사용자가 조회수 증가 가능 (인증 없이)
+						
 						.requestMatchers("/rooms/create").authenticated()
 						.anyRequest().authenticated() // 다른 모든 요청은 인증 필요
 				)
@@ -140,10 +150,11 @@ public class SecurityConfig {
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000", "https://j12e102.p.ssafy.io"));
-		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("Authorization", "x-refresh-token", "Content-Type"));
-		configuration.setAllowCredentials(true);
+		configuration.setAllowCredentials(true); // 쿠키 허용
 		configuration.setMaxAge(3600L);
+		
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
 		return source;

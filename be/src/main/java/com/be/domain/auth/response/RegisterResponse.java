@@ -1,5 +1,4 @@
 package com.be.domain.auth.response;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
