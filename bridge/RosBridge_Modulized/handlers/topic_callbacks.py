@@ -939,7 +939,7 @@ def place_done_callback(node, msg):
 def image_jpeg_compressed_callback(node, msg):
     """압축된 JPEG 이미지 토픽에서 데이터를 받아 Spring 서버로 전송"""
     current_time = time.time()
-    map_interval = 3.0
+    map_interval = 0.5
     
     if current_time - node.last_send_times.get('image_jpeg', 0) >= map_interval:
         try:
