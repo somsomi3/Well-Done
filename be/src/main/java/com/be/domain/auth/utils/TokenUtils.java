@@ -48,7 +48,7 @@ public class TokenUtils {
     private Date createExpiredDate(boolean isAccessToken) {
         Calendar c = Calendar.getInstance();
         if (isAccessToken) {
-            c.add(Calendar.MINUTE, 15);  // AccessToken: 15분
+            c.add(Calendar.DATE, 7);  // AccessToken: 15분
         } else {
             c.add(Calendar.DATE, 14);    // RefreshToken: 14일
         }
