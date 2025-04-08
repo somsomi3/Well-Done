@@ -38,6 +38,7 @@ setup(
             "load_map = warehouse_bot.slam.load_map:main",
             "pick_and_place_node = warehouse_bot.pick_and_place.pick_and_place_node:main",
             "precise_alignment = warehouse_bot.controller.precise_alignment:main",
+            "object_detector = warehouse_bot.perception.object_detector:main",
         ],
     },
 )

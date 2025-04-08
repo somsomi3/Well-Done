@@ -23,14 +23,22 @@ def receive_command():
     if not command_type:
         return jsonify({'status': 'error', 'message': 'Missing command type'}), 400
     
+    # 명령 데이터를 명시적으로 딕셔너리로 변환
+    command_dict = {
+        'type': command_type
+    }
+    
+    # 다른 필드 복사
+    for key, value in command_data.items():
+        if key != 'command':  # 'command'는 이미 'type'으로 처리했으므로 제외
+            command_dict[key] = value
+    
     # Add the command to the queue
     with node.queue_lock:
-        node.command_queue.append({
-            'type': command_type,
-            **command_data
-        })
+        node.command_queue.append(command_dict)
     
     return jsonify({'status': 'success', 'message': f'{command_type} command added to queue'})
+
 
 @app.route('/auto-map', methods=['POST'])
 def start_auto_map():
