@@ -14,3 +14,5 @@ __pycache__/
 # CMake 관련 불필요한 파일
 CMakeCache.txt
 CMakeFiles/
+
+new_model/
