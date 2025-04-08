@@ -12,6 +12,7 @@ import org.springframework.web.socket.TextMessage;
 
 import jakarta.annotation.PostConstruct; // jakarta로 변경
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -231,6 +232,88 @@ public class RobotService {
 
         } catch (Exception e) {
             log.error("카메라 이미지 처리 중 오류 발생", e);
+        }
+    }
+
+    /**
+     * 맵핑 완료 데이터 처리 및 저장
+     * @param mappingDoneData 맵핑 완료 데이터
+     */
+    public void processMappingDoneData(Map<String, Object> mappingDoneData) {
+        try {
+            // 1. 원본 데이터 JSON 변환 및 저장
+            String jsonOriginal = objectMapper.writeValueAsString(mappingDoneData);
+            redisService.saveMappingDoneData(jsonOriginal);
+            log.info("Redis에 원본 맵핑 완료 데이터 저장 완료");
+
+            // 2. 맵 데이터 처리 및 저장
+            boolean success = (boolean) mappingDoneData.get("success");
+            if (success) {
+                // 일반 맵 처리
+                Map<String, Object> mapData = (Map<String, Object>) mappingDoneData.get("map");
+                processAndSaveMapData(mapData, false);
+
+                // 인플레이트된 맵 처리
+                Map<String, Object> inflatedMapData = (Map<String, Object>) mappingDoneData.get("map_inflated");
+                processAndSaveMapData(inflatedMapData, true);
+            }
+        } catch (Exception e) {
+            log.error("맵핑 완료 데이터 처리 중 오류 발생", e);
+        }
+    }
+
+    /**
+     * 맵 데이터 처리 및 저장
+     * @param mapData 맵 데이터
+     * @param isInflated 인플레이트된 맵 여부
+     */
+    private void processAndSaveMapData(Map<String, Object> mapData, boolean isInflated) {
+        try {
+            // 1. 맵 정보 추출
+            Map<String, Object> info = (Map<String, Object>) mapData.get("info");
+            int width = ((Number) info.get("width")).intValue();
+            int height = ((Number) info.get("height")).intValue();
+            double resolution = ((Number) info.get("resolution")).doubleValue();
+
+            // 2. 데이터 배열 처리
+            List<Number> rawData = (List<Number>) mapData.get("data");
+            int[][] processedMap = new int[height][width];
+
+            // 3. 데이터 변환 (1D → 2D 배열)
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    int index = y * width + x;
+                    if (index < rawData.size()) {
+                        processedMap[y][x] = rawData.get(index).intValue();
+                    } else {
+                        processedMap[y][x] = -1; // 기본값 설정
+                    }
+                }
+            }
+
+            // 4. 전송용 객체 구성
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", isInflated ? "map_inflated" : "map");
+            payload.put("width", width);
+            payload.put("height", height);
+            payload.put("resolution", resolution);
+            payload.put("map", processedMap);
+
+            // 원점 정보 추가
+            Map<String, Object> origin = (Map<String, Object>) info.get("origin");
+            payload.put("origin", origin);
+
+            // 5. JSON 변환 및 Redis에 저장
+            String json = objectMapper.writeValueAsString(payload);
+            redisService.saveMapData(json, isInflated);
+            log.info("Redis에 처리된 맵 데이터 저장 완료: isInflated={}", isInflated);
+
+            // 6. WebSocket으로 실시간 전송 (기본 맵만)
+            if (!isInflated) {
+                userSocketHandler.broadcastMap(payload);
+            }
+        } catch (Exception e) {
+            log.error("맵 데이터 처리 및 저장 중 오류 발생", e);
         }
     }
 
