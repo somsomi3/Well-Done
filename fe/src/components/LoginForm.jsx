@@ -15,17 +15,17 @@ function LoginForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!username || !password) {
       setModalMessage('아이디와 비밀번호를 모두 입력해주세요.');
       setIsModalOpen(true);
       return;
     }
-    
+
     const success = await login(username, password);
-    
+
     if (success) {
-      navigate('/main');
+      navigate('/announcements');
     } else if (error) {
       setModalMessage(error);
       setIsModalOpen(true);
@@ -51,10 +51,13 @@ function LoginForm() {
         <h1 className="text-3xl font-bold app-title">Well-Done</h1>
         <h2 className="text-xl text-gray-600">로그인</h2>
       </div>
-      
+
       {/* 아이디 입력 폼 그룹 */}
       <div className="form-group">
-        <label className="block text-gray-700 font-bold mb-2" htmlFor="username">
+        <label
+          className="block text-gray-700 font-bold mb-2"
+          htmlFor="username"
+        >
           아이디
         </label>
         <input
@@ -66,10 +69,13 @@ function LoginForm() {
           onChange={(e) => setUsername(e.target.value)}
         />
       </div>
-      
+
       {/* 비밀번호 입력 폼 그룹 */}
       <div className="form-group">
-        <label className="block text-gray-700 font-bold mb-2" htmlFor="password">
+        <label
+          className="block text-gray-700 font-bold mb-2"
+          htmlFor="password"
+        >
           비밀번호
         </label>
         <input
@@ -81,7 +87,7 @@ function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
-      
+
       {/* 로그인 버튼 그룹 */}
       <div className="form-group flex justify-center">
         <button
@@ -92,7 +98,7 @@ function LoginForm() {
           {loading ? '로그인 중...' : '로그인'}
         </button>
       </div>
-      
+
       {/* ID 찾기, PW 찾기, 회원가입 버튼 그룹 */}
       <div className="form-group flex flex-wrap justify-center gap-2">
         <button
@@ -117,7 +123,7 @@ function LoginForm() {
           회원가입
         </button>
       </div>
-      
+
       <AlertModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

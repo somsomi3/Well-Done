@@ -22,11 +22,10 @@ function Header() {
       {/* 중앙 네비게이션 버튼 - 인증된 사용자만 표시 */}
       {isLoggedIn && (
         <nav className="header-nav">
-          <NavItem to="/main">MAIN</NavItem>
+          <NavItem to="/announcements">BOARD</NavItem>
           <NavItem to="/map">MAP</NavItem>
           <NavItem to="/robot">ROBOT</NavItem>
           <NavItem to="/log">LOG</NavItem>
-          <NavItem to="/announcements">BOARD</NavItem>
         </nav>
       )}
 
