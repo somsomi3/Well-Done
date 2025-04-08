@@ -6,6 +6,7 @@ from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import Bool
 from ssafy_msgs.msg import PickPlaceCommand, HandControl, TurtlebotStatus
 from ssafy_msgs.msg import StatusStamped
+from ssafy_msgs.msg import PlaceDone
 
 
 class PickAndPlaceFSM(Enum):
@@ -44,6 +45,7 @@ class PickAndPlaceNode(Node):
         self.align_done_sub = self.create_subscription(
             Bool, "/alignment_done", self.align_done_callback, 10
         )
+        self.place_done_pub = self.create_publisher(PlaceDone, "/place_done", 10)
 
         self.timer = self.create_timer(0.5, self.fsm_step)
 
@@ -58,7 +60,7 @@ class PickAndPlaceNode(Node):
         self.turtlebot_status = TurtlebotStatus()
 
         self.hand_msg = HandControl()
-        self.put_distance = 0.5
+        self.put_distance = 0.62
         self.put_height = 0.2
 
         self.placing_preview_done = False
@@ -71,38 +73,31 @@ class PickAndPlaceNode(Node):
         self.display_spot = msg.display_spot
         self.goal_reached = False
         self.get_logger().info(
-            f"📥 [COMMAND] Pick & Place 명령 수신: from({msg.from_pos.x}, {msg.from_pos.y}) → to({msg.to_pos.x}, {msg.to_pos.y})"
+            f"📥 [COMMAND] Pick & Place 명령 수신: from({msg.from_pos.position.x}, {msg.from_pos.position.y}) → to({msg.to_pos.position.x}, {msg.to_pos.position.y})"
         )
         self.publish_goal_pose(self.from_pos)
         self.state = PickAndPlaceFSM.GO_TO_PICK
 
-    def publish_goal_pose(self, target_pos: Point):
+    def publish_goal_pose(self, target_pose):
         pose = PoseStamped()
         pose.header.frame_id = "map"
         pose.header.stamp = self.get_clock().now().to_msg()
-        pose.pose.position = target_pos
-        pose.pose.orientation.w = 1.0
+        pose.pose = target_pose
         self.goal_pub.publish(pose)
         self.get_logger().info(
-            f"🗺️ [GOAL] 목표 위치 퍼블리시: ({target_pos.x:.2f}, {target_pos.y:.2f})"
+            f"🗺️ [GOAL] 목표 위치 퍼블리시: ({target_pose.position.x:.2f}, {target_pose.position.y:.2f})"
         )
 
-    def publish_target_pose(self, pos: Point, yaw: float = 0.0):
+    def publish_target_pose(self, pose_msg):
         pose = PoseStamped()
         pose.header.frame_id = "map"
         pose.header.stamp = self.get_clock().now().to_msg()
-        pose.pose.position = pos
-
-        q = Quaternion.from_euler(0, 0, yaw)
-        pose.pose.orientation.x = q.x
-        pose.pose.orientation.y = q.y
-        pose.pose.orientation.z = q.z
-        pose.pose.orientation.w = q.w
+        pose.pose = pose_msg
 
         self.align_pub.publish(pose)
 
         self.get_logger().info(
-            f"🎯 [ALIGN] 정밀 정렬용 목표 퍼블리시: ({pos.x:.2f}, {pos.y:.2f})"
+            f"🎯 [ALIGN] 정밀 정렬용 목표 퍼블리시: ({pose_msg.position.x:.2f}, {pose_msg.position.y:.2f})"
         )
 
     def goal_callback(self, msg):
@@ -191,10 +186,17 @@ class PickAndPlaceNode(Node):
 
         elif self.state == PickAndPlaceFSM.FINISHED:
             self.get_logger().info(
-                f"🏁 [FINISHED] 작업 완료. 전시 위치: ({self.to_pos.x:.2f}, {self.to_pos.y:.2f}) → IDLE 복귀"
+                f"🏁 [FINISHED] 작업 완료. 전시 위치: ({self.to_pos.position.x:.2f}, {self.to_pos.position.y:.2f}) → IDLE 복귀"
             )
             self.placing_preview_done = False
             self.placing_done = False
+
+            msg = PlaceDone()
+            msg.success = True
+            msg.product_id = self.product_id
+            msg.display_spot = self.display_spot
+            self.place_done_pub.publish(msg)
+
             self.state = PickAndPlaceFSM.IDLE
 
 

@@ -1,0 +1,3 @@
+bool success
+string product_id
+int32 display_spot

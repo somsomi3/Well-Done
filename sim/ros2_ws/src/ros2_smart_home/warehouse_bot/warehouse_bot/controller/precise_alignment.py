@@ -29,7 +29,7 @@ class PreciseAlignment(Node):
         self.aligning = False
         self.stage = 0  # 0: 회전, 1: 전진, 2: 방향 정렬
 
-        self.pos_tolerance = 0.03
+        self.pos_tolerance = 0.05
         self.yaw_tolerance = 0.052
 
     def odom_callback(self, msg):
@@ -59,7 +59,7 @@ class PreciseAlignment(Node):
         gy = self.target_pose.pose.position.y
         gq = self.target_pose.pose.orientation
         _, _, goal_yaw = Quaternion(gq.w, gq.x, gq.y, gq.z).to_euler()
-        # goal_yaw += pi / 2
+        # goal_yaw -= pi / 2
 
         # 오차 계산
         dx = gx - x
@@ -87,10 +87,13 @@ class PreciseAlignment(Node):
                     "⚠️ Stage 0 Skip: 목표 위치와 너무 가까움 → 바로 Stage 2로 전환"
                 )
                 return
-            if abs(angle_to_goal) > self.yaw_tolerance:
+            if abs(angle_to_goal) > 0.017:
                 cmd.angular.z = -0.8 * angle_to_goal
+                # 최소 회전 속도 보장 (0.1 이상)
+                if 0 < abs(cmd.angular.z) < 0.1:
+                    cmd.angular.z = 0.1 * np.sign(cmd.angular.z)
                 self.get_logger().info(
-                    f"🔄 Stage 0: 회전 중... (angle_to_goal = {np.degrees(angle_to_goal):.2f}°)"
+                    f"🔄 Stage 0: 회전 중... (angle_to_goal = {np.degrees(angle_to_goal):.2f}°, angular.z = {cmd.angular.z:.2f})"
                 )
             else:
                 self.stage = 1
@@ -101,9 +104,21 @@ class PreciseAlignment(Node):
 
         # Stage 1: 전진
         elif self.stage == 1:
+            # ⛔ 전진 전에 방향이 많이 틀어졌다면 Stage 0으로 되돌아감
+            if abs(angle_to_goal) > self.yaw_tolerance:
+                self.get_logger().warn(
+                    "⚠️ Stage 1 진입 시 yaw 오차 초과 → Stage 0으로 되돌아감"
+                )
+                self.stage = 0
+                return
+
             if dist > self.pos_tolerance:
-                cmd.linear.x = 0.05 * dist
-                self.get_logger().info(f"🚶 Stage 1: 전진 중... (dist = {dist:.3f} m)")
+                linear_speed = 0.2 * dist
+                linear_speed = max(min(linear_speed, 0.2), -0.2)  # 속도 제한
+                cmd.linear.x = linear_speed
+                self.get_logger().info(
+                    f"🚶 Stage 1: 전진 중... (dist = {dist:.3f} m, speed = {linear_speed:.2f})"
+                )
             else:
                 self.stage = 2
                 self.get_logger().info(
@@ -114,7 +129,11 @@ class PreciseAlignment(Node):
         # Stage 2: 도착 후 최종 방향 정렬
         elif self.stage == 2:
             if abs(final_yaw_error) > self.yaw_tolerance:
-                cmd.angular.z = -0.8 * final_yaw_error
+                angular_speed = -0.8 * final_yaw_error
+
+                if 0 < abs(angular_speed) < 0.3:
+                    angular_speed = -0.3 if angular_speed < 0 else 0.3
+                cmd.angular.z = angular_speed
                 self.get_logger().info(
                     f"🧭 Stage 2: 최종 방향 정렬 중... (error = {np.degrees(final_yaw_error):.2f}°)"
                 )
