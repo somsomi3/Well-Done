@@ -227,7 +227,15 @@ const MapPage = () => {
         else if (data.type === "position") {
           console.log("📍 위치 데이터 수신:", data.x, data.y);
           setPosition({ x: data.x, y: data.y });
-          setPath(prev => [...prev, { x: data.x, y: data.y }]);
+          setPath(prev => {
+            // 경로가 비어있거나, 새 위치가 이전 위치와 다른 경우에만 추가
+            if (prev.length === 0 || 
+                prev[prev.length - 1].x !== data.x || 
+                prev[prev.length - 1].y !== data.y) {
+              return [...prev, { x: data.x, y: data.y }];
+            }
+            return prev; // 동일한 위치면 경로 유지
+          });
          
           // 로봇 좌표를 픽셀 좌표로 변환 (변환 함수 사용)
           const { pixelX, pixelY } = robotToPixelCoordinates(data.x, data.y);
@@ -237,7 +245,15 @@ const MapPage = () => {
         else if (data.x !== undefined && data.y !== undefined && !data.type) {
           console.log("📍 기존 형식 위치 데이터 수신:", data.x, data.y);
           setPosition(data);
-          setPath(prev => [...prev, data]);
+          setPath(prev => {
+            // 경로가 비어있거나, 새 위치가 이전 위치와 다른 경우에만 추가
+            if (prev.length === 0 || 
+                prev[prev.length - 1].x !== data.x || 
+                prev[prev.length - 1].y !== data.y) {
+              return [...prev, data];
+            }
+            return prev; // 동일한 위치면 경로 유지
+          });
          
           const { pixelX, pixelY } = robotToPixelCoordinates(data.x, data.y);
           console.log("변환된 픽셀 좌표:", pixelX, pixelY);
@@ -397,7 +413,14 @@ const MapPage = () => {
     // 위치 및 경로 업데이트
     const newPosition = { x: robotX, y: robotY };
     setPosition(newPosition);
-    setPath(prev => [...prev, newPosition]);
+    setPath(prev => {
+      if (prev.length === 0 || 
+          prev[prev.length - 1].x !== robotX || 
+          prev[prev.length - 1].y !== robotY) {
+        return [...prev, newPosition];
+      }
+      return prev; // 동일한 위치면 경로 유지
+    });
     setPixelPosition({ pixelX, pixelY });
   };
  
@@ -526,14 +549,25 @@ const MapPage = () => {
             <p>아직 기록된 경로가 없습니다. 맵을 클릭하여 위치를 시뮬레이션할 수 있습니다.</p>
           ) : (
             <ul>
-              {path.map((pos, index) => (
-                <li key={index}>
-                  #{index + 1} → X: {pos.x.toFixed(2)}, Y: {pos.y.toFixed(2)}
-                </li>
-              ))}
+              {/* 최신 5개 항목만 표시 */}
+              {path.slice(-5).map((pos, index) => {
+                // 실제 경로 인덱스 계산 (전체 길이에서 표시 중인 슬라이스의 위치 고려)
+                const actualIndex = path.length - 5 + index;
+                return (
+                  <li key={actualIndex}>
+                    #{actualIndex + 1} → X: {pos.x.toFixed(2)}, Y: {pos.y.toFixed(2)}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
+        {/* 전체 경로 개수 표시 */}
+        {path.length > 5 && (
+          <div style={{ fontSize: "0.8rem", color: "#888", marginTop: "0.5rem", marginBottom: "1rem" }}>
+            전체 {path.length}개 경로 중 최신 5개만 표시됩니다.
+          </div>
+        )}
        
         {/* 도움말 */}
         <div style={{ marginTop: "1rem", fontSize: "0.9rem", color: "#666" }}>
