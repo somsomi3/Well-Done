@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ReactModal from 'react-modal';
+import { Tab } from '@headlessui/react';
 import { useAuthStore } from '../../stores/authStore';
 import { robotData } from '../../utils/robotData';
 
@@ -9,15 +10,16 @@ const IMAGE_REFRESH_INTERVAL = 1000;
 
 const RobotDetailsModal = ({ isOpen, onClose, robotId }) => {
   const [imageData, setImageData] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
   const socketRef = useRef(null);
-  const fetchIntervalRef = useRef(null);
   const { token } = useAuthStore();
 
   const robot = robotData.robots.find((r) => r.id === robotId);
   const isRobot1 = robotId === 1;
+
+  // 진행 중 작업
+  const currentTask = robot.activities.find((a) => a.status === 'in_progress');
 
   // WebSocket 연결 관리 (로봇 1만)
   useEffect(() => {
@@ -33,7 +35,6 @@ const RobotDetailsModal = ({ isOpen, onClose, robotId }) => {
         const data = JSON.parse(event.data);
         if (data.type === 'camera_image' && data.data) {
           setImageData(data.data);
-          setLastUpdated(new Date());
           setLoading(false);
           setImageError(false);
         }
@@ -59,37 +60,6 @@ const RobotDetailsModal = ({ isOpen, onClose, robotId }) => {
     };
   }, [isOpen, isRobot1, token]);
 
-  // HTTP 폴링 관리 (로봇 1만)
-  useEffect(() => {
-    if (!isOpen || !isRobot1 || !token) return;
-
-    const fetchCameraImage = async () => {
-      try {
-        const response = await fetch(
-          'https://j12e102.p.ssafy.io/api/robot/image-jpeg-compressed',
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (!response.ok) throw new Error(`HTTP 오류: ${response.status}`);
-        const data = await response.json();
-
-        if (data?.data) {
-          setImageData(data.data);
-          setLastUpdated(new Date());
-          setLoading(false);
-          setImageError(false);
-        }
-      } catch (error) {
-        console.error('이미지 가져오기 오류:', error);
-        setImageError(true);
-      }
-    };
-
-    fetchCameraImage();
-    const interval = setInterval(fetchCameraImage, IMAGE_REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [isOpen, isRobot1, token]);
-
   return (
     <ReactModal
       isOpen={isOpen}
@@ -111,10 +81,11 @@ const RobotDetailsModal = ({ isOpen, onClose, robotId }) => {
 
       {/* 본문 */}
       <div className="flex-1 grid grid-cols-2 gap-4 p-4 overflow-hidden">
-        {/* 좌측: 카메라 화면 */}
-        <div className="border rounded-lg overflow-hidden">
-          {isRobot1 ? (
-            loading ? (
+        {/* 좌측: 카메라 화면 및 현재 작업 */}
+        <div className="border rounded-lg overflow-hidden flex flex-col">
+          {/* 카메라 화면 */}
+          <div className="flex-grow bg-gray-100 border-b">
+            {loading ? (
               <div className="text-center text-gray-600">로딩 중...</div>
             ) : imageError ? (
               <div className="text-center text-red-500">연결 오류</div>
@@ -126,82 +97,88 @@ const RobotDetailsModal = ({ isOpen, onClose, robotId }) => {
               />
             ) : (
               <div className="text-center text-gray-600">데이터 없음</div>
-            )
-          ) : (
-            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-              <span className="text-gray-500">카메라 미연결</span>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* 현재 작업 */}
+          <div className="p-4 bg-gray-50">
+            <h3 className="text-lg font-semibold mb-2">현재 작업:</h3>
+            {currentTask ? (
+              <div>
+                <p>
+                  <strong>작업 유형:</strong> {currentTask.type === 'empty_pallet'
+                    ? '빈 파렛트 이동'
+                    : currentTask.type === 'restock'
+                    ? '재고 보충'
+                    : '복합 작업'}
+                </p>
+                <p>
+                  <strong>출발지:</strong> {currentTask.start_location}
+                </p>
+                <p>
+                  <strong>목적지:</strong> {currentTask.end_location}
+                </p>
+                <p>
+                  <strong>상세 내용:</strong> {currentTask.notes}
+                </p>
+              </div>
+            ) : (
+              <p className="text-gray-500">현재 진행 중인 작업이 없습니다.</p>
+            )}
+          </div>
         </div>
 
-        {/* 우측: 활동 기록 */}
+        {/* 우측: 해야 할 일 / 완료한 일 */}
         <div className="border rounded-lg overflow-y-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 sticky top-0 z-10">
-              <tr>
-                <th className="p-2 border-b">시간</th>
-                <th className="p-2 border-b">작업 유형</th>
-                <th className="p-2 border-b">상태</th>
-                <th className="p-2 border-b">세부 내용</th>
-              </tr>
-            </thead>
-            <tbody>
-              {robot.activities.map((activity, i) => (
-                <tr key={i} className="border-t hover:bg-gray-50">
-                  <td className="p-2 text-sm">
-                    {new Date(activity.timestamp).toLocaleDateString('ko-KR', {
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </td>
-                  <td className="p-2 text-sm">
-                    <span
-                      className={`px-2 py-1 rounded ${
-                        activity.type === 'empty_pallet'
-                          ? 'bg-blue-100 text-blue-600'
-                          : activity.type === 'restock'
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-purple-100 text-purple-600'
-                      }`}
-                    >
-                      {activity.type === 'empty_pallet'
-                        ? '빈 파렛트 이동'
-                        : activity.type === 'restock'
-                        ? '재고 보충'
-                        : '복합 작업'}
-                    </span>
-                  </td>
-                  <td className="p-2 text-sm">
-                    <div className="flex items-center">
-                      <div
-                        className={`w-3 h-3 rounded-full mr-2 ${
-                          activity.status === 'completed'
-                            ? 'bg-green-500'
-                            : activity.status === 'in_progress'
-                            ? 'bg-yellow-500'
-                            : 'bg-gray-300'
-                        }`}
-                      />
-                      {activity.status === 'completed'
-                        ? '완료'
-                        : activity.status === 'in_progress'
-                        ? '진행 중'
-                        : '대기 중'}
-                    </div>
-                  </td>
-                  <td className="p-2 text-sm">
-                    {activity.notes}
-                    <br />
-                    <span className="text-gray-500 text-xs">
-                      {activity.start_location} → {activity.end_location}
-                    </span>
-                  </td>
-                </tr>
+          <Tab.Group>
+            {/* 탭 목록 */}
+            <Tab.List className="flex space-x-1 bg-gray-50 p-1">
+              {['해야 할 일', '완료한 일'].map((category) => (
+                <Tab
+                  key={category}
+                  className={({ selected }) =>
+                    `w-full py-2 text-sm font-medium rounded transition-colors ${
+                      selected
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  {category}
+                </Tab>
               ))}
-            </tbody>
-          </table>
+            </Tab.List>
+
+            {/* 탭 내용 */}
+            <Tab.Panels className="mt-2">
+              {/* 해야 할 일 */}
+              <Tab.Panel>
+                {robot.activities
+                  .filter((a) => a.status === 'pending')
+                  .map((activity, i) => (
+                    <div key={i} className="border-b p-2">
+                      <p><strong>작업 유형:</strong> {activity.type}</p>
+                      <p><strong>출발지:</strong> {activity.start_location}</p>
+                      <p><strong>목적지:</strong> {activity.end_location}</p>
+                    </div>
+                  ))}
+              </Tab.Panel>
+
+              {/* 완료한 일 */}
+              <Tab.Panel>
+                {robot.activities
+                  .filter((a) => a.status === 'completed')
+                  .map((activity, i) => (
+                    <div key={i} className="border-b p-2">
+                      <p><strong>작업 유형:</strong> {activity.type}</p>
+                      <p><strong>출발지:</strong> {activity.start_location}</p>
+                      <p><strong>목적지:</strong> {activity.end_location}</p>
+                      <p><strong>상세 내용:</strong> {activity.notes}</p>
+                    </div>
+                  ))}
+              </Tab.Panel>
+            </Tab.Panels>
+          </Tab.Group>
         </div>
       </div>
     </ReactModal>
