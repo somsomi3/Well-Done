@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../Layout/Layout';
-import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import { api } from '../../utils/api';
 import './AnnouncementDetail.css';
 
 function AnnouncementDetail() {
@@ -10,7 +10,6 @@ function AnnouncementDetail() {
   const [announcement, setAnnouncement] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [viewCountIncreased, setViewCountIncreased] = useState(false);
 
   useEffect(() => {
     const fetchAnnouncement = async () => {
@@ -22,31 +21,8 @@ function AnnouncementDetail() {
         }
 
         // 게시글 정보 가져오기
-        const response = await axios.get(
-          `http://localhost:8080/api/boards/announcements/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
+        const response = await api.get(`/boards/announcements/${id}`);
         setAnnouncement(response.data);
-
-        // 조회수 증가 API 별도 호출 (한 번만 호출되도록)
-        if (!viewCountIncreased) {
-          try {
-            // Authorization 헤더 없이 요청하기
-            await axios.post(
-              `http://localhost:8080/api/boards/announcements/${id}/view`
-            );
-            setViewCountIncreased(true);
-          } catch (error) {
-            console.warn('조회수 증가 실패:', error);
-            // 오류가 발생해도 계속 진행 (에러 무시)
-            setViewCountIncreased(true); // 중복 호출 방지를 위해 true로 설정
-          }
-        }
       } catch (error) {
         console.error('공지사항 조회 실패:', error);
         if (error.response?.status === 403) {
@@ -71,7 +47,7 @@ function AnnouncementDetail() {
 
     fetchAnnouncement();
     checkUserRole();
-  }, [id, navigate, viewCountIncreased]);
+  }, [id, navigate]);
 
   const handleDelete = async () => {
     if (!window.confirm('정말로 이 공지사항을 삭제하시겠습니까?')) {
@@ -85,15 +61,7 @@ function AnnouncementDetail() {
         return;
       }
 
-      await axios.delete(
-        `http://localhost:8080/api/boards/announcements/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      await api.delete(`/boards/announcements/${id}`);
       navigate('/announcements');
     } catch (error) {
       console.error('공지사항 삭제 실패:', error);
@@ -142,10 +110,28 @@ function AnnouncementDetail() {
                     </span>
                     <span className="date">
                       작성일:{' '}
-                      {new Date(announcement.createdAt).toLocaleDateString()}
+                      {announcement.createdAt
+                        ? new Date(announcement.createdAt).toLocaleDateString()
+                        : '날짜 정보 없음'}
                     </span>
-                    <span className="views">
-                      조회수: {announcement.viewCount}
+                    <span className="date">
+                      수정일:{' '}
+                      {announcement.updatedAt &&
+                      announcement.updatedAt !== announcement.createdAt &&
+                      new Date(announcement.updatedAt).getTime() >
+                        new Date(announcement.createdAt).getTime()
+                        ? new Date(announcement.updatedAt).toLocaleString(
+                            'ko-KR',
+                            {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false,
+                            }
+                          )
+                        : '수정 없음'}
                     </span>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../Layout/Layout';
+import { api } from '../../utils/api';
 import './AnnouncementList.css';
 
 function AnnouncementList() {
@@ -48,26 +48,23 @@ function AnnouncementList() {
         return;
       }
 
-      const response = await axios.get(
-        'http://localhost:8080/api/boards/announcements',
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await api.get('/boards/announcements');
+
+      console.log('서버 응답 데이터:', response.data);
 
       if (Array.isArray(response.data)) {
-        const formattedAnnouncements = response.data.map((announcement) => ({
-          id: announcement.id,
-          title: announcement.title,
-          content: announcement.content,
-          writer: announcement.writer,
-          viewCount: announcement.view_count || 0,
-          createdAt: announcement.created_at,
-          updatedAt: announcement.updated_at,
-          expirationDate: announcement.expiration_date,
-        }));
+        const formattedAnnouncements = response.data.map((announcement) => {
+          return {
+            id: announcement.id,
+            title: announcement.title,
+            content: announcement.content,
+            writer: announcement.writer,
+            viewCount: announcement.viewCount || 0,
+            createdAt: announcement.createdAt,
+            updatedAt: announcement.updatedAt,
+            expirationDate: announcement.expirationDate,
+          };
+        });
         setAnnouncements(formattedAnnouncements);
         setTotalPages(Math.ceil(formattedAnnouncements.length / itemsPerPage));
       }
@@ -239,13 +236,12 @@ function AnnouncementList() {
                       <th>제목</th>
                       <th style={{ width: '160px' }}>작성자</th>
                       <th style={{ width: '160px' }}>작성일</th>
-                      <th style={{ width: '128px' }}>조회수</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentAnnouncements.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="empty-message">
+                        <td colSpan="3" className="empty-message">
                           {searchKeyword
                             ? '검색 결과가 없습니다.'
                             : '등록된 물류 공지사항이 없습니다.'}
@@ -267,32 +263,11 @@ function AnnouncementList() {
                             {announcement.writer}
                           </td>
                           <td className="text-gray-500">
-                            {new Date(
-                              announcement.createdAt
-                            ).toLocaleDateString()}
-                          </td>
-                          <td className="text-gray-500">
-                            <div className="view-count">
-                              <svg
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                />
-                              </svg>
-                              {announcement.viewCount}
-                            </div>
+                            {announcement.createdAt
+                              ? new Date(
+                                  announcement.createdAt
+                                ).toLocaleDateString()
+                              : '날짜 정보 없음'}
                           </td>
                         </tr>
                       ))
