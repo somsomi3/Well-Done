@@ -118,6 +118,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             }
 
             ValidTokenDto accTokenValidDto = tokenUtils.isValidToken(paramAccessToken);
+            String token = null;
             if (accTokenValidDto.isValid()) {
                 String userId = tokenUtils.getClaimsToUserId(paramAccessToken);
                 Long userIdLong = Long.valueOf(userId);
@@ -127,10 +128,10 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                         .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
                 UserDto userDto = new UserDto(user);
                 List<SimpleGrantedAuthority> authorities = userDto.getRoles().stream()
-                    .map(SimpleGrantedAuthority::new)
-                    .toList();
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
                 UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDto, null, authorities);
+                        new UsernamePasswordAuthenticationToken(userDto, token, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 chain.doFilter(request, response);  // 성공하면 필터 통과
@@ -140,7 +141,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                     ValidTokenDto refTokenValidDto = tokenUtils.isValidToken(paramRefreshToken);
                     if (refTokenValidDto.isValid()) {
                         UserDto claimsToUserDto = tokenUtils.getClaimsToUserDto(paramRefreshToken, false);
-                        String token = tokenUtils.generateJwt(claimsToUserDto);
+                        token = tokenUtils.generateJwt(claimsToUserDto);
                         sendToClientAccessToken(token, response);
                         chain.doFilter(request, response);
                     } else {
