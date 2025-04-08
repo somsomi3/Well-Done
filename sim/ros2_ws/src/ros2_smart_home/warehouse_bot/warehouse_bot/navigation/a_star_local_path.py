@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry, Path
 from std_msgs.msg import Bool
+from geometry_msgs.msg import Twist
 from math import sqrt
 from ssafy_msgs.msg import StatusStamped
 from warehouse_bot.utils.logger_utils import print_log
@@ -15,6 +16,7 @@ class AStarLocalPath(Node):
 
         # Publisher & Subscriber
         self.local_path_pub = self.create_publisher(Path, "/local_path", 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
         self.sub_path = self.create_subscription(
             Path, "/global_path", self.path_callback, 10
         )
@@ -34,6 +36,7 @@ class AStarLocalPath(Node):
         self.is_path = False
         self.goal_reached = False
         self.global_path_received_time = None
+        self.last_log_time = self.get_clock().now()
 
         self.local_path_size = 30
         self.timer = self.create_timer(0.05, self.timer_callback)
@@ -84,7 +87,17 @@ class AStarLocalPath(Node):
                 now - self.global_path_received_time
             ).nanoseconds / 1e9  # 초 단위
 
-            if elapsed > 30.0:
+            # ⏱️ 5초마다 로그 출력
+            if (now - self.last_log_time).nanoseconds / 1e9 > 5.0:
+                print_log(
+                    "info",
+                    self.get_logger(),
+                    f"⏱️ 현재 경과 시간: {elapsed:.1f}초",
+                    file_tag=self.file_tag,
+                )
+                self.last_log_time = now
+
+            if elapsed > 60.0:
                 print_log(
                     "warn",
                     self.get_logger(),
@@ -92,6 +105,12 @@ class AStarLocalPath(Node):
                     file_tag=self.file_tag,
                 )
                 self.goal_reached = True  # 지역 경로 생성 멈추기
+
+                # ⛔️ 로봇 정지
+                stop_msg = Twist()
+                stop_msg.linear.x = 0.0
+                stop_msg.angular.z = 0.0
+                self.cmd_vel_pub.publish(stop_msg)
 
                 # 메시지 생성 및 퍼블리시
                 msg = StatusStamped()
