@@ -455,7 +455,6 @@ def map_callback(node, msg):
             
             # 맵 데이터는 크기가 매우 클 수 있으므로 주석 처리
             # 필요시 아래 코드 주석 해제 가능
-            """
             # 공간 절약을 위해 비어 있는 공간(-1)은 건너뛰고 장애물만 전송
             compressed_data = []
             for i, value in enumerate(msg.data):
@@ -484,7 +483,6 @@ def map_callback(node, msg):
                 "occupied": occupied_cells,
                 "occupancy_percent": round(occupied_cells / (free_cells + occupied_cells + 0.0001) * 100, 2)
             }
-            """
             
             node.get_logger().info(f"Map data received: {msg.info.width}x{msg.info.height}")
             
@@ -658,7 +656,25 @@ def mapping_done_callback(node, msg):
                     "data": list(msg.map.data)  # 바이트 배열을 리스트로 변환
                 },
                 "map_inflated": {
-                    # inflated 맵 데이터가 있다면 여기에 추가
+                    "info": {
+                        "width": msg.map.info.width,
+                        "height": msg.map.info.height,
+                        "resolution": msg.map.info.resolution,
+                        "origin": {
+                            "position": {
+                                "x": msg.map.info.origin.position.x,
+                                "y": msg.map.info.origin.position.y,
+                                "z": msg.map.info.origin.position.z
+                            },
+                            "orientation": {
+                                "x": msg.map.info.origin.orientation.x,
+                                "y": msg.map.info.origin.orientation.y,
+                                "z": msg.map.info.origin.orientation.z,
+                                "w": msg.map.info.origin.orientation.w
+                            }
+                        }
+                    },
+                    "data": list(msg.map.data)
                 }
             }
             
