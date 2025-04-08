@@ -4,9 +4,9 @@ import com.be.domain.robot.RosBridgeClient;
 import com.be.domain.robot.UserSocketHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 
@@ -24,7 +24,9 @@ public class RobotService {
     private final ObjectMapper objectMapper;
     private final RedisService redisService;
 
-
+    // 최신 카메라 이미지 저장 변수
+    @Getter
+    private Map<String, Object> latestCameraImage;
 
     @PostConstruct
     private void initializeRosTopics() {
@@ -164,6 +166,10 @@ public class RobotService {
         }
     }
 
+    /**
+     * 로봇 현재 위치 전송
+     */
+
     public void sendCurrentPosition(String roomId, double x, double y) {
         // 위치 데이터에 type 필드 추가
         Map<String, Object> positionData = new HashMap<>();
@@ -191,4 +197,41 @@ public class RobotService {
             log.error("좌표 처리 중 심각한 오류 발생", e);
         }
     }
+
+    /**
+     * 압축된 JPEG 카메라 이미지 저장 및 클라이언트로 전송
+     * @param imageData 압축된 이미지 데이터
+     */
+
+    public void processCameraImage(Map<String, Object> imageData) {
+        // 최신 이미지 저장
+        this.latestCameraImage = imageData;
+
+        try {
+            // WebSocket으로 전송하기 위한 데이터 포맷 구성
+            Map<String, Object> socketData = new HashMap<>();
+            socketData.put("type", "camera_image");
+            socketData.put("data", imageData.get("data")); // Base64 인코딩된 이미지 데이터
+            socketData.put("timestamp", System.currentTimeMillis());
+
+            // ObjectMapper로 JSON 변환
+            String json = objectMapper.writeValueAsString(socketData);
+
+            // Redis 저장 시도 (선택 사항)
+            try {
+                redisService.saveRobotCameraImage(json);
+                log.debug("Redis에 카메라 이미지 저장 완료");
+            } catch (Exception redisError) {
+                log.error("Redis 저장 실패 (무시하고 계속 진행): {}", redisError.getMessage());
+            }
+
+            // WebSocket으로 전송
+            userSocketHandler.broadcastAll(new TextMessage(json));
+            log.debug("WebSocket으로 카메라 이미지 전송 완료: {} bytes", ((String) imageData.get("data")).length());
+
+        } catch (Exception e) {
+            log.error("카메라 이미지 처리 중 오류 발생", e);
+        }
+    }
+
 }
