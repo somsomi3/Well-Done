@@ -161,11 +161,22 @@ function AppRoutes() {
           />
 
           <Route
-            path="/announcements"
+            path="/announcements/write"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <AnnouncementListComponent />
+                  <AnnouncementForm />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/announcements/edit/:id"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementForm />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -183,11 +194,11 @@ function AppRoutes() {
           />
 
           <Route
-            path="/announcements/write"
+            path="/announcements"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <AnnouncementForm />
+                  <AnnouncementListComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
