@@ -248,6 +248,11 @@ public class RobotService {
 
             // 2. 맵 데이터 처리 및 저장
             boolean success = (boolean) mappingDoneData.get("success");
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("type", "mapping_complete");
+            notification.put("success", success);
+            notification.put("timestamp", System.currentTimeMillis());
+
             if (success) {
                 // 일반 맵 처리
                 Map<String, Object> mapData = (Map<String, Object>) mappingDoneData.get("map");
@@ -257,6 +262,15 @@ public class RobotService {
                 Map<String, Object> inflatedMapData = (Map<String, Object>) mappingDoneData.get("map_inflated");
                 processAndSaveMapData(inflatedMapData, true);
             }
+            // WebSocket으로 알림 전송
+            try {
+                String json = objectMapper.writeValueAsString(notification);
+                userSocketHandler.broadcastAll(new TextMessage(json));
+                log.info("매핑 완료 알림 전송: success={}", success);
+            } catch (Exception e) {
+                log.error("매핑 완료 알림 전송 중 오류 발생", e);
+            }
+
         } catch (Exception e) {
             log.error("맵핑 완료 데이터 처리 중 오류 발생", e);
         }
