@@ -36,6 +36,9 @@ class PickAndPlaceNode(Node):
         self.goal_result_sub = self.create_subscription(
             StatusStamped, "/goal_reached", self.goal_callback, 10
         )
+        self.sub_goal_failed = self.create_subscription(
+            StatusStamped, "/goal_failed", self.goal_failed_callback, 1
+        )
         self.command_sub = self.create_subscription(
             PickPlaceCommand, "/pick_place_command", self.command_callback, 10
         )
@@ -51,6 +54,7 @@ class PickAndPlaceNode(Node):
 
         # 내부 변수
         self.goal_reached = False
+        self.goal_failed = False
         self.from_pos = None
         self.to_pos = None
         self.product_id = None
@@ -72,6 +76,7 @@ class PickAndPlaceNode(Node):
         self.product_id = msg.product_id
         self.display_spot = msg.display_spot
         self.goal_reached = False
+        self.goal_failed = False
         self.get_logger().info(
             f"📥 [COMMAND] Pick & Place 명령 수신: from({msg.from_pos.position.x}, {msg.from_pos.position.y}) → to({msg.to_pos.position.x}, {msg.to_pos.position.y})"
         )
@@ -103,6 +108,16 @@ class PickAndPlaceNode(Node):
     def goal_callback(self, msg):
         self.goal_reached = msg.status
         self.get_logger().info(f"✅ [GOAL] goal_reached 수신: {msg.status}")
+
+    def goal_failed_callback(self, msg):
+        if msg.status:
+            self.get_logger().warn(
+                "⚠️ [GOAL] 목표 지점 도달 신뢰 실패 → 동일 목표 재시도"
+            )
+            if self.state == PickAndPlaceFSM.GO_TO_PICK:
+                self.publish_goal_pose(self.from_pos)
+            elif self.state == PickAndPlaceFSM.GO_TO_PLACE:
+                self.publish_goal_pose(self.to_pos)
 
     def status_callback(self, msg):
         self.turtlebot_status = msg
