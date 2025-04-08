@@ -18,10 +18,13 @@ from sensor_msgs.msg import CompressedImage
 try:
     from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand
     # from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
+    print("성공적으로 ssafy_msgs를 임포트했습니다!")
+    CUSTOM_IMPORTS_AVAILABLE = True
 except ImportError:
+    print(f"ssafy_msgs 임포트 오류: {e}")
     # 없으면 message_types.py에서 가져옴
     # from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
-    from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand
+    # from .message_types import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand
     
 # 내부 모듈 임포트
 from .handlers.topic_callbacks import register_all_callbacks
@@ -60,6 +63,7 @@ class RobotBridgeNode(Node):
 
         # Spring 서버 URL 및 인증
         self.spring_server_url = "http://172.26.15.101:8080"
+        # self.spring_server_url = "http://localhost:8080"
         self.jwt_token = None
         self.token_refresh_timer = None
         self.attempt_jwt_token_acquisition()

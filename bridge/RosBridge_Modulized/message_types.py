@@ -9,7 +9,7 @@ from sensor_msgs.msg import CompressedImage
 
 # SSAFY 메시지 패키지 경로 추가
 sys.path.append(
-    "C:/Users/SSAFY/Desktop/ros/S12P21E102/sim/ros2_ws/install/ssafy_bridge/Lib/site-packages"
+    "C:/Users/SSAFY/Desktop/sim/S12P21E102/sim/ros2_ws/install/ssafy_bridge/Lib/site-packages"
 )
 # SSAFY 메시지 타입 임포트 시도
 try:
