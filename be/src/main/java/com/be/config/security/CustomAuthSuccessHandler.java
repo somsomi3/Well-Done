@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import org.springframework.http.ResponseCookie; // 추가
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -75,3 +74,4 @@ public class CustomAuthSuccessHandler implements AuthenticationSuccessHandler {
         response.getWriter().write(objectMapper.writeValueAsString(tokenMap));
     }
 }
+
