@@ -76,7 +76,7 @@ class detection_net_class:
         t_start = time.time()
 
         # YOLOv8 추론 실행
-        results = self.model(image_np, conf=0.8)
+        results = self.model(image_np, conf=0.7)
 
         # 추론 결과 처리
         image_process = results[0].plot()  # 시각화된 이미지
@@ -87,7 +87,7 @@ class detection_net_class:
         classes = results[0].boxes.cls.cpu().numpy().astype(np.int32)
 
         # 점수가 0.6 이상인 객체만 선택
-        idx_detect = np.where(scores > 0.8)[0]
+        idx_detect = np.where(scores > 0.7)[0]
         boxes_detect = boxes[idx_detect]
         classes_pick = classes[idx_detect]
 
@@ -106,7 +106,7 @@ def visualize_images(image_out, t_cost, boxes, classes, scores, class_names):
 
     # 바운딩 박스에 클래스 이름 추가
     for i in range(len(boxes)):
-        if scores[i] >= 0.8:
+        if scores[i] >= 0.7:
             x1, y1, x2, y2 = boxes[i]
             class_id = classes[i]
             class_name = class_names[class_id]
