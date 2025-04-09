@@ -1,31 +1,32 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
-import ErrorBoundary from '../components/ErrorBoundary';
-import MainPage from '../pages/MainPage';
-import LoginPage from '../pages/LoginPage';
-import RegisterPage from '../pages/RegisterPage';
-import MapPage from '../pages/MapPage';
-import RobotPage from '../pages/RobotPage';
-import LogPage from '../pages/LogPage';
-import SettingsPage from '../pages/SettingsPage';
-import AnnouncementDetail from '../components/board/AnnouncementDetail';
-import AnnouncementList from '../components/board/AnnouncementList';
-import AnnouncementForm from '../components/board/AnnouncementForm';
+import React, { Suspense, lazy, useEffect, useState } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useAuthStore } from "../stores/authStore";
+import ErrorBoundary from "../components/ErrorBoundary";
+import MainPage from "../pages/MainPage";
+import LoginPage from "../pages/LoginPage";
+import RegisterPage from "../pages/RegisterPage";
+import MapPage from "../pages/MapPage";
+import RobotPage from "../pages/RobotPage";
+import LogPage from "../pages/LogPage";
+import SettingsPage from "../pages/SettingsPage";
+import AnnouncementDetail from "../components/board/AnnouncementDetail";
+import AnnouncementList from "../components/board/AnnouncementList";
+import AnnouncementForm from "../components/board/AnnouncementForm";
 
 // 지연 로딩을 사용한 페이지 컴포넌트 임포트
-const LoginPageComponent = lazy(() => import('../pages/LoginPage'));
-const RegisterPageComponent = lazy(() => import('../pages/RegisterPage'));
-const MainPageComponent = lazy(() => import('../pages/MainPage'));
-const MapPageComponent = lazy(() => import('../pages/MapPage'));
-const RobotPageComponent = lazy(() => import('../pages/RobotPage'));
-const LogPageComponent = lazy(() => import('../pages/LogPage'));
-const SettingsPageComponent = lazy(() => import('../pages/SettingsPage'));
+const LoginPageComponent = lazy(() => import("../pages/LoginPage"));
+const RegisterPageComponent = lazy(() => import("../pages/RegisterPage"));
+const MainPageComponent = lazy(() => import("../pages/MainPage"));
+const MapPageComponent = lazy(() => import("../pages/MapPage"));
+const RobotPageComponent = lazy(() => import("../pages/RobotPage"));
+const LogPageComponent = lazy(() => import("../pages/LogPage"));
+const SettingsPageComponent = lazy(() => import("../pages/SettingsPage"));
+const WorkPageComponent = lazy(() => import("../pages/WorkPage"));
 const AnnouncementDetailComponent = lazy(() =>
-  import('../components/board/AnnouncementDetail')
+  import("../components/board/AnnouncementDetail")
 );
 const AnnouncementListComponent = lazy(() =>
-  import('../components/board/AnnouncementList')
+  import("../components/board/AnnouncementList")
 );
 
 // 로딩 컴포넌트
@@ -46,7 +47,7 @@ const ProtectedRoute = ({ children }) => {
       setIsRedirecting(true);
       // 약간의 지연을 주어 네비게이션 제한 문제를 방지
       setTimeout(() => {
-        navigate('/login', { replace: true });
+        navigate("/login", { replace: true });
       }, 100);
     }
   }, [isAuthenticated, navigate, isRedirecting]);
@@ -69,7 +70,7 @@ const PublicRoute = ({ children }) => {
       setIsRedirecting(true);
       // 약간의 지연을 주어 네비게이션 제한 문제를 방지
       setTimeout(() => {
-        navigate('/board', { replace: true });
+        navigate("/board", { replace: true });
       }, 100);
     }
   }, [isAuthenticated, navigate, isRedirecting]);
@@ -160,6 +161,16 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/move"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <WorkPageComponent />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/log"
             element={
               <ProtectedRoute>
@@ -227,7 +238,7 @@ function AppRoutes() {
                     요청하신 페이지가 존재하지 않습니다.
                   </p>
                   <button
-                    onClick={() => (window.location.href = '/main')}
+                    onClick={() => (window.location.href = "/main")}
                     className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
                     메인 페이지로 이동
