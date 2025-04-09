@@ -152,6 +152,40 @@ class AutoMappingFSM(Node):
             self.cmd_pub.publish(stop_twist)
             self.prev_goal = None
 
+            if (
+                self.raw_map_msg is not None
+                and self.map_info is not None
+                and self.map_data is not None
+            ):
+                print_log(
+                    "info",
+                    self.get_logger(),
+                    "🗺️ 정지 시점 맵을 MappingDone 메시지로 발행합니다.",
+                    file_tag=self.file_tag,
+                )
+
+                done_msg = MappingDone()
+                done_msg.header.stamp = self.get_clock().now().to_msg()
+                done_msg.header.frame_id = "map"
+                done_msg.success = True
+                done_msg.map = self.raw_map_msg
+
+                # map_inflated 구성
+                done_msg.map_inflated = OccupancyGrid()
+                done_msg.map_inflated.header.frame_id = "map"
+                done_msg.map_inflated.header.stamp = self.get_clock().now().to_msg()
+                done_msg.map_inflated.info = self.map_info
+                done_msg.map_inflated.data = self.map_data.flatten().tolist()
+
+                self.done_pub.publish(done_msg)
+            else:
+                print_log(
+                    "warn",
+                    self.get_logger(),
+                    "❗ 정지 시점 맵 데이터가 없어 MappingDone 메시지 생략.",
+                    file_tag=self.file_tag,
+                )
+
     def odom_callback(self, msg):
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
