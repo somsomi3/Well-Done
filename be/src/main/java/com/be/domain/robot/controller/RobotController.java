@@ -3,6 +3,7 @@ package com.be.domain.robot.controller;
 import com.be.domain.robot.UserSocketHandler;
 import com.be.domain.robot.service.RedisService;
 import com.be.domain.robot.service.RobotService;
+import com.be.domain.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +24,12 @@ public class RobotController {
     private final UserSocketHandler userSocketHandler;
     private final Logger log = LoggerFactory.getLogger(RobotController.class);
     private final RestTemplate restTemplate;
+    private final StorageService storageService;
     private final RedisService redisService;
 
     // 브릿지 서버 URL 설정
     private final String bridgeUrl = "http://10.0.0.2:5000";
+//    private final String bridgeUrl = "http://localhost:5000";
 
     // 최신 데이터 저장용 변수들
     private Map<String, Object> latestGlobalPath = new HashMap<>();
@@ -401,6 +404,7 @@ public class RobotController {
 
         if (success) {
             log.info("물건 집기 성공: 상품 ID {}, 시간 {}", productId, timestamp);
+            storageService.autoReplenishFromStorage(Long.parseLong(productId));
         } else {
             log.info("물건 집기 실패: 상품 ID {}, 시간 {}", productId, timestamp);
         }
@@ -425,6 +429,8 @@ public class RobotController {
 
         if (success) {
             log.info("전시 완료: 상품 ID {}, 진열 위치 {}", productId, displaySpot);
+            // 여기서 자동 보충 트리거
+            storageService.autoReplenishFromStorage(Long.parseLong(productId));
         } else {
             log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, displaySpot);
         }
@@ -494,6 +500,7 @@ public class RobotController {
     @PostMapping("/pick-place")
     public ResponseEntity<?> executePickPlaceCommand(@RequestBody Map<String, Object> command) {
         try {
+            log.info("📦 전체 명령 데이터: {}", command);
             // 명령 데이터 추출
             Map<String, Object> from = (Map<String, Object>) command.get("from");
             Map<String, Object> to = (Map<String, Object>) command.get("to");
