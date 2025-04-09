@@ -39,6 +39,7 @@ setup(
             "pick_and_place_node = warehouse_bot.pick_and_place.pick_and_place_node:main",
             "precise_alignment = warehouse_bot.controller.precise_alignment:main",
             "object_detector = warehouse_bot.perception.object_detector:main",
+            "ex_calib = warehouse_bot.perception.ex_calib:main",
             "mode_manager_node = warehouse_bot.mode_control.mode_manager_node:main",
         ],
     },
