@@ -6,6 +6,8 @@ from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool, String
 from nav_msgs.msg import OccupancyGrid
 from nav_msgs.msg import Odometry
+from ssafy_msgs.msg import FSMStatus
+from datetime import datetime, timezone
 import math
 
 from ssafy_msgs.msg import (
@@ -69,6 +71,7 @@ class PickAndPlaceNode(Node):
 
         self.place_done_pub = self.create_publisher(PlaceDone, "/place_done", 10)
         self.pick_done_pub = self.create_publisher(PickDone, "/pick_done", 10)
+        self.fsm_status_pub = self.create_publisher(FSMStatus, "/fsm_status", 10)
 
         self.timer = self.create_timer(0.5, self.fsm_step)
 
@@ -128,6 +131,16 @@ class PickAndPlaceNode(Node):
             "EMP1": (-55.56, -65.95),
             "EMP2": (-55.03, -65.95),
         }
+        self.publish_fsm_status(self.state.name)
+
+    # 상태가 바뀔 때 호출하는 함수
+    def publish_fsm_status(self, state_str):
+        msg = FSMStatus()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.node_name = "pick_and_place_node"
+        msg.state = state_str
+        msg.timestamp = datetime.now(timezone.utc).isoformat()
+        self.fsm_status_pub.publish(msg)
 
     def odom_callback(self, msg):
         pos = msg.pose.pose.position
@@ -160,6 +173,7 @@ class PickAndPlaceNode(Node):
         )
         self.publish_goal_pose(self.from_pos)
         self.state = PickAndPlaceFSM.GO_TO_PICK
+        self.publish_fsm_status(self.state.name)
 
     def publish_goal_pose(self, target_pose):
         pose = PoseStamped()
@@ -194,8 +208,10 @@ class PickAndPlaceNode(Node):
             )
             if self.state == PickAndPlaceFSM.GO_TO_PICK:
                 self.publish_goal_pose(self.from_pos)
+                self.publish_fsm_status(self.state.name)
             elif self.state == PickAndPlaceFSM.GO_TO_PLACE:
                 self.publish_goal_pose(self.to_pos)
+                self.publish_fsm_status(self.state.name)
 
     def status_callback(self, msg):
         self.turtlebot_status = msg
@@ -219,6 +235,7 @@ class PickAndPlaceNode(Node):
                 self.state_before_alignment = PickAndPlaceFSM.ALIGN_OBJECT
                 self.publish_target_pose(self.from_pos)
                 self.state = PickAndPlaceFSM.WAIT_ALIGNMENT_DONE
+                self.publish_fsm_status(self.state.name)
 
         elif self.state == PickAndPlaceFSM.GO_TO_PLACE:
             if self.goal_reached:
@@ -228,6 +245,7 @@ class PickAndPlaceNode(Node):
                 self.state_before_alignment = PickAndPlaceFSM.ALIGN_RACK
                 self.publish_target_pose(self.to_pos)
                 self.state = PickAndPlaceFSM.WAIT_ALIGNMENT_DONE
+                self.publish_fsm_status(self.state.name)
 
         elif self.state == PickAndPlaceFSM.WAIT_ALIGNMENT_DONE:
             if self.alignment_done:
@@ -235,11 +253,13 @@ class PickAndPlaceNode(Node):
                     "🧭 [WAIT_ALIGNMENT_DONE] 정렬 완료 → 다음 단계 전환"
                 )
                 self.alignment_done = False
+                self.publish_fsm_status(self.state_before_alignment.name)
                 self.state = self.state_before_alignment
 
         elif self.state == PickAndPlaceFSM.ALIGN_OBJECT:
             self.get_logger().info("🔧 [ALIGN_OBJECT] 물체 정렬 수행 중 (추후 구현)")
             self.state = PickAndPlaceFSM.PICK_OBJECT
+            self.publish_fsm_status(self.state.name)
 
         elif self.state == PickAndPlaceFSM.PICK_OBJECT:
             if self.turtlebot_status.can_lift:
@@ -263,15 +283,18 @@ class PickAndPlaceNode(Node):
                 self.get_logger().info("📦 [PICK_DONE] 집기 완료 메시지 발행됨.")
 
                 self.state = PickAndPlaceFSM.GO_TO_PLACE
+                self.publish_fsm_status(self.state.name)
                 self.publish_goal_pose(self.to_pos)
 
         elif self.state == PickAndPlaceFSM.ALIGN_RACK:
             self.get_logger().info("🔧 [ALIGN_RACK] 랙 정렬 수행 중 (추후 구현)")
             self.state = PickAndPlaceFSM.CHECK_RACK
+            self.publish_fsm_status(self.state.name)
 
         elif self.state == PickAndPlaceFSM.CHECK_RACK:
             self.get_logger().info("📦 [CHECK_RACK] 랙 상태 확인 중 (추후 구현)")
             self.state = PickAndPlaceFSM.PLACE_OBJECT
+            self.publish_fsm_status(self.state.name)
 
         elif self.state == PickAndPlaceFSM.PLACE_OBJECT:
             place_xy = self.place_position_table.get(self.to_id, None)
@@ -311,6 +334,7 @@ class PickAndPlaceNode(Node):
                     self.get_logger().info("✅ [PLACE_OBJECT] 내려놓기 완료 → 종료")
                     self.placing_done = True
                     self.state = PickAndPlaceFSM.FINISHED
+                    self.publish_fsm_status(self.state.name)
 
         elif self.state == PickAndPlaceFSM.FINISHED:
             self.get_logger().info(
@@ -330,8 +354,8 @@ class PickAndPlaceNode(Node):
                 else OccupancyGrid()
             )
             self.place_done_pub.publish(msg)
-
             self.state = PickAndPlaceFSM.IDLE
+            self.publish_fsm_status(self.state.name)
 
 
 def main(args=None):

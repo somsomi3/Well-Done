@@ -7,6 +7,8 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import OccupancyGrid, Odometry
 from ssafy_msgs.msg import StatusStamped
+from ssafy_msgs.msg import FSMStatus
+from datetime import datetime, timezone
 from squaternion import Quaternion
 from warehouse_bot.utils.frontier_utils import (
     find_frontiers,
@@ -60,6 +62,7 @@ class AutoMappingFSM(Node):
         self.done_pub = self.create_publisher(MappingDone, "/mapping_done", 1)
         self.pub_reset = self.create_publisher(Bool, "/reset_mapping", 1)
         self.cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.fsm_status_pub = self.create_publisher(FSMStatus, "/fsm_status", 10)
 
         self.sub_start = self.create_subscription(
             Bool, "/start_auto_map", self.start_callback, 1
@@ -94,13 +97,21 @@ class AutoMappingFSM(Node):
         # 상태 전이 확인용 타이머
         self.running = False
         self.timer = self.create_timer(1.0, self.fsm_step)
-
+        self.publish_fsm_status(self.state)
         print_log(
             "info",
             self.get_logger(),
             "AutoMapping FSM Node initialized.",
             file_tag=self.file_tag,
         )
+
+    def publish_fsm_status(self, state_str: str):
+        msg = FSMStatus()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.node_name = "auto_mapping_fsm"
+        msg.state = state_str
+        msg.timestamp = datetime.now(timezone.utc).isoformat()
+        self.fsm_status_pub.publish(msg)
 
     def mode_callback(self, msg):
         self.is_active = msg.data == "MAPPING"
@@ -135,6 +146,7 @@ class AutoMappingFSM(Node):
             self.running = False
 
             self.state = "FRONTIER_SEARCH"
+            self.publish_fsm_status(self.state)
 
     def stop_auto_map_callback(self, msg):
         if msg.data:
@@ -145,6 +157,7 @@ class AutoMappingFSM(Node):
                 file_tag=self.file_tag,
             )
             self.state = "WAIT_FOR_COMMAND"
+            self.publish_fsm_status(self.state)
             self.running = False
             stop_twist = Twist()
             stop_twist.linear.x = 0.0
@@ -245,6 +258,7 @@ class AutoMappingFSM(Node):
                     self.done_pub.publish(done_msg)
 
                     self.state = "WAIT_FOR_COMMAND"
+                    self.publish_fsm_status(self.state)
                 elif duration > self.MAP_IDLE_DURATION:
                     print_log(
                         "info",
@@ -253,6 +267,7 @@ class AutoMappingFSM(Node):
                         file_tag=self.file_tag,
                     )
                     self.state = "FRONTIER_SEARCH"
+                    self.publish_fsm_status(self.state)
 
         self.prev_map = self.map_data.copy()
 
@@ -274,6 +289,7 @@ class AutoMappingFSM(Node):
             )
             self.failed_goals = []
             self.state = "WAIT_FOR_GOAL_RESULT"
+            self.publish_fsm_status(self.state)
             print_log(
                 "info",
                 self.get_logger(),
@@ -301,6 +317,7 @@ class AutoMappingFSM(Node):
                     file_tag=self.file_tag,
                 )
             self.state = "FRONTIER_SEARCH"
+            self.publish_fsm_status(self.state)
 
     def goal_reached_callback(self, msg):
         if self.state == "WAIT_FOR_COMMAND":
@@ -331,6 +348,7 @@ class AutoMappingFSM(Node):
                 file_tag=self.file_tag,
             )
             self.state = "FRONTIER_SEARCH"
+            self.publish_fsm_status(self.state)
 
     def goal_failed_callback(self, msg):
         if self.state == "WAIT_FOR_COMMAND":
@@ -345,6 +363,7 @@ class AutoMappingFSM(Node):
             if self.prev_goal is not None:
                 self.failed_goals.append(self.prev_goal)
             self.state = "FRONTIER_SEARCH"
+            self.publish_fsm_status(self.state)
 
     def fsm_step(self):
         if not self.is_active or self.state == "WAIT_FOR_COMMAND" or self.stopped:
@@ -416,6 +435,7 @@ class AutoMappingFSM(Node):
 
                     self.done_pub.publish(done_msg)
                     self.state = "WAIT_FOR_COMMAND"
+                    self.publish_fsm_status(self.state)
                     return
 
                 # 2. grid → world 변환
@@ -468,6 +488,7 @@ class AutoMappingFSM(Node):
 
                     self.done_pub.publish(done_msg)
                     self.state = "WAIT_FOR_COMMAND"
+                    self.publish_fsm_status(self.state)
                     return
 
                 # 4. 최소 거리 필터링
@@ -589,6 +610,7 @@ class AutoMappingFSM(Node):
 
                 # 다음 상태로 전이
                 self.state = "WAIT_FOR_PLAN_RESULT"
+                self.publish_fsm_status(self.state)
                 print_log(
                     "info",
                     self.get_logger(),
