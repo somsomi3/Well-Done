@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Twist
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from squaternion import Quaternion
 from math import atan2, sqrt, pi
 import numpy as np
@@ -21,6 +21,11 @@ class PreciseAlignment(Node):
         self.target_sub = self.create_subscription(
             PoseStamped, "/target_pose", self.target_callback, 10
         )
+        self.create_subscription(String, "/current_mode", self.mode_callback, 10)
+        self.is_active = True  # default
+
+        self.create_subscription(Bool, "/stop_all", self.stop_all_callback, 10)
+        self.stopped = False
 
         self.timer = self.create_timer(0.02, self.control_loop)
 
@@ -31,6 +36,16 @@ class PreciseAlignment(Node):
 
         self.pos_tolerance = 0.05
         self.yaw_tolerance = 0.052
+
+    def stop_all_callback(self, msg):
+        self.stopped = msg.data
+        if self.stopped:
+            self.stop_robot()
+            self.aligning = False
+            self.get_logger().warn("🛑 시스템 정지 신호 수신됨. 정렬 중단")
+
+    def mode_callback(self, msg):
+        self.is_active = msg.data == "PICK_AND_PLACE"
 
     def odom_callback(self, msg):
         self.odom = msg
@@ -46,7 +61,8 @@ class PreciseAlignment(Node):
     def control_loop(self):
         if not self.aligning or self.odom is None or self.target_pose is None:
             return
-
+        if not self.is_active or self.stopped:
+            return
         # 현재 위치 및 자세
         x = self.odom.pose.pose.position.x
         y = self.odom.pose.pose.position.y

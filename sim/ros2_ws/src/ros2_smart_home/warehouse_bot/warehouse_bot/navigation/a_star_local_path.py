@@ -17,6 +17,8 @@ class AStarLocalPath(Node):
         # Publisher & Subscriber
         self.local_path_pub = self.create_publisher(Path, "/local_path", 10)
         self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.goal_failed_pub = self.create_publisher(StatusStamped, "/goal_failed", 10)
+
         self.sub_path = self.create_subscription(
             Path, "/global_path", self.path_callback, 10
         )
@@ -24,10 +26,10 @@ class AStarLocalPath(Node):
             Odometry, "/odom_true", self.odom_callback, 10
         )
         self.goal_sub = self.create_subscription(
-            StatusStamped, "/goal_reached", self.goal_callback, 10
+            StatusStamped, "/goal_reached", self.goal_reached_callback, 10
         )
-        self.goal_reached_pub = self.create_publisher(
-            StatusStamped, "/goal_reached", 10
+        self.sub_goal_failed = self.create_subscription(
+            StatusStamped, "/goal_failed", self.goal_failed_callback, 10
         )
 
         self.odom_msg = None
@@ -35,6 +37,7 @@ class AStarLocalPath(Node):
         self.is_odom = False
         self.is_path = False
         self.goal_reached = False
+        self.goal_failed = False
         self.global_path_received_time = None
         self.last_log_time = self.get_clock().now()
 
@@ -56,6 +59,7 @@ class AStarLocalPath(Node):
         self.global_path_msg = msg
         self.is_path = True
         self.goal_reached = False
+        self.goal_failed = False
         self.global_path_received_time = self.get_clock().now()
         print_log(
             "info",
@@ -64,7 +68,7 @@ class AStarLocalPath(Node):
             file_tag=self.file_tag,
         )
 
-    def goal_callback(self, msg):
+    def goal_reached_callback(self, msg):
         self.goal_reached = msg.status
         if self.goal_reached:
             print_log(
@@ -74,12 +78,22 @@ class AStarLocalPath(Node):
                 file_tag=self.file_tag,
             )
 
+    def goal_failed_callback(self, msg):
+        if msg.status:
+            self.goal_failed = True
+            print_log(
+                "warn",
+                self.get_logger(),
+                "❌ goal_failed 수신. 지역 경로 생성 중단.",
+                file_tag=self.file_tag,
+            )
+
     def timer_callback(self):
         if not (self.is_odom and self.is_path):
             return
 
-        if self.goal_reached:
-            return  # 도달했으면 지역 경로 생성 안 함
+        if self.goal_reached or self.goal_failed:
+            return
 
         if self.global_path_received_time:
             now = self.get_clock().now()
@@ -104,7 +118,7 @@ class AStarLocalPath(Node):
                     f"⏰ 동일 경로 시도 시간 초과 ({elapsed:.1f}초) → 새로운 전역 경로 필요",
                     file_tag=self.file_tag,
                 )
-                self.goal_reached = True  # 지역 경로 생성 멈추기
+                self.goal_failed = True  # 지역 경로 생성 멈추기
 
                 # ⛔️ 로봇 정지
                 stop_msg = Twist()
@@ -117,7 +131,7 @@ class AStarLocalPath(Node):
                 msg.stamp = now.to_msg()
                 msg.tag = "timeout_reached"
                 msg.status = True
-                self.goal_reached_pub.publish(msg)
+                self.goal_failed_pub.publish(msg)
                 return
 
         x = self.odom_msg.pose.pose.position.x
@@ -141,6 +155,20 @@ class AStarLocalPath(Node):
                 "❌ No nearest point found on global path.",
                 file_tag=self.file_tag,
             )
+            self.goal_failed = True  # 지역 경로 생성 멈추기
+
+            # ⛔️ 로봇 정지
+            stop_msg = Twist()
+            stop_msg.linear.x = 0.0
+            stop_msg.angular.z = 0.0
+            self.cmd_vel_pub.publish(stop_msg)
+
+            # 메시지 생성 및 퍼블리시
+            msg = StatusStamped()
+            msg.stamp = now.to_msg()
+            msg.tag = "timeout_reached"
+            msg.status = True
+            self.goal_failed_pub.publish(msg)
             return
 
         end_idx = min(

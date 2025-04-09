@@ -1,7 +1,7 @@
 import os
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from ssafy_msgs.msg import MappingDone
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
@@ -47,6 +47,8 @@ class AutoMappingFSM(Node):
         self.last_goal_reach_time = None
 
         self.raw_map_msg = None
+        self.is_active = True  ###
+        self.stopped = False
 
         # 종료 조건 파라미터
         self.MAP_CHANGE_THRESHOLD = 0.01
@@ -84,8 +86,10 @@ class AutoMappingFSM(Node):
             StatusStamped, "/goal_failed", self.goal_failed_callback, 1
         )
         self.sub_stop = self.create_subscription(
-            Bool, "/stop_auto_map", self.stop_callback, 1
+            Bool, "/stop_auto_map", self.stop_auto_map_callback, 1
         )
+        self.create_subscription(String, "/current_mode", self.mode_callback, 10)
+        self.create_subscription(Bool, "/stop_all", self.stop_all_callback, 10)
 
         # 상태 전이 확인용 타이머
         self.running = False
@@ -97,6 +101,15 @@ class AutoMappingFSM(Node):
             "AutoMapping FSM Node initialized.",
             file_tag=self.file_tag,
         )
+
+    def mode_callback(self, msg):
+        self.is_active = msg.data == "MAPPING"
+
+    def stop_all_callback(self, msg):
+        self.stopped = msg.data
+        if self.stopped:
+            self.cmd_pub.publish(Twist())  # 긴급 정지
+            self.get_logger().warn("🛑 시스템 전체 정지 신호 수신됨. 동작 중단.")
 
     def start_callback(self, msg):
         if msg.data and self.state == "WAIT_FOR_COMMAND":
@@ -123,7 +136,7 @@ class AutoMappingFSM(Node):
 
             self.state = "FRONTIER_SEARCH"
 
-    def stop_callback(self, msg):
+    def stop_auto_map_callback(self, msg):
         if msg.data:
             print_log(
                 "warn",
@@ -295,10 +308,12 @@ class AutoMappingFSM(Node):
                 "❌ Goal failed. Retrying frontier search.",
                 file_tag=self.file_tag,
             )
+            if self.prev_goal is not None:
+                self.failed_goals.append(self.prev_goal)
             self.state = "FRONTIER_SEARCH"
 
     def fsm_step(self):
-        if self.state == "WAIT_FOR_COMMAND":
+        if not self.is_active or self.state == "WAIT_FOR_COMMAND" or self.stopped:
             return
         print_log(
             "info",

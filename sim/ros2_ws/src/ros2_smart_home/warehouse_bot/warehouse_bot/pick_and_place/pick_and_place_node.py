@@ -2,11 +2,10 @@ import rclpy
 from rclpy.node import Node
 from enum import Enum
 from squaternion import Quaternion
-from geometry_msgs.msg import PoseStamped, Point
-from std_msgs.msg import Bool
-from ssafy_msgs.msg import PickPlaceCommand, HandControl, TurtlebotStatus
-from ssafy_msgs.msg import StatusStamped
-from ssafy_msgs.msg import PlaceDone
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Bool, String
+from nav_msgs.msg import OccupancyGrid
+from ssafy_msgs.msg import PickPlaceCommand, HandControl, TurtlebotStatus, StatusStamped, PlaceDone, PickDone
 
 
 class PickAndPlaceFSM(Enum):
@@ -36,6 +35,9 @@ class PickAndPlaceNode(Node):
         self.goal_result_sub = self.create_subscription(
             StatusStamped, "/goal_reached", self.goal_callback, 10
         )
+        self.sub_goal_failed = self.create_subscription(
+            StatusStamped, "/goal_failed", self.goal_failed_callback, 1
+        )
         self.command_sub = self.create_subscription(
             PickPlaceCommand, "/pick_place_command", self.command_callback, 10
         )
@@ -45,12 +47,23 @@ class PickAndPlaceNode(Node):
         self.align_done_sub = self.create_subscription(
             Bool, "/alignment_done", self.align_done_callback, 10
         )
+        self.sub_map = self.create_subscription(
+            OccupancyGrid, "/map", self.map_callback, 10
+        )
+        self.sub_map_inflated = self.create_subscription(
+            OccupancyGrid, "/map_inflated", self.map_inflated_callback, 10
+        )
+        self.create_subscription(String, "/current_mode", self.mode_callback, 10)
+        self.create_subscription(Bool, "/stop_all", self.stop_all_callback, 10)
+
         self.place_done_pub = self.create_publisher(PlaceDone, "/place_done", 10)
+        self.pick_done_pub = self.create_publisher(PickDone, "/pick_done", 10)
 
         self.timer = self.create_timer(0.5, self.fsm_step)
 
         # 내부 변수
         self.goal_reached = False
+        self.goal_failed = False
         self.from_pos = None
         self.to_pos = None
         self.product_id = None
@@ -58,6 +71,8 @@ class PickAndPlaceNode(Node):
         self.alignment_done = False
         self.state_before_alignment = None
         self.turtlebot_status = TurtlebotStatus()
+        self.is_active = True
+        self.stopped = False
 
         self.hand_msg = HandControl()
         self.put_distance = 0.62
@@ -66,12 +81,33 @@ class PickAndPlaceNode(Node):
         self.placing_preview_done = False
         self.placing_done = False
 
+        self.latest_map = None
+        self.latest_map_inflated = None
+        self.from_id = ""
+        self.to_id = ""
+
+    def map_callback(self, msg):
+        self.latest_map = msg
+
+    def map_inflated_callback(self, msg):
+        self.latest_map_inflated = msg
+
+    def mode_callback(self, msg):
+        self.is_active = msg.data == "PICK_AND_PLACE"
+
+    def stop_all_callback(self, msg):
+        self.stopped = msg.data
+        if self.stopped:
+            self.get_logger().warn("🛑 시스템 전체 정지 신호 수신됨. FSM 중단.")
+
     def command_callback(self, msg: PickPlaceCommand):
         self.from_pos = msg.from_pos
         self.to_pos = msg.to_pos
         self.product_id = msg.product_id
-        self.display_spot = msg.display_spot
+        self.from_id = msg.from_id
+        self.to_id = msg.to_id
         self.goal_reached = False
+        self.goal_failed = False
         self.get_logger().info(
             f"📥 [COMMAND] Pick & Place 명령 수신: from({msg.from_pos.position.x}, {msg.from_pos.position.y}) → to({msg.to_pos.position.x}, {msg.to_pos.position.y})"
         )
@@ -104,6 +140,16 @@ class PickAndPlaceNode(Node):
         self.goal_reached = msg.status
         self.get_logger().info(f"✅ [GOAL] goal_reached 수신: {msg.status}")
 
+    def goal_failed_callback(self, msg):
+        if msg.status:
+            self.get_logger().warn(
+                "⚠️ [GOAL] 목표 지점 도달 신뢰 실패 → 동일 목표 재시도"
+            )
+            if self.state == PickAndPlaceFSM.GO_TO_PICK:
+                self.publish_goal_pose(self.from_pos)
+            elif self.state == PickAndPlaceFSM.GO_TO_PLACE:
+                self.publish_goal_pose(self.to_pos)
+
     def status_callback(self, msg):
         self.turtlebot_status = msg
 
@@ -113,6 +159,9 @@ class PickAndPlaceNode(Node):
             self.alignment_done = True
 
     def fsm_step(self):
+        if not self.is_active or self.stopped:
+            return
+
         self.get_logger().info(f"🔄 [FSM] 현재 상태: {self.state.name}")
 
         if self.state == PickAndPlaceFSM.GO_TO_PICK:
@@ -152,6 +201,16 @@ class PickAndPlaceNode(Node):
                 self.hand_pub.publish(self.hand_msg)
             elif self.turtlebot_status.can_use_hand:
                 self.get_logger().info("✅ [PICK_OBJECT] 집기 완료 → 이동 시작")
+
+                msg = PickDone()
+                msg.success = True
+                msg.product_id = self.product_id
+                msg.from_id = self.from_id
+                msg.map = self.latest_map if self.latest_map else OccupancyGrid()
+                msg.map_inflated = self.latest_map_inflated if self.latest_map_inflated else OccupancyGrid()
+                self.pick_done_pub.publish(msg)
+                self.get_logger().info("📦 [PICK_DONE] 집기 완료 메시지 발행됨.")
+                
                 self.hand_msg.put_distance = self.put_distance
                 self.hand_msg.put_height = self.put_height
                 self.state = PickAndPlaceFSM.GO_TO_PLACE
@@ -194,7 +253,9 @@ class PickAndPlaceNode(Node):
             msg = PlaceDone()
             msg.success = True
             msg.product_id = self.product_id
-            msg.display_spot = self.display_spot
+            msg.to_id = self.to_id
+            msg.map = self.latest_map if self.latest_map else OccupancyGrid()
+            msg.map_inflated = self.latest_map_inflated if self.latest_map_inflated else OccupancyGrid()
             self.place_done_pub.publish(msg)
 
             self.state = PickAndPlaceFSM.IDLE
