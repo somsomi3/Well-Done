@@ -120,6 +120,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             }
 
             ValidTokenDto accTokenValidDto = tokenUtils.isValidToken(paramAccessToken);
+            String token = null;
             if (accTokenValidDto.isValid()) {
                 String userId = tokenUtils.getClaimsToUserId(paramAccessToken);
                 Long userIdLong = Long.valueOf(userId);
@@ -132,20 +133,10 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                 log.info("사용자 역할: {}", userDto.getRoles());
 
                 List<SimpleGrantedAuthority> authorities = userDto.getRoles().stream()
-                    .map(role -> {
-                        log.info("역할 변환: {}", role);
-                        return new SimpleGrantedAuthority(role);
-                    })
-                    .toList();
-
-                // List<SimpleGrantedAuthority> authorities = userDto.getRoles().stream()
-                //     .map(SimpleGrantedAuthority::new)
-                //     .toList(); >>디버깅용 지우고 다시 이거 하면됨.
-
-                // 디버깅용 로그 추가
-                log.info("생성된 권한 객체: {}", authorities);
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
                 UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDto, null, authorities);
+                        new UsernamePasswordAuthenticationToken(userDto, token, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 chain.doFilter(request, response);  // 성공하면 필터 통과
@@ -155,16 +146,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                     ValidTokenDto refTokenValidDto = tokenUtils.isValidToken(paramRefreshToken);
                     if (refTokenValidDto.isValid()) {
                         UserDto claimsToUserDto = tokenUtils.getClaimsToUserDto(paramRefreshToken, false);
-
-                        // [수정] 리프레시 토큰으로 새 액세스 토큰 생성 시 역할 정보를 포함시키기 위해
-                        // DB에서 최신 사용자 정보와 역할 정보를 가져와 UserDto를 다시 생성
-                        User user = userRepository.findById(claimsToUserDto.getUserid())
-                            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
-                        UserDto userDtoWithRoles = new UserDto(user);  // 역할 정보가 포함된 완전한 UserDto
-
-                        // 역할 정보가 포함된 새 액세스 토큰 생성
-                        String token = tokenUtils.generateJwt(userDtoWithRoles);
-
+                        token = tokenUtils.generateJwt(claimsToUserDto);
                         sendToClientAccessToken(token, response);
                         chain.doFilter(request, response);
                     } else {

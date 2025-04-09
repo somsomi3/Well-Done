@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,10 +41,21 @@ public class InventoryController {
             @RequestParam int amount,
             Authentication authentication) {
 
-        String updatedBy = authentication.getName(); // UserDto에서 getUsername()을 가져옴
-        Inventory updated = inventoryService.updateStock(id, amount, updatedBy);
+        String updatedBy = authentication.getName();
+
+        // SecurityContextHolder에서 JWT 토큰 추출
+        String token = null;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getCredentials() instanceof String) {
+            token = (String) auth.getCredentials(); // 여기서 JWT 문자열 획득
+        }
+        System.out.println("추출된 토큰: " + token); // null이면 문제 있음!
+
+
+        Inventory updated = inventoryService.updateStock(id, amount, updatedBy, token);
         return ResponseEntity.ok(updated);
     }
+
 
 
     @PostMapping
