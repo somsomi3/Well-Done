@@ -28,8 +28,8 @@ public class RobotController {
     private final RedisService redisService;
 
     // 브릿지 서버 URL 설정
-    private final String bridgeUrl = "http://10.0.0.2:5000";
-//    private final String bridgeUrl = "http://localhost:5000";
+//    private final String bridgeUrl = "http://10.0.0.2:5000";
+    private final String bridgeUrl = "http://localhost:5000";
 
     // 최신 데이터 저장용 변수들
     private Map<String, Object> latestGlobalPath = new HashMap<>();
@@ -150,7 +150,7 @@ public class RobotController {
     @PostMapping("/local-path")
     public ResponseEntity<?> receiveLocalPath(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-         log.info("로컬 경로 데이터 수신: {}", data);
+        log.info("로컬 경로 데이터 수신: {}", data);
 
         // 최신 데이터 저장
         this.latestLocalPath = data;
@@ -166,7 +166,7 @@ public class RobotController {
     @PostMapping("/odometry")
     public ResponseEntity<?> receiveOdometry(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-         log.info("오도메트리 데이터 수신: {}", data);
+        log.info("오도메트리 데이터 수신: {}", data);
 
         // 최신 데이터 저장
         this.latestOdometry = data;
@@ -213,7 +213,7 @@ public class RobotController {
 
     @PostMapping("/map")
     public ResponseEntity<?> receiveMap(@RequestBody Map<String, Object> data) {
-        log.info("맵 데이터 수신: {}", data);
+//        log.info("맵 데이터 수신: {}", data);
 
         // 1. 맵 info
         Map<String, Object> info = (Map<String, Object>) data.get("info");
@@ -404,7 +404,7 @@ public class RobotController {
 
         if (success) {
             log.info("물건 집기 성공: 상품 ID {}, 출발 위치 {}", productId, fromId);
-            storageService.autoReplenishFromStorage(Long.parseLong(productId));
+            storageService.autoReplenishFromStorage(productId);
         } else {
             log.info("물건 집기 실패: 상품 ID {}, 출발 위치 {}", productId, fromId);
         }
@@ -433,7 +433,7 @@ public class RobotController {
         if (success) {
             log.info("전시 완료: 상품 ID {}, 진열 위치 {}", productId, toId);
             // 여기서 자동 보충 트리거
-            storageService.autoReplenishFromStorage(Long.parseLong(productId));
+            storageService.autoReplenishFromStorage(productId);
         } else {
             log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, toId);
         }
@@ -443,6 +443,7 @@ public class RobotController {
 
         // 데이터 처리 및 Redis 저장
         robotService.processPlaceDoneData(data);
+        log.info("Phase 3");
 
         // 응답 생성
         Map<String, Object> response = new HashMap<>();

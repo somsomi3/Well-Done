@@ -12,6 +12,7 @@ public interface StorageRepository extends JpaRepository<Storage, Long> {
 
     Optional<Storage> findByItemNameAndPositionXAndPositionY(String itemName, double x, double y);
 
+
     @Query("SELECT COALESCE(SUM(s.quantity), 0) FROM Storage s WHERE s.itemName = :itemName")
     int getTotalQuantityByItemName(@Param("itemName") String itemName);
 }

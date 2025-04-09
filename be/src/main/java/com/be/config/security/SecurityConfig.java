@@ -112,7 +112,9 @@ public class SecurityConfig {
 								"/mqtt", // MQTT 엔드포인트는 인증 없이 접근 가능
 								"/ws/**", // WebSocket 경로 허용 추가
 								"/api/ws/**",
-								"/api/robot/**"
+								"/api/robot/**",
+								"/api/robot/pick-place"
+
 						).permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 메소드 허용
 						.requestMatchers("/admin/**").hasRole("ADMIN") // /admin/** 경로에 접근하려면 관리자 권한이 필요
@@ -124,7 +126,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.PATCH, "/api/boards/announcements/**").hasRole("ADMIN") // 관리자만 PATCH 가능
 						.requestMatchers(HttpMethod.PATCH, "/api/boards/announcements/*/expire").hasRole("ADMIN") // 관리자만 만료일 설정 가능
 						.requestMatchers(HttpMethod.POST, "/api/boards/announcements/*/view").permitAll() // 모든 사용자가 조회수 증가 가능 (인증 없이)
-						
+
 						.requestMatchers("/rooms/create").authenticated()
 						.anyRequest().authenticated() // 다른 모든 요청은 인증 필요
 				)
@@ -154,7 +156,7 @@ public class SecurityConfig {
 		configuration.setAllowedHeaders(List.of("Authorization", "x-refresh-token", "Content-Type"));
 		configuration.setAllowCredentials(true); // 쿠키 허용
 		configuration.setMaxAge(3600L);
-		
+
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
