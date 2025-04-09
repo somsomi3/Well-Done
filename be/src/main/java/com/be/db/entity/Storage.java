@@ -28,6 +28,10 @@ public class Storage extends BaseEntity {
     private Coordinate position;
 
     // 선택: 왼쪽/오른쪽 창고 줄 정보, 예: MONSHELL, COOKDAS
-    @Column(name = "storage_type")
-    private String storageType;
+//    @Column(name = "storage_type")
+//    private String storageType;
+
+    //선반 번호 추가를 위한 필드
+    private String shelfCode;
+
 }
