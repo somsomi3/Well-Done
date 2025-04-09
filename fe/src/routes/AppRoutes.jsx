@@ -69,7 +69,7 @@ const PublicRoute = ({ children }) => {
       setIsRedirecting(true);
       // 약간의 지연을 주어 네비게이션 제한 문제를 방지
       setTimeout(() => {
-        navigate('/main', { replace: true });
+        navigate('/board', { replace: true });
       }, 100);
     }
   }, [isAuthenticated, navigate, isRedirecting]);
