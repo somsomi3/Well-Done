@@ -38,6 +38,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PickPlaceCommand.msg"
   "msg/PickDone.msg"
   "msg/PlaceDone.msg"
+  "msg/FSMStatus.msg"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs sensor_msgs nav_msgs
  )
 
