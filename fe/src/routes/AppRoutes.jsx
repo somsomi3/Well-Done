@@ -2,21 +2,11 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import ErrorBoundary from '../components/ErrorBoundary';
-import MainPage from '../pages/MainPage';
-import LoginPage from '../pages/LoginPage';
-import RegisterPage from '../pages/RegisterPage';
-import MapPage from '../pages/MapPage';
-import RobotPage from '../pages/RobotPage';
-import LogPage from '../pages/LogPage';
-import SettingsPage from '../pages/SettingsPage';
-import AnnouncementDetail from '../components/board/AnnouncementDetail';
-import AnnouncementList from '../components/board/AnnouncementList';
 import AnnouncementForm from '../components/board/AnnouncementForm';
 
 // 지연 로딩을 사용한 페이지 컴포넌트 임포트
 const LoginPageComponent = lazy(() => import('../pages/LoginPage'));
 const RegisterPageComponent = lazy(() => import('../pages/RegisterPage'));
-const MainPageComponent = lazy(() => import('../pages/MainPage'));
 const MapPageComponent = lazy(() => import('../pages/MapPage'));
 const RobotPageComponent = lazy(() => import('../pages/RobotPage'));
 const LogPageComponent = lazy(() => import('../pages/LogPage'));
@@ -109,26 +99,6 @@ function AppRoutes() {
           />
 
           {/* 보호된 라우트 - 인증이 필요함 */}
-          {/* <Route
-            path="/main"
-            element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <MainPageComponent />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            }
-          /> */}
-          <Route
-            path="/main"
-            element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <Navigate to="/board" replace />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            }
-          />
           <Route
             path="/board"
             element={
@@ -214,7 +184,7 @@ function AppRoutes() {
           />
 
           {/* 기본 및 404 리다이렉션 */}
-          <Route path="/" element={<Navigate to="/main" replace />} />
+          <Route path="/" element={<Navigate to="/board" replace />} />
           <Route
             path="*"
             element={
@@ -227,10 +197,10 @@ function AppRoutes() {
                     요청하신 페이지가 존재하지 않습니다.
                   </p>
                   <button
-                    onClick={() => (window.location.href = '/main')}
+                    onClick={() => (window.location.href = '/board')}
                     className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
-                    메인 페이지로 이동
+                    공지지 페이지로 이동
                   </button>
                 </div>
               </ErrorBoundary>
