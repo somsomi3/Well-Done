@@ -25,7 +25,7 @@ function LoginForm() {
     const success = await login(username, password);
 
     if (success) {
-      navigate('/announcements');
+      navigate('/board');
     } else if (error) {
       setModalMessage(error);
       setIsModalOpen(true);

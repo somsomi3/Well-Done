@@ -143,11 +143,11 @@ function AnnouncementList() {
   };
 
   const handleNavigateToDetail = (id) => {
-    navigate(`/announcements/${id}`, { replace: true });
+    navigate(`/board/${id}`, { replace: true });
   };
 
   const handleNavigateToWrite = () => {
-    navigate('/announcements/write', { replace: true });
+    navigate('/board/write', { replace: true });
   };
 
   if (isLoading) {
@@ -173,27 +173,34 @@ function AnnouncementList() {
       <div className="announcement-page">
         <div className="announcement-container">
           <div className="announcement-header">
-            <h1 className="announcement-title">
-              <span className="announcement-title-gradient">물류 공지사항</span>
-            </h1>
-            {isAdmin && (
-              <button onClick={handleNavigateToWrite} className="write-button">
-                <svg
-                  className="h-5 w-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <div className="announcement-header-content">
+              <h1 className="announcement-title">
+                <span className="announcement-title-gradient">
+                  물류 공지사항
+                </span>
+              </h1>
+              {isAdmin && (
+                <button
+                  onClick={handleNavigateToWrite}
+                  className="write-button"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                새 물류 공지 작성
-              </button>
-            )}
+                  <svg
+                    className="h-5 w-5 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  새 물류 공지 작성
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="search-container">

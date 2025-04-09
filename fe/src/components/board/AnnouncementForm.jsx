@@ -38,7 +38,7 @@ function AnnouncementForm() {
           });
         } catch (error) {
           console.error('공지사항 조회 실패:', error);
-          navigate('/announcements');
+          navigate('/board');
         }
       }
     };
@@ -62,7 +62,7 @@ function AnnouncementForm() {
         // 관리자가 아닌 경우 공지사항 목록 페이지로 리다이렉트
         if (!isUserAdmin) {
           console.error('관리자 권한이 필요합니다.');
-          navigate('/announcements');
+          navigate('/board');
         } else {
           fetchAnnouncementData();
         }
@@ -115,7 +115,7 @@ function AnnouncementForm() {
       }
 
       // 공지사항 목록 페이지로 리다이렉트
-      navigate('/announcements', { replace: true });
+      navigate('/board', { replace: true });
     } catch (error) {
       console.error(
         isEditMode ? '공지사항 수정 실패:' : '공지사항 생성 실패:',
@@ -152,7 +152,7 @@ function AnnouncementForm() {
           </div>
 
           <div className="form-container">
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="announcement-form">
               <div className="form-group">
                 <label htmlFor="title" className="form-label">
                   제목
@@ -181,48 +181,51 @@ function AnnouncementForm() {
                   required
                   className="form-textarea"
                   placeholder="내용을 입력하세요"
+                  rows="10"
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="writer" className="form-label">
-                  작성자
-                </label>
-                <input
-                  type="text"
-                  id="writer"
-                  name="writer"
-                  value={formData.writer}
-                  readOnly
-                  className="form-input readonly"
-                />
-              </div>
+              <div className="form-row">
+                <div className="form-group half-width">
+                  <label htmlFor="writer" className="form-label">
+                    작성자
+                  </label>
+                  <input
+                    type="text"
+                    id="writer"
+                    name="writer"
+                    value={formData.writer}
+                    readOnly
+                    className="form-input readonly"
+                  />
+                </div>
 
-              <div className="form-group">
-                <label htmlFor="expirationDate" className="form-label">
-                  만료일
-                </label>
-                <input
-                  type="datetime-local"
-                  id="expirationDate"
-                  name="expirationDate"
-                  value={
-                    formData.expirationDate
-                      ? formData.expirationDate.slice(0, 16)
-                      : ''
-                  }
-                  onChange={handleChange}
-                  className="form-input"
-                />
-                <small className="form-text text-muted">
-                  만료일을 설정하지 않으면 공지사항이 계속 표시됩니다.
-                </small>
+                <div className="form-group half-width">
+                  <label htmlFor="expirationDate" className="form-label">
+                    만료일
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="expirationDate"
+                    name="expirationDate"
+                    value={
+                      formData.expirationDate
+                        ? formData.expirationDate.slice(0, 16)
+                        : ''
+                    }
+                    onChange={handleChange}
+                    className="form-input"
+                  />
+                  <small className="form-text text-muted">
+                    만료일을 설정하지 않으면 공지사항이 계속 표시됩니다.
+                  </small>
+                </div>
               </div>
 
               <div className="button-group">
                 <button
                   type="button"
-                  onClick={() => navigate('/announcements')}
+                  onClick={() => navigate('/board')}
                   className="cancel-button"
                 >
                   취소
