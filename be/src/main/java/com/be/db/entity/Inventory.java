@@ -28,6 +28,9 @@ public class Inventory extends BaseEntity {
     @Column(nullable = false)
     private int warehouseQuantity; // 창고 수량
 
+    private String shelfCode;
+
+
     // 좌표 정보 (x, y, angle)
     @Embedded
     @AttributeOverrides({
