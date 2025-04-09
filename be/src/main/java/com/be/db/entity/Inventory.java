@@ -1,5 +1,6 @@
 package com.be.db.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,12 +28,16 @@ public class Inventory extends BaseEntity {
     @Column(nullable = false)
     private int warehouseQuantity; // 창고 수량
 
-
-    // 필요하면 창고 위치, 카테고리 등도 추가 가능
-    // @Column
-    // private String location;
-
+    // 좌표 정보 (x, y, angle)
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "x", column = @Column(name = "x")),
+            @AttributeOverride(name = "y", column = @Column(name = "y")),
+            @AttributeOverride(name = "angle", column = @Column(name = "angle"))
+    })
+    private Coordinate coordinate;
 
     @OneToMany(mappedBy = "inventory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<InventoryHistory> historyList = new ArrayList<>();
 }

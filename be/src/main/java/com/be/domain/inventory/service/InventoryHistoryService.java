@@ -25,6 +25,7 @@ public class InventoryHistoryService {
     public void saveHistory(Inventory inventory, int changeAmount, String actionType, String updatedBy) {
         InventoryHistory history = InventoryHistory.builder()
                 .inventory(inventory)
+                .itemName(inventory.getItemName())
                 .changeAmount(changeAmount)
                 .resultQuantity(inventory.getQuantity()) // 매대 수량
                 .warehouseTotal(inventory.getWarehouseQuantity()) // 창고 수량
