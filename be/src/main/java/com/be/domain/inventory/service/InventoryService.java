@@ -37,7 +37,15 @@ public class InventoryService {
     // 수량 조정 및 이력 저장 (로봇 명령은 프론트에서 따로 요청)
     public Inventory updateStock(Long id, int amount, String updatedBy, String token) {
         Inventory inventory = findById(id);
-        inventory.setQuantity(inventory.getQuantity() + amount);
+        int currentQty = inventory.getQuantity();
+        int newQty = currentQty + amount;
+
+        // ❌ 음수 재고 방지 로직
+        if (newQty < 0) {
+            throw new IllegalStateException("❌ 재고는 0개 미만으로 줄일 수 없습니다.");
+        }
+
+        inventory.setQuantity(newQty);
         Inventory updated = inventoryRepository.save(inventory);
 
         // 재고 이력 저장

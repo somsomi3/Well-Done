@@ -277,6 +277,94 @@ public class RobotService {
     }
 
     /**
+     * 전시 완료 데이터 처리 및 저장
+     * @param placeDoneData 전시 완료 데이터
+     */
+    public void processPlaceDoneData(Map<String, Object> placeDoneData) {
+        try {
+            boolean success = (boolean) placeDoneData.get("success");
+            String productId = (String) placeDoneData.get("product_id");
+            String toId = (String) placeDoneData.get("to_id");
+
+            // 알림 데이터 준비
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("type", "place_complete");
+            notification.put("success", success);
+            notification.put("product_id", productId);
+            notification.put("to_id", toId);
+            notification.put("timestamp", System.currentTimeMillis());
+
+            if (success && placeDoneData.containsKey("map") && placeDoneData.containsKey("map_inflated")) {
+                // 일반 맵 처리
+                Map<String, Object> mapData = (Map<String, Object>) placeDoneData.get("map");
+                processAndSaveMapData(mapData, false);
+
+                // 인플레이트된 맵 처리
+                Map<String, Object> inflatedMapData = (Map<String, Object>) placeDoneData.get("map_inflated");
+                processAndSaveMapData(inflatedMapData, true);
+
+                log.info("전시 완료 후 맵 데이터 처리 완료");
+            }
+
+            // WebSocket으로 알림 전송
+            try {
+                String json = objectMapper.writeValueAsString(notification);
+                userSocketHandler.broadcastAll(new TextMessage(json));
+                log.info("전시 완료 알림 전송: product_id={}, to_id={}", productId, toId);
+            } catch (Exception e) {
+                log.error("전시 완료 알림 전송 중 오류 발생", e);
+            }
+
+        } catch (Exception e) {
+            log.error("전시 완료 데이터 처리 중 오류 발생", e);
+        }
+    }
+
+    /**
+     * 물건 집기 완료 데이터 처리 및 저장
+     * @param pickDoneData 물건 집기 완료 데이터
+     */
+    public void processPickDoneData(Map<String, Object> pickDoneData) {
+        try {
+            boolean success = (boolean) pickDoneData.get("success");
+            String productId = (String) pickDoneData.get("product_id");
+            String fromId = (String) pickDoneData.get("from_id");
+
+            // 알림 데이터 준비
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("type", "pick_complete");
+            notification.put("success", success);
+            notification.put("product_id", productId);
+            notification.put("from_id", fromId);
+            notification.put("timestamp", System.currentTimeMillis());
+
+            if (success && pickDoneData.containsKey("map") && pickDoneData.containsKey("map_inflated")) {
+                // 일반 맵 처리
+                Map<String, Object> mapData = (Map<String, Object>) pickDoneData.get("map");
+                processAndSaveMapData(mapData, false);
+
+                // 인플레이트된 맵 처리
+                Map<String, Object> inflatedMapData = (Map<String, Object>) pickDoneData.get("map_inflated");
+                processAndSaveMapData(inflatedMapData, true);
+
+                log.info("물건 집기 완료 후 맵 데이터 처리 완료");
+            }
+
+            // WebSocket으로 알림 전송
+            try {
+                String json = objectMapper.writeValueAsString(notification);
+                userSocketHandler.broadcastAll(new TextMessage(json));
+                log.info("물건 집기 완료 알림 전송: product_id={}, from_id={}", productId, fromId);
+            } catch (Exception e) {
+                log.error("물건 집기 완료 알림 전송 중 오류 발생", e);
+            }
+
+        } catch (Exception e) {
+            log.error("물건 집기 완료 데이터 처리 중 오류 발생", e);
+        }
+    }
+
+    /**
      * 맵 데이터 처리 및 저장
      * @param mapData 맵 데이터
      * @param isInflated 인플레이트된 맵 여부
