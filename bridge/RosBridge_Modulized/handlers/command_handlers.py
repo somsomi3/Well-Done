@@ -505,9 +505,9 @@ def execute_pick_place_command(node, cmd):
         # 새 PickPlaceCommand 메시지 생성
         msg = PickPlaceCommand()
         
-        # 메시지 Header 설정
-        msg.header.stamp = node.get_clock().now().to_msg()
-        msg.header.frame_id = 'map'  # 또는 적절한 프레임 ID
+        if hasattr(msg, 'header'):
+            msg.header.stamp = node.get_clock().now().to_msg()
+            msg.header.frame_id = 'map' 
         
         # from_pos 설정 (세타값을 쿼터니언으로 변환)
         import math
