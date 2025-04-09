@@ -522,35 +522,33 @@ public class RobotController {
 
             // from_pos 구조 설정
             Map<String, Object> fromPos = new HashMap<>();
-
-            // position 구조 설정
             Map<String, Object> fromPosition = new HashMap<>();
             fromPosition.put("x", ((Number) from.get("x")).doubleValue());
             fromPosition.put("y", ((Number) from.get("y")).doubleValue());
-            fromPosition.put("z", 0.0); // 기본값으로 0.0 설정
+            fromPosition.put("z", 0.0);
 
-            // theta를 라디안으로 설정
-            double fromTheta = from.containsKey("theta") ?
+            // 각도를 라디안으로 변환하는 부분 (수정)
+            double fromThetaDegrees = from.containsKey("theta") ?
                     ((Number) from.get("theta")).doubleValue() : 0.0;
+            double fromThetaRadians = Math.toRadians(fromThetaDegrees); // 각도 → 라디안 변환
 
             fromPos.put("position", fromPosition);
-            fromPos.put("theta", fromTheta);
+            fromPos.put("theta", fromThetaRadians); // 변환된 라디안 값 저장
 
-            // to_pos 구조 설정
+            // to_pos에 대해서도 동일하게 수정
             Map<String, Object> toPos = new HashMap<>();
-
-            // position 구조 설정
             Map<String, Object> toPosition = new HashMap<>();
             toPosition.put("x", ((Number) to.get("x")).doubleValue());
             toPosition.put("y", ((Number) to.get("y")).doubleValue());
-            toPosition.put("z", 0.0); // 기본값으로 0.0 설정
+            toPosition.put("z", 0.0);
 
-            // theta를 라디안으로 설정
-            double toTheta = to.containsKey("theta") ?
+            // 각도를 라디안으로 변환하는 부분 (수정)
+            double toThetaDegrees = to.containsKey("theta") ?
                     ((Number) to.get("theta")).doubleValue() : 0.0;
+            double toThetaRadians = Math.toRadians(toThetaDegrees); // 각도 → 라디안 변환
 
             toPos.put("position", toPosition);
-            toPos.put("theta", toTheta);
+            toPos.put("theta", toThetaRadians); // 변환된 라디안 값 저장
 
             // 요청 데이터에 추가
             requestData.put("from_pos", fromPos);
