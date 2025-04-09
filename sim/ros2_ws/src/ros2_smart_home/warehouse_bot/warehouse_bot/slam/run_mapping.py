@@ -118,7 +118,8 @@ class Mapping:
         try:
             with open(txt_path, "r") as f:
                 data = list(map(int, f.read().split()))
-                self.map = 1.0 - np.array(data).reshape(self.map_size) / 100.0
+                raw_map = np.array(data).reshape(self.map_size)
+                self.map = np.where(raw_map == -1, 0.5, 1.0 - raw_map / 100.0)
                 self.map = np.clip(self.map, 0.0, 1.0)
             return True
         except Exception as e:
@@ -271,6 +272,8 @@ class Mapper(Node):
         self.mapping = Mapping(
             params_map, reset_map=reset_map, logger=self.get_logger()
         )
+        self.map_received = False
+        self.reset_time = self.get_clock().now()
 
         self.explored_mask = np.zeros(self.mapping.map.shape, dtype=bool)
 
@@ -305,7 +308,7 @@ class Mapper(Node):
         laser = np.vstack((x.reshape((1, -1)), y.reshape((1, -1))))
 
         self.mapping.update(pose, laser)
-
+        self.map_received = True
         self.publish_map()
         print_log("info", self.get_logger(), "Map updated.", file_tag="mapper")
 
@@ -339,11 +342,15 @@ class Mapper(Node):
             )
             self.explored_mask = np.zeros(self.mapping.map.shape, dtype=bool)
             self.mapping = Mapping(params_map, reset_map=True, logger=self.get_logger())
+            self.map_received = False  # → 초기화 후 맵 아직 없음
+            self.reset_time = self.get_clock().now()
 
     def publish_map(self):
         # start = self.get_clock().now().nanoseconds / 1e9
         # self.get_logger().info("Starting map publish...")
-
+        time_since_reset = (self.get_clock().now() - self.reset_time).nanoseconds / 1e9
+        if not self.map_received and time_since_reset < 1.0:
+            return  # 아직 맵 초기화 후 유효한 맵 없음
         np_map = self.mapping.map
         np_map_data = np_map.reshape(1, self.map_size)
 
@@ -415,7 +422,13 @@ def save_all_map(node, file_name_txt="map.txt", file_name_png="map.png"):
     data_np = np.array(node.map_msg.data).reshape(np_map.shape)
     np_map[data_np == -1] = 0.5  # 회색 (미탐색)
 
+    # float(0~1) → uint8(0~255) 변환
     map_image = (np_map * 255).astype(np.uint8)
+
+    # 좌우 반전된 맵을 원래대로 보기 위해 flip 적용
+    map_image = cv2.flip(map_image, 1)
+
+    # PNG 저장
     cv2.imwrite(full_png_path, map_image)
 
 

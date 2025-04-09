@@ -6,8 +6,8 @@ def get_jwt_token(node):
     try:
         # 로그인 요청
         login_data = {
-            "username": "admin",
-            "password": "7156ase@",
+            "username": "robot",
+            "password": "robotrobot",
         }
         
         # 타임아웃을 짧게 설정하여 연결 시도

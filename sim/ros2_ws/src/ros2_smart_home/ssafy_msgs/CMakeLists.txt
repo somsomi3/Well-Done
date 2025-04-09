@@ -35,6 +35,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ScanWithPose.msg"
   "msg/StatusStamped.msg"
   "msg/MappingDone.msg"
+  "msg/PickPlaceCommand.msg"
+  "msg/PickDone.msg"
+  "msg/PlaceDone.msg"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs sensor_msgs nav_msgs
  )
 
