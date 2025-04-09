@@ -61,6 +61,9 @@ public class RobotController {
     // 압축된 JPEG 이미지 데이터를 위한 변수
     private Map<String, Object> latestCompressedImage = new HashMap<>();
 
+    // FSM 상태 데이터 저장용 변수
+    private Map<String, Object> latestFsmState = new HashMap<>();
+
     @PostMapping("/envir-status")
     public ResponseEntity<?> receiveEnvirStatus(@RequestBody Map<String, Object> data) {
         // 환경 상태 데이터 추출
@@ -483,6 +486,41 @@ public class RobotController {
         }
     }
 
+    @PostMapping("/fsm-state")
+    public ResponseEntity<?> receiveFsmState(@RequestBody Map<String, Object> data) {
+        try {
+            // 데이터 로깅
+            String nodeName = (String) data.get("node_name");
+            String state = (String) data.get("state");
+            String timestamp = (String) data.get("timestamp");
+
+            log.info("FSM 상태 데이터 수신: node={}, state={}, timestamp={}", nodeName, state, timestamp);
+
+            // 최신 데이터 저장
+            this.latestFsmState = data;
+
+            // 웹소켓을 통해 클라이언트에게 상태 전송
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", "fsm_state");
+            payload.put("data", data);
+
+            // broadcastMap 메서드 사용
+            userSocketHandler.broadcastMap(payload);
+
+            // 응답 생성
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "FSM 상태 데이터를 성공적으로 수신하고 처리했습니다");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("FSM 상태 처리 중 오류 발생: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "FSM 상태 처리 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
 
     // 시뮬브릿지 에서 백으로.
     @PostMapping("/image-jpeg-compressed")
@@ -573,6 +611,7 @@ public class RobotController {
             return ResponseEntity.status(500).body(error);
         }
     }
+
 
     // ----- 데이터 조회용 GET 엔드포인트 -----
 
