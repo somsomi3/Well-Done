@@ -14,13 +14,3 @@ __pycache__/
 # CMake 관련 불필요한 파일
 CMakeCache.txt
 CMakeFiles/
-
-new_model/
-<<<<<<< HEAD
-augmented_annotations/
-augmented_images/
-model_data_set/
-model_image/
-model_data_augmented_set/
-=======
->>>>>>> origin/feature/sim-object-recognition

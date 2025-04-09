@@ -67,7 +67,7 @@ def create_xml_annotation(filename, img_width, img_height, boxes, labels, folder
     ET.SubElement(size, "width").text = str(img_width)
     ET.SubElement(size, "height").text = str(img_height)
     ET.SubElement(size, "depth").text = "3"
-    
+
     # 객체 정보 추가
     for i, (box, label) in enumerate(zip(boxes, labels)):
         obj = ET.SubElement(root, "object")
@@ -99,30 +99,24 @@ def resize_boxes(boxes, original_size, target_size):
     
     return resized_boxes
 
-# 좌우 반전 시 바운딩 박스 조정
+
+# 반전 시 박스 좌표 계산 검증 추가
 def flip_boxes(boxes, width):
     flipped_boxes = np.zeros_like(boxes)
-    flipped_boxes[:, 0] = boxes[:, 0]          # ymin
+    flipped_boxes[:, 0] = boxes[:, 0]  # ymin 유지
     flipped_boxes[:, 1] = width - boxes[:, 3]  # xmin = width - xmax
-    flipped_boxes[:, 2] = boxes[:, 2]          # ymax
+    flipped_boxes[:, 2] = boxes[:, 2]  # ymax 유지
     flipped_boxes[:, 3] = width - boxes[:, 1]  # xmax = width - xmin
-    
     return flipped_boxes
 
-# 90도 회전 시 바운딩 박스 조정
-def rotate90_boxes(boxes, width, height):
-    rotated_boxes = np.zeros_like(boxes)
-    rotated_boxes[:, 0] = boxes[:, 1]           # ymin = xmin
-    rotated_boxes[:, 1] = height - boxes[:, 2]  # xmin = height - ymax
-    rotated_boxes[:, 2] = boxes[:, 3]           # ymax = xmax
-    rotated_boxes[:, 3] = height - boxes[:, 0]  # xmax = height - ymin
-    
-    return rotated_boxes
+
+
+
 
 # 이미지와 XML 파일이 있는 디렉토리 경로 지정
 image_dir = 'model_image'
 xml_dir = 'model_data_set'
-target_size = (300, 300)  # 목표 이미지 크기
+target_size = (640, 640)  # 목표 이미지 크기
 
 # 유효한 이미지-XML 쌍 찾기
 image_paths = []
@@ -261,33 +255,10 @@ for idx, (img_path, xml_path) in enumerate(zip(image_paths, xml_paths)):
     with open(os.path.join(output_xml_dir, f"aug_{idx}_3.xml"), 'w') as f:
         f.write(xml_content)
     
-    # 5. 90도 회전
-    img_rotated = tf.image.rot90(img_resized)
     
-    rotated_filename = f"aug_{idx}_4.png"
-    tf.io.write_file(
-        os.path.join(output_img_dir, rotated_filename),
-        tf.io.encode_png(img_rotated)
-    )
-    
-    # 바운딩 박스 회전
-    boxes_rotated = rotate90_boxes(boxes_resized, target_size[1], target_size[0])
-    
-    # XML 저장 (주의: 회전 후에는 이미지 크기가 바뀔 수 있음)
-    xml_content = create_xml_annotation(
-        rotated_filename,
-        target_size[0],  # 회전 후 width = 원래 height
-        target_size[1],  # 회전 후 height = 원래 width
-        boxes_rotated,
-        labels
-    )
-    
-    with open(os.path.join(output_xml_dir, f"aug_{idx}_4.xml"), 'w') as f:
-        f.write(xml_content)
 
 print(f"모든 이미지 증강 완료. 총 {len(image_paths) * 5}개 이미지 생성됨")
 print(f"- 원본 리사이징: {len(image_paths)}개")
 print(f"- 밝기 증강: {len(image_paths)}개")
 print(f"- 대비 증강: {len(image_paths)}개")
 print(f"- 좌우 반전: {len(image_paths)}개")
-print(f"- 90도 회전: {len(image_paths)}개")
