@@ -143,11 +143,11 @@ function AnnouncementList() {
   };
 
   const handleNavigateToDetail = (id) => {
-    navigate(`/announcements/${id}`, { replace: true });
+    navigate(`/board/${id}`, { replace: true });
   };
 
   const handleNavigateToWrite = () => {
-    navigate('/announcements/write', { replace: true });
+    navigate('/board/write', { replace: true });
   };
 
   if (isLoading) {

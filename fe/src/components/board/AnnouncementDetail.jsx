@@ -62,7 +62,7 @@ function AnnouncementDetail() {
       }
 
       await api.delete(`/boards/announcements/${id}`);
-      navigate('/announcements');
+      navigate('/board');
     } catch (error) {
       console.error('공지사항 삭제 실패:', error);
       if (error.response?.status === 403) {
@@ -143,7 +143,7 @@ function AnnouncementDetail() {
 
               <div className="detail-actions">
                 <button
-                  onClick={() => navigate('/announcements')}
+                  onClick={() => navigate('/board')}
                   className="back-button"
                 >
                   목록으로
@@ -151,7 +151,7 @@ function AnnouncementDetail() {
                 {isAdmin && (
                   <>
                     <button
-                      onClick={() => navigate(`/announcements/edit/${id}`)}
+                      onClick={() => navigate(`/board/edit/${id}`)}
                       className="edit-button"
                     >
                       수정

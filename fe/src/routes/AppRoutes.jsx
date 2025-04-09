@@ -109,12 +109,32 @@ function AppRoutes() {
           />
 
           {/* 보호된 라우트 - 인증이 필요함 */}
-          <Route
+          {/* <Route
             path="/main"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
                   <MainPageComponent />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          /> */}
+          <Route
+            path="/main"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <Navigate to="/board" replace />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/board"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementListComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -161,7 +181,7 @@ function AppRoutes() {
           />
 
           <Route
-            path="/announcements/write"
+            path="/board/write"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
@@ -172,7 +192,7 @@ function AppRoutes() {
           />
 
           <Route
-            path="/announcements/edit/:id"
+            path="/board/edit/:id"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
@@ -183,22 +203,11 @@ function AppRoutes() {
           />
 
           <Route
-            path="/announcements/:id"
+            path="/board/:id"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
                   <AnnouncementDetailComponent />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/announcements"
-            element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <AnnouncementListComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
