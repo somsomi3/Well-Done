@@ -5,10 +5,10 @@ from std_msgs.msg import Header, Bool
 
 # SSAFY 메시지 타입 임포트 시도
 try:
-    from ssafy_msgs.msg import ScanWithPose
+    from ssafy_msgs.msg import ScanWithPose, PickPlaceCommand
 except ImportError:
     # 없으면 상위 모듈에서 가져옴
-    from ..message_types import ScanWithPose
+    from ..message_types import ScanWithPose, PickPlaceCommand
 
 import random  # 스캔 명령에서 랜덤 데이터 생성에 필요
 
@@ -404,7 +404,6 @@ def execute_start_auto_map_command(node, command):
     """자동 매핑 시작 명령 실행"""
     try:
         # Bool 메시지 생성
-        from std_msgs.msg import Bool
         bool_msg = Bool()
         bool_msg.data = command.get('data', True)  # 기본값은 True
         
@@ -428,7 +427,6 @@ def execute_stop_auto_map_command(node, command):
     """자동 매핑 끄기 명령 실행"""
     try:
         # Bool 메시지 생성
-        from std_msgs.msg import Bool
         bool_msg = Bool()
         bool_msg.data = command.get('data', True)  # 기본값은 True
         
@@ -460,7 +458,6 @@ def execute_goal_pose_command(node, command):
         node.get_logger().info(f"Goal pose command received: x={position_x}, y={position_y}, orientation={orientation}")
         
         # PoseStamped 메시지 생성
-        from geometry_msgs.msg import PoseStamped
         pose_msg = PoseStamped()
         
         # Header 설정
@@ -502,7 +499,8 @@ def execute_pick_place_command(node, cmd):
         from_pos = cmd.get('from_pos', {})
         to_pos = cmd.get('to_pos', {})
         product_id = cmd.get('product_id', '')
-        display_spot = cmd.get('display_spot', 0)
+        from_id = cmd.get('from_id', '')
+        to_id = cmd.get('to_id', '')
         
         # 새 PickPlaceCommand 메시지 생성
         msg = PickPlaceCommand()
@@ -540,7 +538,8 @@ def execute_pick_place_command(node, cmd):
         
         # 제품 ID와 진열대 번호 설정
         msg.product_id = product_id
-        msg.display_spot = display_spot
+        msg.from_id = from_id
+        msg.to_id = to_id
         
         # 디버깅 정보 로깅
         node.get_logger().debug(f"From position: x={msg.from_pos.position.x}, y={msg.from_pos.position.y}")
@@ -550,7 +549,7 @@ def execute_pick_place_command(node, cmd):
         
         # 메시지 발행
         node.pick_place_command_publisher.publish(msg)
-        node.get_logger().info(f"Published pick_place_command for product {product_id} to display spot {display_spot}")
+        node.get_logger().info(f"Published pick_place_command for product {product_id} from {from_id} to {to_id}")
         
         return {"result": True, "message": "Pick and place command published successfully"}
     except Exception as e:

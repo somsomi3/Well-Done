@@ -864,13 +864,55 @@ def pick_done_callback(node, msg):
             pick_data = {
                 "success": msg.success,
                 "product_id": msg.product_id,
-                "timestamp": msg.timestamp
+                "from_id": msg.from_id,
+                "map": {
+                    "info": {
+                        "width": msg.map.info.width,
+                        "height": msg.map.info.height,
+                        "resolution": msg.map.info.resolution,
+                        "origin": {
+                            "position": {
+                                "x": msg.map.info.origin.position.x,
+                                "y": msg.map.info.origin.position.y,
+                                "z": msg.map.info.origin.position.z
+                            },
+                            "orientation": {
+                                "x": msg.map.info.origin.orientation.x,
+                                "y": msg.map.info.origin.orientation.y,
+                                "z": msg.map.info.origin.orientation.z,
+                                "w": msg.map.info.origin.orientation.w
+                            }
+                        }
+                    },
+                    "data": list(msg.map.data)  # 바이트 배열을 리스트로 변환
+                },
+                "map_inflated": {
+                    "info": {
+                        "width": msg.map.info.width,
+                        "height": msg.map.info.height,
+                        "resolution": msg.map.info.resolution,
+                        "origin": {
+                            "position": {
+                                "x": msg.map.info.origin.position.x,
+                                "y": msg.map.info.origin.position.y,
+                                "z": msg.map.info.origin.position.z
+                            },
+                            "orientation": {
+                                "x": msg.map.info.origin.orientation.x,
+                                "y": msg.map.info.origin.orientation.y,
+                                "z": msg.map.info.origin.orientation.z,
+                                "w": msg.map.info.origin.orientation.w
+                            }
+                        }
+                    },
+                    "data": list(msg.map.data)
+                }
             }
             
             if msg.success:
-                node.get_logger().info(f"물건 집기 성공: product_id={msg.product_id}, timestamp={msg.timestamp}")
+                node.get_logger().info(f"물건 집기 성공: product_id={msg.product_id}, from_id={msg.from_id}")
             else:
-                node.get_logger().info(f"물건 집기 실패: product_id={msg.product_id}, timestamp={msg.timestamp}")
+                node.get_logger().info(f"물건 집기 실패: product_id={msg.product_id}, from_id={msg.from_id}")
             
             # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
             if node.jwt_token:
@@ -912,14 +954,56 @@ def place_done_callback(node, msg):
             # 전시 완료 데이터 준비
             place_data = {
                 "success": msg.success,
-                "display_spot": msg.display_spot,
-                "product_id": msg.product_id
+                "to_id": msg.to_id,
+                "product_id": msg.product_id,
+                "map": {
+                    "info": {
+                        "width": msg.map.info.width,
+                        "height": msg.map.info.height,
+                        "resolution": msg.map.info.resolution,
+                        "origin": {
+                            "position": {
+                                "x": msg.map.info.origin.position.x,
+                                "y": msg.map.info.origin.position.y,
+                                "z": msg.map.info.origin.position.z
+                            },
+                            "orientation": {
+                                "x": msg.map.info.origin.orientation.x,
+                                "y": msg.map.info.origin.orientation.y,
+                                "z": msg.map.info.origin.orientation.z,
+                                "w": msg.map.info.origin.orientation.w
+                            }
+                        }
+                    },
+                    "data": list(msg.map.data)  # 바이트 배열을 리스트로 변환
+                },
+                "map_inflated": {
+                    "info": {
+                        "width": msg.map.info.width,
+                        "height": msg.map.info.height,
+                        "resolution": msg.map.info.resolution,
+                        "origin": {
+                            "position": {
+                                "x": msg.map.info.origin.position.x,
+                                "y": msg.map.info.origin.position.y,
+                                "z": msg.map.info.origin.position.z
+                            },
+                            "orientation": {
+                                "x": msg.map.info.origin.orientation.x,
+                                "y": msg.map.info.origin.orientation.y,
+                                "z": msg.map.info.origin.orientation.z,
+                                "w": msg.map.info.origin.orientation.w
+                            }
+                        }
+                    },
+                    "data": list(msg.map.data)
+                }
             }
             
             if msg.success:
-                node.get_logger().info(f"전시 완료: product_id={msg.product_id}, display_spot={msg.display_spot}")
+                node.get_logger().info(f"전시 완료: product_id={msg.product_id}, to_id={msg.to_id}")
             else:
-                node.get_logger().info(f"전시 실패: product_id={msg.product_id}, display_spot={msg.display_spot}")
+                node.get_logger().info(f"전시 실패: product_id={msg.product_id}, to_id={msg.to_id}")
             
             # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
             if node.jwt_token:
@@ -955,7 +1039,8 @@ def place_done_callback(node, msg):
 def image_jpeg_compressed_callback(node, msg):
     """압축된 JPEG 이미지 토픽에서 데이터를 받아 Spring 서버로 전송"""
     current_time = time.time()
-    map_interval = 0.5
+    # 실험적으로 5fps 까지 상승(2프레임이 생각보다 여유로웠어서)
+    map_interval = 0.2
     
     if current_time - node.last_send_times.get('image_jpeg', 0) >= map_interval:
         try:
