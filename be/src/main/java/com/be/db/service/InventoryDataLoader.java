@@ -77,7 +77,8 @@ public class InventoryDataLoader implements CommandLineRunner {
             String name = (String) entry[1];
 
             // 이미 등록된 상품이면 스킵
-            if (inventoryRepository.findByItemName(name).isPresent()) {
+            List<Inventory> existingItems = inventoryRepository.findByItemName(name);
+            if (!existingItems.isEmpty()) {
                 continue;
             }
 
