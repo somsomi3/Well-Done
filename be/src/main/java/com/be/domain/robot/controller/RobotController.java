@@ -397,16 +397,19 @@ public class RobotController {
         // 데이터 로깅
         boolean success = (boolean) data.get("success");
         String productId = (String) data.get("product_id");
-        String timestamp = (String) data.get("timestamp");
+        String fromId = (String) data.get("from_id");
 
         if (success) {
-            log.info("물건 집기 성공: 상품 ID {}, 시간 {}", productId, timestamp);
+            log.info("물건 집기 성공: 상품 ID {}, 출발 위치 {}", productId, fromId);
         } else {
-            log.info("물건 집기 실패: 상품 ID {}, 시간 {}", productId, timestamp);
+            log.info("물건 집기 실패: 상품 ID {}, 출발 위치 {}", productId, fromId);
         }
 
         // 최신 데이터 저장
         this.latestPickDone = data;
+
+        // 데이터 처리 및 Redis 저장
+        robotService.processPickDoneData(data);
 
         // 응답 생성
         Map<String, Object> response = new HashMap<>();
@@ -420,17 +423,20 @@ public class RobotController {
     public ResponseEntity<?> receivePlaceDone(@RequestBody Map<String, Object> data) {
         // 데이터 로깅
         boolean success = (boolean) data.get("success");
-        int displaySpot = ((Number) data.get("display_spot")).intValue();
         String productId = (String) data.get("product_id");
+        String toId = (String) data.get("to_id");
 
         if (success) {
-            log.info("전시 완료: 상품 ID {}, 진열 위치 {}", productId, displaySpot);
+            log.info("전시 완료: 상품 ID {}, 진열 위치 {}", productId, toId);
         } else {
-            log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, displaySpot);
+            log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, toId);
         }
 
         // 최신 데이터 저장
         this.latestPlaceDone = data;
+
+        // 데이터 처리 및 Redis 저장
+        robotService.processPlaceDoneData(data);
 
         // 응답 생성
         Map<String, Object> response = new HashMap<>();
@@ -498,9 +504,10 @@ public class RobotController {
             Map<String, Object> from = (Map<String, Object>) command.get("from");
             Map<String, Object> to = (Map<String, Object>) command.get("to");
             String productId = (String) command.get("product_id");
-            int displaySpot = ((Number) command.get("display_spot")).intValue();
+            String fromId = (String) command.get("from_id");
+            String toId = (String) command.get("to_id");
 
-            log.info("Pick and Place 명령: from={}, to={}, productId={}, displaySpot={}", from, to, productId, displaySpot);
+            log.info("Pick and Place 명령: from={}, to={}, productId={}, fromId={}, toId={}", from, to, productId, fromId, toId);
 
             // 브릿지 노드가 요구하는 형식으로 데이터 변환
             Map<String, Object> requestData = new HashMap<>();
@@ -542,7 +549,8 @@ public class RobotController {
             requestData.put("from_pos", fromPos);
             requestData.put("to_pos", toPos);
             requestData.put("product_id", productId);
-            requestData.put("display_spot", displaySpot);
+            requestData.put("from_id", fromId);
+            requestData.put("to_id", toId);
 
             // 디버깅을 위한 최종 요청 데이터 로깅
             log.info("브릿지 서버로 전송할 Pick and Place 명령: {}", requestData);
