@@ -12,6 +12,7 @@ const RobotPageComponent = lazy(() => import('../pages/RobotPage'));
 const InventoryPageComponent = lazy(() => import('../pages/InventoryPage'));
 const InventoryDetailPageComponent = lazy(() => import('../pages/InventoryDetailPage'));
 const SettingsPageComponent = lazy(() => import('../pages/SettingsPage'));
+const WorkPageComponent = lazy(() => import('../pages/WorkPage'));
 const AnnouncementDetailComponent = lazy(() =>
   import('../components/board/AnnouncementDetail')
 );
@@ -126,6 +127,16 @@ function AppRoutes() {
               <ProtectedRoute>
                 <ErrorBoundary>
                   <RobotPageComponent />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/move"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <WorkPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
