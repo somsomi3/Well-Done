@@ -1,11 +1,14 @@
 package com.be.domain.robot.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 public class RedisService {
 
@@ -132,5 +135,57 @@ public class RedisService {
             return null;
         }
     }
+    /**
+     * 맵핑 관련 데이터 삭제
+     * 모든 맵핑 관련 데이터(원본, 일반 맵, 인플레이트된 맵)를 삭제합니다.
+     */
+    public void deleteMappingData() {
+        try {
+            // 등록된 키 상수 활용
+            redisTemplate.delete(MAPPING_DONE_KEY);    // 원본 맵핑 데이터 키
+            redisTemplate.delete(MAP_KEY);             // 일반 맵 데이터 키
+            redisTemplate.delete(MAP_INFLATED_KEY);    // 인플레이트된 맵 데이터 키
 
+            log.info("Redis에서 맵핑 관련 데이터 삭제 완료");
+        } catch (Exception e) {
+            log.error("맵핑 데이터 삭제 중 오류 발생", e);
+            throw e;
+        }
+    }
+
+    /**
+     * 패턴으로 맵핑 관련 데이터 삭제
+     * 지정된 패턴과 일치하는 모든 맵핑 관련 키를 삭제합니다.
+     */
+    public void deleteMappingDataByPattern(String pattern) {
+        try {
+            // 해당 패턴의 모든 키 조회
+            Set<String> keys = redisTemplate.keys(pattern);
+
+            if (keys != null && !keys.isEmpty()) {
+                // 모든 관련 키 삭제
+                redisTemplate.delete(keys);
+                log.info("Redis에서 패턴 '{}' 일치하는 {} 개의 맵핑 데이터 삭제 완료", pattern, keys.size());
+            } else {
+                log.info("패턴 '{}'과 일치하는 삭제할 맵핑 데이터가 없습니다", pattern);
+            }
+        } catch (Exception e) {
+            log.error("패턴 '{}'의 맵핑 데이터 삭제 중 오류 발생", pattern, e);
+            throw e;
+        }
+    }
+
+    /**
+     * 모든 맵핑 관련 데이터 삭제
+     * mapping:로 시작하는 모든 키를 삭제합니다.
+     */
+    public void deleteAllMappingData() {
+        try {
+            deleteMappingDataByPattern("robot:map*");
+            deleteMappingDataByPattern(MAPPING_DONE_KEY);
+        } catch (Exception e) {
+            log.error("모든 맵핑 데이터 삭제 중 오류 발생", e);
+            throw e;
+        }
+    }
 }
