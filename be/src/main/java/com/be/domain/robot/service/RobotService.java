@@ -308,8 +308,7 @@ public class RobotService {
 
             // WebSocket으로 알림 전송
             try {
-                String json = objectMapper.writeValueAsString(notification);
-                userSocketHandler.broadcastAll(new TextMessage(json));
+                userSocketHandler.broadcastMap(notification);
                 log.info("전시 완료 알림 전송: product_id={}, to_id={}", productId, toId);
             } catch (Exception e) {
                 log.error("전시 완료 알림 전송 중 오류 발생", e);
@@ -352,8 +351,7 @@ public class RobotService {
 
             // WebSocket으로 알림 전송
             try {
-                String json = objectMapper.writeValueAsString(notification);
-                userSocketHandler.broadcastAll(new TextMessage(json));
+                userSocketHandler.broadcastMap(notification);
                 log.info("물건 집기 완료 알림 전송: product_id={}, from_id={}", productId, fromId);
             } catch (Exception e) {
                 log.error("물건 집기 완료 알림 전송 중 오류 발생", e);
