@@ -1,6 +1,8 @@
 package com.be.domain.storage.service;
 
+import com.be.db.entity.Inventory;
 import com.be.db.entity.Storage;
+import com.be.db.repository.InventoryRepository;
 import com.be.db.repository.StorageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -10,36 +12,48 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@Service
 @RequiredArgsConstructor
+@Service
 public class StorageService {
 
     private final StorageRepository storageRepository;
+    private final InventoryRepository inventoryRepository; // 추가
 
-    public void autoReplenishFromStorage(Long inventoryId) {
-        // 예제 로직 (Inventory와 Storage의 연관 관계 가정)
-        Storage storage = storageRepository.findById(inventoryId)
-                .orElseThrow(() -> new RuntimeException("창고에서 상품을 찾을 수 없습니다."));
+    public void autoReplenishFromStorage(String itemName) {
+        List<Inventory> result = inventoryRepository.findByItemName(itemName);
+        Inventory inventory = result.stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("해당 창고 아이템이 없습니다."));
 
-        // 좌표 정보 가정
-        var from = new java.util.HashMap<String, Object>();
-        from.put("x", storage.getPosition().getX());
-        from.put("y", storage.getPosition().getY());
+        // 👉 하드코딩된 창고 출발 좌표 (예: 쿠크다스 창고 위치)
+        Map<String, Object> from = Map.of(
+                "x", -60.19,
+                "y", -64.82,
+                "theta", Math.toRadians(-90)
+        );
 
-        var to = new java.util.HashMap<String, Object>();
-        to.put("x", -49.30); // 매대 좌표 예시
-        to.put("y", -63.09); // 매대 좌표 예시
+        // 👉 하드코딩된 도착 좌표 (예: 매대의 빈 칸 좌표)
+        Map<String, Object> to = Map.of(
+                "x", -50.45,
+                "y", -62.56,
+                "theta", Math.toRadians(0)
+        );
 
-        var command = new java.util.HashMap<String, Object>();
-        command.put("command", "pick_place");
-        command.put("from", from);
-        command.put("to", to);
-        command.put("product_id", inventoryId.toString());
-        command.put("display_spot", 0); // 보충은 display_spot 무의미
+        Map<String, Object> command = Map.of(
+                "command", "pick_place",
+                "from", from,
+                "to", to,
+                "product_id", inventory.getItemName(), // 또는 inventoryId.toString()
+                "from_id", "STORAGE_COOKDAS1", // (선택사항) UI에 보여주기 위한 식별자
+                "to_id", "A1", // (선택사항)
+                "display_spot", 0
+        );
 
-        var restTemplate = new RestTemplate();
-        restTemplate.postForEntity("http://localhost:8080/api/robot/pick-place", command, Map.class);
+        new RestTemplate().postForEntity("http://localhost:8080/api/robot/pick-place", command, Map.class);
     }
+
+
+
     public List<Storage> findAll() {
         return storageRepository.findAll();
     }
