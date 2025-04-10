@@ -282,9 +282,12 @@ public class RobotService {
      */
     public void processPlaceDoneData(Map<String, Object> placeDoneData) {
         try {
+            log.info("processPlaceDoneData 시작");
             boolean success = (boolean) placeDoneData.get("success");
             String productId = (String) placeDoneData.get("product_id");
             String toId = (String) placeDoneData.get("to_id");
+
+            log.info("전시 데이터 추출: success={}, productId={}, toId={}", success, productId, toId);
 
             // 알림 데이터 준비
             Map<String, Object> notification = new HashMap<>();
@@ -293,6 +296,8 @@ public class RobotService {
             notification.put("product_id", productId);
             notification.put("to_id", toId);
             notification.put("timestamp", System.currentTimeMillis());
+
+            log.info("잔시 알림 데이터 준비 완료: {}", notification);
 
             if (success && placeDoneData.containsKey("map") && placeDoneData.containsKey("map_inflated")) {
                 // 일반 맵 처리
@@ -308,12 +313,15 @@ public class RobotService {
 
             // WebSocket으로 알림 전송
             try {
-                userSocketHandler.broadcastMap(notification);
-                log.info("전시 완료 알림 전송: product_id={}, to_id={}", productId, toId);
+                log.info("WebSocket 메시지 전송 시도");
+                String json = objectMapper.writeValueAsString(notification);
+                log.info("JSON 변환 완료: {}", json);
+                userSocketHandler.broadcastAll(new TextMessage(json));
+                log.info("WebSocket 메시지 전송 완료: type=place_complete, productId={}, toId={}", productId, toId);
             } catch (Exception e) {
                 log.error("전시 완료 알림 전송 중 오류 발생", e);
             }
-
+            log.info("processPlaceDoneData 완료");
         } catch (Exception e) {
             log.error("전시 완료 데이터 처리 중 오류 발생", e);
         }
@@ -351,7 +359,10 @@ public class RobotService {
 
             // WebSocket으로 알림 전송
             try {
-                userSocketHandler.broadcastMap(notification);
+                log.info("WebSocket 메시지 전송 시도");
+                String json = objectMapper.writeValueAsString(notification);
+                log.info("JSON 변환 완료: {}", json);
+                userSocketHandler.broadcastAll(new TextMessage(json));
                 log.info("물건 집기 완료 알림 전송: product_id={}, from_id={}", productId, fromId);
             } catch (Exception e) {
                 log.error("물건 집기 완료 알림 전송 중 오류 발생", e);
