@@ -975,7 +975,7 @@ const LOCATION_GROUPS = {
                 : "bg-blue-500 text-white hover:bg-blue-600"
             }`}
           >
-            {isPickPlaceMode ? "🔙 컨트롤러 모드로 전환" : "📦 모니터링 모드로 전환"}
+            {isPickPlaceMode ? "🔙 모니터링 모드로 전환" : "📦 컨트롤러 모드로 전환"}
           </button>
         </div>
 
