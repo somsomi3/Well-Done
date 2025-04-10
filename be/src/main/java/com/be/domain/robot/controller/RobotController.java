@@ -7,6 +7,7 @@ import com.be.domain.storage.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -617,6 +618,26 @@ public class RobotController {
             error.put("status", "error");
             error.put("message", "Pick and Place 명령을 전송하는 데 실패했습니다: " + e.getMessage());
             return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    // 시연용 맵 죽이기
+    @DeleteMapping("/mapping-data")
+    public ResponseEntity<?> deleteMappingData() {
+        try {
+            // 레디스에서 맵핑 데이터 삭제
+            redisService.deleteAllMappingData();
+
+            // 응답 생성
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "맵핑 데이터가 성공적으로 삭제되었습니다");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("맵핑 데이터 삭제 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "error", "message", "맵핑 데이터 삭제 중 오류가 발생했습니다"));
         }
     }
 
