@@ -350,4 +350,73 @@
       padding: 0.5rem;
     }
   }
-  
+  /* InventoryStyles.css에 추가 */
+
+  /* 프로세스 상태 표시 */
+  .process-status {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* 보충 버튼 */
+  .replenish-button {
+    min-width: 50px;
+  }
+
+  /* 텍스트 색상 및 스타일 */
+  .text-red-600 {
+    color: #e53e3e;
+  }
+
+  .font-bold {
+    font-weight: bold;
+  }
+
+  /* Flex 레이아웃 */
+  .flex {
+    display: flex;
+  }
+
+  .space-x-2 > * + * {
+    margin-left: 0.5rem;
+  }
+
+  /* 배경색 */
+  .bg-blue-100 {
+    background-color: #ebf8ff;
+  }
+
+  .bg-green-500 {
+    background-color: #48bb78;
+  }
+
+  /* 텍스트 색상 */
+  .text-white {
+    color: white;
+  }
+
+  /* 패딩 */
+  .p-2 {
+    padding: 0.5rem;
+  }
+
+  .px-2 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .py-1 {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
+  /* 모서리 둥글게 */
+  .rounded {
+    border-radius: 0.25rem;
+  }
+
+  /* 텍스트 크기 */
+  .text-sm {
+    font-size: 0.875rem;
+  }
+    
