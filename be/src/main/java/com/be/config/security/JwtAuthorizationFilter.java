@@ -47,34 +47,36 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     private static final String ACCESS_TOKEN_HEADER_KEY = "Authorization";
     private static final String REFRESH_TOKEN_HEADER_KEY = "x-refresh-token";
     private static final List<String> WHITELIST_PREFIXES = List.of(
-        "/api/swagger-ui/index.html",
-        "/swagger-ui/index.html",
-        "/api/auth/login",
-        "/auth/login",
-        "/api/auth/register",
-        "/auth/register",
-        "/api/auth/refresh",
-        "/auth/refresh",
-        "/api/v3/api-docs",
-        "/v3/api-docs",
-        "/api/swagger-ui",
-        "/swagger-ui",
-        "/api/swagger-ui/**",
-        "/swagger-ui/**",
-        "/api/swagger-resources/**",
-        "/swagger-resources/**",
-        "/api/webjars/**",
-        "/webjars/**",
-        "/api/auth/test-login",
-        "/auth/test-login",
-        "/api/auth/check-username",
-        "/auth/check-username",
-        "/api/auth/logout",
-        "/auth/logout",
-        "/ws/**",
-        "/api/ws/**",
-        "/api/boards/announcements/*/view",
-        "/api/boards/announcements/view"
+            "/api/swagger-ui/index.html",
+            "/swagger-ui/index.html",
+            "/api/auth/login",
+            "/auth/login",
+            "/api/auth/register",
+            "/auth/register",
+            "/api/auth/refresh",
+            "/auth/refresh",
+            "/api/v3/api-docs",
+            "/v3/api-docs",
+            "/api/swagger-ui",
+            "/swagger-ui",
+            "/api/swagger-ui/**",
+            "/swagger-ui/**",
+            "/api/swagger-resources/**",
+            "/swagger-resources/**",
+            "/api/webjars/**",
+            "/webjars/**",
+            "/api/auth/test-login",
+            "/auth/test-login",
+            "/api/auth/check-username",
+            "/auth/check-username",
+            "/api/auth/logout",
+            "/auth/logout",
+            "/ws/**",
+            "/api/ws/**",
+            "/api/boards/announcements/*/view",
+            "/api/boards/announcements/view",
+            "/api/robot/**",
+            "/api/robot/pick-place"
     );
 
     public JwtAuthorizationFilter(TokenUtils tokenUtils, UserRepository userRepository) {
@@ -86,15 +88,15 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     //검증에 성공하면 SecurityContext에 인증 정보를 저장
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-        @NonNull HttpServletResponse response,
-        @NonNull FilterChain chain)
-        throws IOException, ServletException {
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain chain)
+            throws IOException, ServletException {
 
         String requestURI = request.getRequestURI();
 
         // WebSocket이나 화이트리스트에 해당하는 경로는 검증 없이 통과
         if (requestURI.startsWith("/ws/") || isWhitelisted(requestURI) ||
-            HTTP_METHOD_OPTIONS.equalsIgnoreCase(request.getMethod())) {
+                HTTP_METHOD_OPTIONS.equalsIgnoreCase(request.getMethod())) {
             log.debug("JWT 필터 제외 경로: {}", requestURI);
             chain.doFilter(request, response);
             return; // 여기서 확실히 리턴
@@ -127,7 +129,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
                 // DB 조회로 UserDto 구성
                 User user = userRepository.findById(userIdLong)
-                    .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                        .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
                 UserDto userDto = new UserDto(user);
                 // 디버깅용 로그 추가
                 log.info("사용자 역할: {}", userDto.getRoles());

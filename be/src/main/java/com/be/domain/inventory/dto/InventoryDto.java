@@ -13,5 +13,6 @@ public class InventoryDto {
     private int quantity;
     private int warehouseQuantity;
     private int minThreshold;
+    private String shelfCode;
 }
 

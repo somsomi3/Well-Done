@@ -28,8 +28,8 @@ public class RobotController {
     private final RedisService redisService;
 
     // 브릿지 서버 URL 설정
-    private final String bridgeUrl = "http://10.0.0.2:5000";
-//    private final String bridgeUrl = "http://localhost:5000";
+   private final String bridgeUrl = "http://10.0.0.2:5000";
+    // private final String bridgeUrl = "http://localhost:5000";
 
     // 최신 데이터 저장용 변수들
     private Map<String, Object> latestGlobalPath = new HashMap<>();
@@ -169,7 +169,7 @@ public class RobotController {
     @PostMapping("/odometry")
     public ResponseEntity<?> receiveOdometry(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-         log.info("오도메트리 데이터 수신: {}", data);
+        log.info("오도메트리 데이터 수신: {}", data);
 
         // 최신 데이터 저장
         this.latestOdometry = data;
@@ -408,7 +408,7 @@ public class RobotController {
         if (success) {
             log.info("물건 집기 성공: 상품 ID {}, 출발 위치 {}", productId, fromId);
             try {
-                storageService.autoReplenishFromStorage(Long.parseLong(productId));
+                storageService.autoReplenishFromStorage(productId);
             } catch (Exception e) {
             log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
             }
@@ -440,7 +440,7 @@ public class RobotController {
         if (success) {
             log.info("전시 성공: 상품 ID {}, 진열 위치 {}", productId, toId);
             try {
-                storageService.autoReplenishFromStorage(Long.parseLong(productId));
+                storageService.autoReplenishFromStorage(productId);
             } catch (Exception e) {
                 log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
             }
@@ -453,6 +453,7 @@ public class RobotController {
 
         // 데이터 처리 및 Redis 저장
         robotService.processPlaceDoneData(data);
+        log.info("Phase 3");
 
         // 응답 생성
         Map<String, Object> response = new HashMap<>();
