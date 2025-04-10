@@ -9,7 +9,8 @@ const LoginPageComponent = lazy(() => import('../pages/LoginPage'));
 const RegisterPageComponent = lazy(() => import('../pages/RegisterPage'));
 const MapPageComponent = lazy(() => import('../pages/MapPage'));
 const RobotPageComponent = lazy(() => import('../pages/RobotPage'));
-const LogPageComponent = lazy(() => import('../pages/LogPage'));
+const InventoryPageComponent = lazy(() => import('../pages/InventoryPage'));
+const InventoryDetailPageComponent = lazy(() => import('../pages/InventoryDetailPage'));
 const SettingsPageComponent = lazy(() => import('../pages/SettingsPage'));
 const AnnouncementDetailComponent = lazy(() =>
   import('../components/board/AnnouncementDetail')
@@ -130,11 +131,21 @@ function AppRoutes() {
             }
           />
           <Route
-            path="/log"
+            path="/inventory"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <LogPageComponent />
+                  <InventoryPageComponent />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/:itemId/history"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <InventoryDetailPageComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -200,7 +211,7 @@ function AppRoutes() {
                     onClick={() => (window.location.href = '/board')}
                     className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
-                    공지지 페이지로 이동
+                    공지 페이지로 이동
                   </button>
                 </div>
               </ErrorBoundary>
