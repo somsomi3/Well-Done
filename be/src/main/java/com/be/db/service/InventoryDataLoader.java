@@ -62,8 +62,8 @@ public class InventoryDataLoader implements CommandLineRunner {
                 {"L1", "버터링", -51.26, -57.97, 0},
                 {"L2", "버터링", -51.75, -57.97, 0},
 
-                {"EMP1", "빈파레트저장소", -55.56, -66.42, 0},
-                {"EMP2", "임시저장소", -55.03, -66.42, 0},
+                {"EMP1", "빈파레트저장소", -55.56, -65.42, 0},
+                {"EMP2", "임시저장소", -55.03, -65.42, 0},
 
         };
 
@@ -77,7 +77,7 @@ public class InventoryDataLoader implements CommandLineRunner {
             String name = (String) entry[1];
 
             // 이미 등록된 상품이면 스킵
-            if (inventoryRepository.findByItemName(name).isPresent()) {
+            if (!inventoryRepository.findByItemName(name).isEmpty()) {
                 continue;
             }
 

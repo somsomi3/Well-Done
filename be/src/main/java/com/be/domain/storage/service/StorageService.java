@@ -20,7 +20,9 @@ public class StorageService {
     private final InventoryRepository inventoryRepository; // 추가
 
     public void autoReplenishFromStorage(String itemName) {
-        Inventory inventory = inventoryRepository.findByItemName(itemName)
+        List<Inventory> result = inventoryRepository.findByItemName(itemName);
+        Inventory inventory = result.stream()
+                .findFirst()
                 .orElseThrow(() -> new RuntimeException("해당 창고 아이템이 없습니다."));
 
         // 👉 하드코딩된 창고 출발 좌표 (예: 쿠크다스 창고 위치)

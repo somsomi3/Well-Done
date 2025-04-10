@@ -24,6 +24,7 @@ public class InventoryService {
                         .quantity(i.getQuantity())
                         .warehouseQuantity(i.getWarehouseQuantity())
                         .minThreshold(i.getMinThreshold())
+                        .shelfCode(i.getShelfCode())
                         .build())
                 .toList();
     }

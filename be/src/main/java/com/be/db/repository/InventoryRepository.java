@@ -11,7 +11,8 @@ import java.util.Optional;
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     // itemName으로 재고를 찾고 싶을 때 사용
-    Optional<Inventory> findByItemName(String itemName);
+    List<Inventory> findByItemName(String itemName);
+
 
     // 재고가 임계치 이하인 것만 찾고 싶을 때
     List<Inventory> findByQuantityLessThanEqual(int threshold);
