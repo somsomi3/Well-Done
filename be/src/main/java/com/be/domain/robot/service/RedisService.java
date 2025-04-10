@@ -181,8 +181,7 @@ public class RedisService {
      */
     public void deleteAllMappingData() {
         try {
-            deleteMappingDataByPattern("robot:map*");
-            deleteMappingDataByPattern(MAPPING_DONE_KEY);
+            deleteMappingData();
         } catch (Exception e) {
             log.error("모든 맵핑 데이터 삭제 중 오류 발생", e);
             throw e;
