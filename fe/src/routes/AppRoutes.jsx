@@ -238,7 +238,7 @@ function AppRoutes() {
                     요청하신 페이지가 존재하지 않습니다.
                   </p>
                   <button
-                    onClick={() => (window.location.href = "/main")}
+                    onClick={() => (window.location.href = '/main')}
                     className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                   >
                     메인 페이지로 이동
