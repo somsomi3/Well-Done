@@ -74,3 +74,4 @@ public class CustomAuthSuccessHandler implements AuthenticationSuccessHandler {
         response.getWriter().write(objectMapper.writeValueAsString(tokenMap));
     }
 }
+

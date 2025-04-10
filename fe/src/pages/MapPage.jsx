@@ -169,6 +169,98 @@ const LOCATION_GROUPS = {
     checkExistingMap();
   }, [token]);
 
+  // Canvas에 맵 렌더링 (좌우 반전 적용)
+  useEffect(() => {
+    // 매핑이 완료되었다면 finalMapData를 사용, 아니면 실시간 mapData 사용
+    const currentMapData = (useInflatedMap && inflatedMapData) 
+                       ? inflatedMapData 
+                       : (isMappingComplete ? finalMapData : mapData);
+  
+  // 현재 어떤 맵이 렌더링되는지 상세 로깅
+    console.log("🗺️ 맵 렌더링 상태:", {
+      인플레이티드맵사용중: useInflatedMap,
+      맵핑완료상태: isMappingComplete,
+      인플레이티드맵데이터있음: !!inflatedMapData,
+      최종맵데이터있음: !!finalMapData,
+      실시간맵데이터있음: !!mapData,
+      현재선택된맵종류: useInflatedMap 
+                  ? "인플레이티드 맵" 
+                  : (isMappingComplete ? "최종 맵" : "실시간 맵"),
+      맵크기: currentMapData 
+            ? `${currentMapData.width}x${currentMapData.height}` 
+            : "데이터 없음"
+    });
+    
+    if (!currentMapData || !canvasRef.current) {
+      console.log("⚠️ 맵 렌더링 불가 - 데이터 또는 캔버스 참조 누락");
+      return;
+    }
+   
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const { width, height, map } = currentMapData;
+   
+    // 캔버스 클리어
+    ctx.clearRect(0, 0, width, height);
+   
+    // 배경을 회색으로 설정 (미탐색 영역)
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(0, 0, width, height);
+   
+    // 맵 데이터 렌더링 (좌우 반전 적용)
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        // 맵을 좌우로 반전 - x 좌표에서 width-1-x 값을 사용
+        const value = map[y][width - 1 - x];
+       
+        // 값에 따라 색상 지정
+        if (value === 0) {
+          // 빈 공간 (탐색 완료, 이동 가능)
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(x, y, 1, 1);
+        } else if (value === 100) {
+          // 장애물
+          ctx.fillStyle = '#333333';
+          ctx.fillRect(x, y, 1, 1);
+        }
+        // -1은 미탐색 영역으로 기본 배경색 사용
+      }
+    }
+   
+    // 경로 그리기
+    if (path.length > 1) {
+      ctx.beginPath();
+      ctx.strokeStyle = 'blue';
+      ctx.lineWidth = 2;
+     
+      const startPoint = robotToPixelCoordinates(path[0].x, path[0].y);
+      ctx.moveTo(startPoint.pixelX, startPoint.pixelY);
+     
+      for (let i = 1; i < path.length; i++) {
+        const point = robotToPixelCoordinates(path[i].x, path[i].y);
+        ctx.lineTo(point.pixelX, point.pixelY);
+      }
+     
+      ctx.stroke();
+    }
+   
+    // 현재 위치 마커 그리기
+    if (pixelPosition.pixelX > 0 && pixelPosition.pixelY > 0) {
+      // 외부 원 (흰색 테두리)
+      ctx.beginPath();
+      ctx.arc(pixelPosition.pixelX, pixelPosition.pixelY, 8, 0, Math.PI * 2);
+      ctx.fillStyle = 'white';
+      ctx.fill();
+     
+      // 내부 원 (빨간색)
+      ctx.beginPath();
+      ctx.arc(pixelPosition.pixelX, pixelPosition.pixelY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'red';
+      ctx.fill();
+    }
+   
+  }, [mapData, finalMapData, inflatedMapData, isMappingComplete, useInflatedMap, pixelPosition, path]);
+ 
   // WebSocket 연결
   useEffect(() => {
     if (!token) return;
@@ -188,6 +280,7 @@ const LOCATION_GROUPS = {
     };
 
     socket.onmessage = (event) => {
+      // console.log("원본 메시지:", event.data);
       try {
         const data = JSON.parse(event.data);
         console.log("WebSocket 메시지 수신:", data);
@@ -408,7 +501,7 @@ const LOCATION_GROUPS = {
 
   const fetchInflatedMap = async () => {
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = getApiUrl(); // env.js에서 API URL 가져오기
       const response = await axios.get(`${apiUrl}/robot/map-inflated`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -462,6 +555,9 @@ const LOCATION_GROUPS = {
     setIsLoading(true);
     try {
       const apiUrl = getApiUrl();
+      
+      // API URL에서 이미 '/api'가 포함되어 있으므로 '/robot/auto-map'만 추가
+      // 이는 환경 변수 설정에 따라 달라질 수 있습니다
       const url = `${apiUrl}/robot/auto-map`;
 
       console.log("API 요청 URL:", url);

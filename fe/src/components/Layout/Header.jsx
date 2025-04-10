@@ -25,7 +25,7 @@ function Header() {
           <NavItem to="/board">BOARD</NavItem>
           <NavItem to="/map">MAP</NavItem>
           <NavItem to="/robot">ROBOT</NavItem>
-          <NavItem to="/log">LOG</NavItem>
+          <NavItem to="/inventory">INVENTORY</NavItem>
         </nav>
       )}
 

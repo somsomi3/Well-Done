@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -47,7 +48,7 @@ public class TokenUtils {
     private Date createExpiredDate(boolean isAccessToken) {
         Calendar c = Calendar.getInstance();
         if (isAccessToken) {
-            c.add(Calendar.MINUTE, 15);  // AccessToken: 15분
+            c.add(Calendar.DATE, 7);  // AccessToken: 15분
         } else {
             c.add(Calendar.DATE, 14);    // RefreshToken: 14일
         }
@@ -60,11 +61,13 @@ public class TokenUtils {
     private Map<String, Object> createClaims(UserDto userDto, boolean isAccessToken) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userDto.getUserid());
-        if (isAccessToken) {
-            claims.put("username", userDto.getUsername());
-        } else {
-            claims.put("username", userDto.getUsername()); // 리프레시 토큰에도 추가!
+        claims.put("username", userDto.getUsername()); // 모든 토큰에 사용자명 포함
+
+        // [수정] 액세스 토큰에는 사용자 역할 정보도 추가
+        if (isAccessToken && userDto.getRoles() != null) {
+            claims.put("roles", userDto.getRoles());
         }
+
         return claims;
     }
 
@@ -73,13 +76,13 @@ public class TokenUtils {
      */
     public String generateJwt(UserDto userDto) {
         return Jwts.builder()
-                .subject(userDto.getEmail())
-                .claim("userId", userDto.getUserid())
-                .claim("username", userDto.getUsername())
-                .claim("roles", userDto.getRoles())
-                .signWith(JWT_SECRET_KEY, Jwts.SIG.HS256)
-                .expiration(createExpiredDate(true))
-                .compact();
+            .subject(userDto.getEmail())
+            .claim("userId", userDto.getUserid())
+            .claim("username", userDto.getUsername())
+            .claim("roles", userDto.getRoles())
+            .signWith(JWT_SECRET_KEY, Jwts.SIG.HS256)
+            .expiration(createExpiredDate(true))
+            .compact();
     }
 
     /**
@@ -87,11 +90,11 @@ public class TokenUtils {
      */
     public String generateRefreshToken(UserDto userDto) {
         return Jwts.builder()
-                .claims(createClaims(userDto, false))
-                .subject(userDto.getUsername())
-                .signWith(JWT_SECRET_KEY, Jwts.SIG.HS256)
-                .expiration(createExpiredDate(false))
-                .compact();
+            .claims(createClaims(userDto, false))
+            .subject(userDto.getUsername())
+            .signWith(JWT_SECRET_KEY, Jwts.SIG.HS256)
+            .expiration(createExpiredDate(false))
+            .compact();
     }
 
     /**
@@ -130,20 +133,17 @@ public class TokenUtils {
             }
         }
         throw new IllegalArgumentException("잘못된 Authorization 헤더 형식 현재 값: [" + header + "]");
-
     }
-
-
 
     /**
      * 🔹 JWT 토큰을 Claims 객체로 변환
      */
     public Claims getTokenToClaims(String token) {
         return Jwts.parser()
-                .verifyWith(JWT_SECRET_KEY)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+            .verifyWith(JWT_SECRET_KEY)
+            .build()
+            .parseSignedClaims(token)
+            .getPayload();
     }
 
     /**
@@ -160,11 +160,21 @@ public class TokenUtils {
     public UserDto getClaimsToUserDto(String token, boolean isAccessToken) {
         Claims claims = getTokenToClaims(token);
         Long userId = Long.valueOf(claims.get("userId").toString());
-        if (isAccessToken) {
-            String username = claims.get("username").toString();
-            return UserDto.builder().userid(userId).username(username).build();
+
+        // [수정] 모든 토큰에서 username 추출
+        String username = claims.getOrDefault("username", "").toString();
+
+        // [수정] 빌더 시작
+        UserDto.UserDtoBuilder builder = UserDto.builder()
+            .userid(userId)
+            .username(username);
+
+        // [수정] roles 클레임이 있으면 추가
+        if (claims.get("roles") != null) {
+            builder.roles((List<String>)claims.get("roles"));
         }
-        return UserDto.builder().userid(userId).build();
+
+        return builder.build();
     }
 
     /**
@@ -182,11 +192,16 @@ public class TokenUtils {
 
         String username = usernameClaim.toString();
 
-        UserDto userDto = UserDto.builder()
-                .userid(userId)
-                .username(username)
-                .build();
+        // [수정] 역할 정보 추가
+        UserDto.UserDtoBuilder builder = UserDto.builder()
+            .userid(userId)
+            .username(username);
 
-        return generateJwt(userDto);
+        // [수정] 리프레시 토큰에 roles 클레임이 있으면 추가
+        if (claims.get("roles") != null) {
+            builder.roles((List<String>)claims.get("roles"));
+        }
 
-    }}
+        return generateJwt(builder.build());
+    }
+}

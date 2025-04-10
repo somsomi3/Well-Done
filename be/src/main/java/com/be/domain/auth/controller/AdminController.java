@@ -52,6 +52,12 @@ public class AdminController {
 			.orElseThrow(() -> new RuntimeException("Role not found"));
 
 		User existingUser = user.get();
+
+		// 이미 권한이 있는지 확인
+		if (existingUser.getRoles().contains(adminRole)) {
+			return ResponseEntity.status(400).body("User already has admin role");
+		}
+
 		existingUser.getRoles().add(adminRole);
 		userRepository.save(existingUser);
 		return ResponseEntity.ok("Admin role granted to user");
@@ -78,13 +84,20 @@ public class AdminController {
 		}
 
 		User existingUser = user.get();
-		Role adminRole = roleRepository.findByName(Role.RoleName.ROLE_ADMIN)
-			.orElseThrow(() -> new RuntimeException("Role not found"));
 
-		existingUser.getRoles().removeIf(role -> role.getName() == Role.RoleName.ROLE_ADMIN); // 중요
+		Role adminRole = roleRepository.findByName(Role.RoleName.ROLE_ADMIN)
+				.orElseThrow(() -> new RuntimeException("Role not found"));
+
+		// ✅ ROLE_ADMIN을 전부 제거
+		boolean removed = existingUser.getRoles().removeIf(role -> role.getName() == Role.RoleName.ROLE_ADMIN);
+
+		if (!removed) {
+			return ResponseEntity.status(400).body("User does not have admin role");
+		}
 
 		userRepository.save(existingUser);
 		return ResponseEntity.ok("Admin role revoked from user");
 	}
+
 
 }
