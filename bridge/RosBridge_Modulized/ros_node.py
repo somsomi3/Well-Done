@@ -16,7 +16,7 @@ from sensor_msgs.msg import CompressedImage
 
 # SSAFY 메시지 타입 임포트 시도
 try:
-    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand, PickDone, PlaceDone
+    from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, PickPlaceCommand, PickDone, PlaceDone, FSMStatus
     # from ssafy_msgs.msg import EnviromentStatus, TurtlebotStatus, ScanWithPose, MappingDone, MapStatus, ObstacleAlert, GoalStatus, PickDone, PlaceDone, PickPlaceCommand
     print("성공적으로 ssafy_msgs를 임포트했습니다!")
     CUSTOM_IMPORTS_AVAILABLE = True
@@ -50,7 +50,8 @@ class RobotBridgeNode(Node):
             'goal_status': 0.0,
             'pick_done': 0.0,
             'place_done': 0.0,
-            'image_jpeg': 0.0
+            'image_jpeg': 0.0,
+            'fsm_state': 0.0
         }
         self.send_interval = 1.0
 
@@ -185,6 +186,9 @@ class RobotBridgeNode(Node):
             ),
             'image_jpeg_compressed': self.create_subscription(
                 CompressedImage, "/image_jpeg/compressed", self.image_jpeg_compressed_callback, self.qos_profile
+            ),
+            'fsm_state': self.create_subscription(
+                FSMStatus, "/fsm_state", self.fsm_state_callback, self.qos_profile
             )
         }
 

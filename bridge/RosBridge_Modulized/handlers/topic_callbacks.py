@@ -21,6 +21,7 @@ def register_all_callbacks(node):
     node.pick_done_callback = lambda msg: pick_done_callback(node, msg)
     node.place_done_callback = lambda msg: place_done_callback(node, msg)
     node.image_jpeg_compressed_callback = lambda msg: image_jpeg_compressed_callback(node, msg)
+    node.fsm_state_callback = lambda msg: fsm_state_callback(node, msg)
 
 def envir_status_callback(node, msg):
     """환경 상태 토픽에서 데이터를 받아 Spring 서버로 전송"""
@@ -1086,3 +1087,59 @@ def image_jpeg_compressed_callback(node, msg):
         
         except Exception as e:
             node.get_logger().error(f"Exception during compressed image data processing: {str(e)}")
+
+def fsm_state_callback(node, msg):
+    """FSM 상태 토픽에서 데이터를 받아 Spring 서버로 전송"""
+    current_time = time.time()
+    
+    if current_time - node.last_send_times.get('fsm_state', 0) >= node.send_interval:
+        try:
+            # FSM 상태 데이터 준비
+            fsm_state_data = {
+                "node_name": msg.node_name,
+                "state": msg.state,
+                "timestamp": msg.timestamp,
+                "header": {
+                    "frame_id": msg.header.frame_id,
+                    "stamp": {
+                        "sec": msg.header.stamp.sec,
+                        "nanosec": msg.header.stamp.nanosec
+                    }
+                }
+            }
+            
+            node.get_logger().info(f"FSM state data received: node={msg.node_name}, state={msg.state}")
+            
+            # JWT 토큰이 있는 경우에만 Spring 서버로 전송 시도
+            if node.jwt_token:
+                try:
+                    # JWT 토큰을 헤더에 추가
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {node.jwt_token}"
+                    }
+                
+                    # Spring 서버로 POST 요청
+                    response = requests.post(
+                        f"{node.spring_server_url}/api/robot/fsm-state", 
+                        json=fsm_state_data, 
+                        headers=headers,
+                        timeout=2.0
+                    )
+                
+                    if response.status_code == 200:
+                        node.get_logger().info("FSM state data successfully sent to Spring server")
+                    else:
+                        node.get_logger().error(
+                            f"Spring server error: {response.status_code}, {response.text}"
+                        )
+                except requests.exceptions.RequestException as e:
+                    node.get_logger().warning(
+                        f"Failed to send FSM state data to Spring server: {str(e)}"
+                    )
+            
+            # 마지막 전송 시간 업데이트
+            node.last_send_times['fsm_state'] = current_time
+        
+        except Exception as e:
+            node.get_logger().error(f"Exception during FSM state processing: {str(e)}")
