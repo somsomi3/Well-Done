@@ -1008,7 +1008,8 @@ const LOCATION_GROUPS = {
                   border: "1px solid #ccc",
                   backgroundColor: "#f0f0f0",
                   width: "100%",
-                  height: "100%",
+                  height: "auto",
+                  maxHeight: "70vh",
                   objectFit: "contain"
                 }}
               />
@@ -1024,10 +1025,9 @@ const LOCATION_GROUPS = {
             path={path}
             onMapClick={handleMapClick}
             style={{
-              border: "1px solid #ccc",
-              backgroundColor: "#f0f0f0",
               width: "100%",
-              height: "100%",
+              height: "auto",
+              maxHeight: "70vh",
               objectFit: "contain"
             }}
           />

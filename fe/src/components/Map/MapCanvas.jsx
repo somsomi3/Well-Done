@@ -9,7 +9,8 @@ const MapCanvas = ({
   isMappingComplete, 
   pixelPosition, 
   path, 
-  onMapClick 
+  onMapClick,
+  style // 스타일 prop 추가
 }) => {
   const canvasRef = useRef(null);
 
@@ -85,16 +86,26 @@ const MapCanvas = ({
     }
   }, [mapData, finalMapData, inflatedMapData, useInflatedMap, isMappingComplete, pixelPosition, path]);
 
+  // 기본 스타일과 전달받은 스타일을 병합
+  const defaultStyle = {
+    border: "1px solid #ccc",
+    backgroundColor: "#f0f0f0",
+    cursor: "crosshair",
+    width: "100%",
+    height: "auto",
+    maxHeight: "70vh",
+    objectFit: "contain"
+  };
+
+  // 스타일 병합 (전달받은 스타일이 우선)
+  const canvasStyle = { ...defaultStyle, ...(style || {}) };
+
   return (
     <canvas
       ref={canvasRef}
       width={480}
       height={480}
-      style={{
-        border: "1px solid #ccc",
-        backgroundColor: "#f0f0f0",
-        cursor: "crosshair"
-      }}
+      style={canvasStyle}
       onClick={onMapClick}
     />
   );
