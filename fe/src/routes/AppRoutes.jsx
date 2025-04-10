@@ -132,16 +132,6 @@ function AppRoutes() {
             }
           />
           <Route
-            path="/move"
-            element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <WorkPageComponent />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/inventory"
             element={
               <ProtectedRoute>
