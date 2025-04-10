@@ -99,8 +99,11 @@ public class UserSocketHandler extends TextWebSocketHandler {
     //맵데이터를 실시간으로 WebSocket으로 브로드캐스트하기
     public void broadcastMap(Object mapData) {
         try {
+            log.info("broadcastMap 호출: {}", mapData);
             String message = objectMapper.writeValueAsString(mapData);
+            log.info("broadcastMap JSON 변환 완료: {}", message);
             broadcastAll(new TextMessage(message));
+            log.info("broadcastMap 전송 완료");
         } catch (Exception e) {
             log.error("맵 데이터 전송 실패", e);
         }

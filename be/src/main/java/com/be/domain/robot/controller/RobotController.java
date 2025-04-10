@@ -61,6 +61,9 @@ public class RobotController {
     // 압축된 JPEG 이미지 데이터를 위한 변수
     private Map<String, Object> latestCompressedImage = new HashMap<>();
 
+    // FSM 상태 데이터 저장용 변수
+    private Map<String, Object> latestFsmState = new HashMap<>();
+
     @PostMapping("/envir-status")
     public ResponseEntity<?> receiveEnvirStatus(@RequestBody Map<String, Object> data) {
         // 환경 상태 데이터 추출
@@ -150,7 +153,7 @@ public class RobotController {
     @PostMapping("/local-path")
     public ResponseEntity<?> receiveLocalPath(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-        log.info("로컬 경로 데이터 수신: {}", data);
+//         log.info("로컬 경로 데이터 수신: {}", data);
 
         // 최신 데이터 저장
         this.latestLocalPath = data;
@@ -404,7 +407,11 @@ public class RobotController {
 
         if (success) {
             log.info("물건 집기 성공: 상품 ID {}, 출발 위치 {}", productId, fromId);
-            storageService.autoReplenishFromStorage(productId);
+            try {
+                storageService.autoReplenishFromStorage(Long.parseLong(productId));
+            } catch (Exception e) {
+            log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
+            }
         } else {
             log.info("물건 집기 실패: 상품 ID {}, 출발 위치 {}", productId, fromId);
         }
@@ -431,9 +438,12 @@ public class RobotController {
         String toId = (String) data.get("to_id");
 
         if (success) {
-            log.info("전시 완료: 상품 ID {}, 진열 위치 {}", productId, toId);
-            // 여기서 자동 보충 트리거
-            storageService.autoReplenishFromStorage(productId);
+            log.info("전시 성공: 상품 ID {}, 진열 위치 {}", productId, toId);
+            try {
+                storageService.autoReplenishFromStorage(Long.parseLong(productId));
+            } catch (Exception e) {
+                log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
+            }
         } else {
             log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, toId);
         }
@@ -484,6 +494,41 @@ public class RobotController {
         }
     }
 
+    @PostMapping("/fsm-state")
+    public ResponseEntity<?> receiveFsmState(@RequestBody Map<String, Object> data) {
+        try {
+            // 데이터 로깅
+            String nodeName = (String) data.get("node_name");
+            String state = (String) data.get("state");
+            String timestamp = (String) data.get("timestamp");
+
+            log.info("FSM 상태 데이터 수신: node={}, state={}, timestamp={}", nodeName, state, timestamp);
+
+            // 최신 데이터 저장
+            this.latestFsmState = data;
+
+            // 웹소켓을 통해 클라이언트에게 상태 전송
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", "fsm_state");
+            payload.put("data", data);
+
+            // broadcastMap 메서드 사용
+            userSocketHandler.broadcastMap(payload);
+
+            // 응답 생성
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "FSM 상태 데이터를 성공적으로 수신하고 처리했습니다");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("FSM 상태 처리 중 오류 발생: {}", e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "FSM 상태 처리 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
 
     // 시뮬브릿지 에서 백으로.
     @PostMapping("/image-jpeg-compressed")
@@ -523,35 +568,33 @@ public class RobotController {
 
             // from_pos 구조 설정
             Map<String, Object> fromPos = new HashMap<>();
-
-            // position 구조 설정
             Map<String, Object> fromPosition = new HashMap<>();
             fromPosition.put("x", ((Number) from.get("x")).doubleValue());
             fromPosition.put("y", ((Number) from.get("y")).doubleValue());
-            fromPosition.put("z", 0.0); // 기본값으로 0.0 설정
+            fromPosition.put("z", 0.0);
 
-            // theta를 라디안으로 설정
-            double fromTheta = from.containsKey("theta") ?
+            // 각도를 라디안으로 변환하는 부분 (수정)
+            double fromThetaDegrees = from.containsKey("theta") ?
                     ((Number) from.get("theta")).doubleValue() : 0.0;
+            double fromThetaRadians = Math.toRadians(fromThetaDegrees); // 각도 → 라디안 변환
 
             fromPos.put("position", fromPosition);
-            fromPos.put("theta", fromTheta);
+            fromPos.put("theta", fromThetaRadians); // 변환된 라디안 값 저장
 
-            // to_pos 구조 설정
+            // to_pos에 대해서도 동일하게 수정
             Map<String, Object> toPos = new HashMap<>();
-
-            // position 구조 설정
             Map<String, Object> toPosition = new HashMap<>();
             toPosition.put("x", ((Number) to.get("x")).doubleValue());
             toPosition.put("y", ((Number) to.get("y")).doubleValue());
-            toPosition.put("z", 0.0); // 기본값으로 0.0 설정
+            toPosition.put("z", 0.0);
 
-            // theta를 라디안으로 설정
-            double toTheta = to.containsKey("theta") ?
+            // 각도를 라디안으로 변환하는 부분 (수정)
+            double toThetaDegrees = to.containsKey("theta") ?
                     ((Number) to.get("theta")).doubleValue() : 0.0;
+            double toThetaRadians = Math.toRadians(toThetaDegrees); // 각도 → 라디안 변환
 
             toPos.put("position", toPosition);
-            toPos.put("theta", toTheta);
+            toPos.put("theta", toThetaRadians); // 변환된 라디안 값 저장
 
             // 요청 데이터에 추가
             requestData.put("from_pos", fromPos);
@@ -576,6 +619,7 @@ public class RobotController {
             return ResponseEntity.status(500).body(error);
         }
     }
+
 
     // ----- 데이터 조회용 GET 엔드포인트 -----
 
