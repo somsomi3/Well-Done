@@ -378,6 +378,7 @@ const InventoryItem = ({ item }) => {
     <tr className="inventory-item">
       <td>{item.id}</td>
       <td>{item.item_name}</td>
+      <td>{item.shelf_code || '-'}</td> {/* 선반 코드 추가, 없을 경우 '-' 표시 */}
       <td className={item.quantity === 0 ? "text-red-600 font-bold" : ""}>{item.quantity}</td>
       <td>{item.warehouse_quantity}</td>
       <td>{item.min_threshold}</td>

@@ -9,7 +9,8 @@ const InventoryForm = ({ onClose }) => {
     item_name: '',
     quantity: 0,
     warehouse_quantity: 0,
-    min_threshold: 0
+    min_threshold: 0,
+    shelf_code: '' // 선반 코드 추가
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -66,6 +67,18 @@ const InventoryForm = ({ onClose }) => {
             value={formData.item_name}
             onChange={handleChange}
             required
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="shelf_code">선반 코드</label>
+          <input
+            type="text"
+            id="shelf_code"
+            name="shelf_code"
+            value={formData.shelf_code}
+            onChange={handleChange}
+            placeholder="예: A1, B2 등"
           />
         </div>
 

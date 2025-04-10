@@ -17,7 +17,8 @@ export const inventoryService = {
         item_name: item.itemName,
         quantity: item.quantity,
         warehouse_quantity: item.warehouseQuantity,
-        min_threshold: item.minThreshold
+        min_threshold: item.minThreshold,
+        shelf_code: item.shelfCode // 선반 코드 추가
       }));
     } catch (error) {
       console.error('재고 데이터 조회 실패:', error);
@@ -41,7 +42,8 @@ export const inventoryService = {
         item_name: item.item_name || item.itemName,
         quantity: item.quantity,
         warehouse_quantity: item.warehouse_quantity || item.warehouseQuantity,
-        min_threshold: item.min_threshold || item.minThreshold
+        min_threshold: item.min_threshold || item.minThreshold,
+        shelf_code: item.shelf_code || item.shelfCode // 선반 코드 추가
       };
     } catch (error) {
       console.error('재고 수량 조정 실패:', error);
@@ -65,7 +67,8 @@ export const inventoryService = {
         itemName: itemData.item_name,
         quantity: itemData.quantity,
         warehouseQuantity: itemData.warehouse_quantity,
-        minThreshold: itemData.min_threshold
+        minThreshold: itemData.min_threshold,
+        shelfCode: itemData.shelf_code // 선반 코드 추가
       };
       
       const response = await api.post('/inventory', requestData);
@@ -77,7 +80,8 @@ export const inventoryService = {
         item_name: item.item_name || item.itemName,
         quantity: item.quantity,
         warehouse_quantity: item.warehouse_quantity || item.warehouseQuantity,
-        min_threshold: item.min_threshold || item.minThreshold
+        min_threshold: item.min_threshold || item.minThreshold,
+        shelf_code: item.shelf_code || item.shelfCode // 선반 코드 추가
       };
     } catch (error) {
       console.error('재고 아이템 추가 실패:', error);

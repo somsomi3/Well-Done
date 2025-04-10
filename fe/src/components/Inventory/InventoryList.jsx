@@ -116,6 +116,9 @@ const InventoryList = ({ onAddInventory }) => {
               <th onClick={() => handleSort('item_name')}>
                 제품명 {getSortIndicator('item_name')}
               </th>
+              <th onClick={() => handleSort('shelf_code')}>
+                선반 코드 {getSortIndicator('shelf_code')}
+              </th>
               <th onClick={() => handleSort('quantity')}>
                 현재 수량 {getSortIndicator('quantity')}
               </th>
