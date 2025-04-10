@@ -9,15 +9,21 @@ const InventoryList = ({ onAddInventory }) => {
   const { error: showError } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'ascending' });
+  // We'll keep the dataFetched state to prevent unnecessary API calls
+  const [dataFetched, setDataFetched] = useState(false);
 
-  // 컴포넌트 마운트 시 데이터 로드 (이미 InventoryPage에서 호출하므로 선택적)
+  // Modified useEffect to handle both initial loading and inventory changes
   useEffect(() => {
-    console.log('InventoryList 마운트, 현재 데이터:', inventory);
-    if (!inventory || inventory.length === 0) {
-      fetchInventory();
+    // First load when component mounts
+    if (!dataFetched) {
+      console.log('InventoryList: Initial data loading');
+      fetchInventory()
+        .then(() => setDataFetched(true))
+        .catch((err) => console.error('데이터 로딩 실패:', err));
     }
-  }, [inventory, fetchInventory]);
+  }, [fetchInventory, dataFetched]);
 
+  // Add a separate effect to handle error display
   useEffect(() => {
     if (error) {
       showError(`재고 데이터를 불러오는 중 오류가 발생했습니다: ${error}`);
@@ -38,7 +44,8 @@ const InventoryList = ({ onAddInventory }) => {
 
   // 정렬 및 필터링된 재고 목록
   const sortedInventory = React.useMemo(() => {
-    if (!inventory || inventory.length === 0) {
+    // inventory가 유효한 배열인지 확인
+    if (!Array.isArray(inventory) || inventory.length === 0) {
       console.log('정렬할 재고 데이터가 없습니다');
       return [];
     }
@@ -74,7 +81,8 @@ const InventoryList = ({ onAddInventory }) => {
     return sortConfig.direction === 'ascending' ? '↑' : '↓';
   };
 
-  if (loading) {
+  // Initial loading state
+  if (loading && !dataFetched) {
     return <div className="inventory-loading">재고 데이터를 불러오는 중...</div>;
   }
 
