@@ -961,12 +961,12 @@ const LOCATION_GROUPS = {
   return (
     <Layout>
       <div className="p-4">
+        {/* 최상단: 모드 전환 버튼 */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">
             {isPickPlaceMode ? "🤖 로봇 물품 이동 명령" : "📍 실시간 로봇 위치 보기"}
           </h2>
           
-          {/* 모드 전환 버튼 */}
           <button
             onClick={togglePickPlaceMode}
             className={`px-4 py-2 rounded font-semibold ${
@@ -979,34 +979,7 @@ const LOCATION_GROUPS = {
           </button>
         </div>
 
-        {/* 맵핑 모드 컨트롤 */}
-        {!isPickPlaceMode && (
-          <MapControls
-            isAutoMapping={isAutoMapping}
-            isLoading={isLoading}
-            isMappingComplete={isMappingComplete}
-            useInflatedMap={useInflatedMap}
-            startAutoMapping={startAutoMapping}
-            stopAutoMapping={stopAutoMapping}
-            toggleMapType={toggleMapType}
-          />
-        )}
-
-        {/* 맵핑 및 뷰 상태 표시 */}
-        {!isPickPlaceMode && isAutoMapping && (
-          <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">
-            🔄 오토 맵핑이 진행 중입니다...
-          </div>
-        )}
-
-        {!isPickPlaceMode && isMappingComplete && (
-          <div className="mb-4 p-2 bg-green-100 text-green-800 rounded">
-            ✅ 맵핑이 완료되었습니다!{" "}
-            {useInflatedMap ? "인플레이티드 맵" : "기본 맵"}을 사용 중입니다.
-          </div>
-        )}
-
-        {/* Pick & Place 모드 상태 메시지 */}
+        {/* 물품 이동 모드 상태 메시지 */}
         {isPickPlaceMode && operationStatus.message && (
           <div className={`mb-4 p-3 rounded ${colorClass}`}>
             {icon} {operationStatus.message}
@@ -1021,10 +994,10 @@ const LOCATION_GROUPS = {
           </div>
         )}
         
-        {/* 맵과 컨트롤러 영역 */}
-        <div className={`flex ${isPickPlaceMode ? "flex-wrap" : "flex-col"}`}>
-          {/* 맵 영역 */}
-          <div className={`relative mb-4 ${isPickPlaceMode ? "w-full md:w-8/12 pr-4" : "w-full"}`}>
+        {/* 메인 영역: 왼쪽 지도, 오른쪽 표시 영역 */}
+        <div style={{ display: 'flex', height: 'calc(100vh - 200px)' }}>
+          {/* 왼쪽: 지도 영역 */}
+          <div style={{ flex: '1', borderRight: '1px solid #ccc', paddingRight: '1rem' }}>
             {isPickPlaceMode ? (
               <canvas
                 ref={canvasRef}
@@ -1034,100 +1007,38 @@ const LOCATION_GROUPS = {
                 style={{
                   border: "1px solid #ccc",
                   backgroundColor: "#f0f0f0",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain"
                 }}
               />
             ) : (
-              <MapCanvas
-                mapData={mapData}
-                finalMapData={finalMapData}
-                inflatedMapData={inflatedMapData}
-                useInflatedMap={useInflatedMap}
-                isMappingComplete={isMappingComplete}
-                pixelPosition={pixelPosition}
-                path={path}
-                onMapClick={handleMapClick}
-              />
-            )}
+              <div style={{ height: "100%" }}>
+          <MapCanvas
+            mapData={mapData}
+            finalMapData={finalMapData}
+            inflatedMapData={inflatedMapData}
+            useInflatedMap={useInflatedMap}
+            isMappingComplete={isMappingComplete}
+            pixelPosition={pixelPosition}
+            path={path}
+            onMapClick={handleMapClick}
+            style={{
+              border: "1px solid #ccc",
+              backgroundColor: "#f0f0f0",
+              width: "100%",
+              height: "100%",
+              objectFit: "contain"
+            }}
+          />
+        </div>
 
-            {!mapData && !finalMapData && (
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center text-gray-500">
-                맵 데이터 로딩 중...
-              </div>
-            )}
-
-            {/* 기본 모드 정보 표시 영역 */}
-            {!isPickPlaceMode && (
-              <MapInfo
-                position={position}
-                pixelPosition={pixelPosition}
-                mapData={useInflatedMap ? inflatedMapData : finalMapData || mapData}
-                useInflatedMap={useInflatedMap}
-              />
-            )}
-
-            {/* 픽앤플레이스 모드 좌표 정보 */}
-            {isPickPlaceMode && (
-              <p className="mb-2">
-                <strong>로봇 좌표:</strong> X: {position.x.toFixed(2)}, Y:{" "}
-                {position.y.toFixed(2)}
-              </p>
-            )}
-
-            {/* 선택된 출발지/목적지 표시 */}
-            {isPickPlaceMode && (fromLocation || toLocation) && (
-              <div className="mb-4 p-3 bg-gray-100 rounded">
-                <h3 className="font-bold mb-2">선택한 위치:</h3>
-                {fromLocation && (
-                  <p>
-                    <span className="inline-block w-6 h-3 bg-orange-500 mr-2"></span>
-                    <strong>출발지:</strong>{" "}
-                    {LOCATIONS.find((loc) => loc.id === fromLocation)?.name} (
-                    {fromLocation})
-                  </p>
-                )}
-                {toLocation && (
-                  <p>
-                    <span className="inline-block w-6 h-3 bg-green-500 mr-2"></span>
-                    <strong>목적지:</strong>{" "}
-                    {LOCATIONS.find((loc) => loc.id === toLocation)?.name} (
-                    {toLocation})
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* 명령 결과 표시 */}
-            {isPickPlaceMode && commandResult && (
-              <div
-                className={`mt-4 p-3 rounded ${
-                  commandResult.success
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                }`}
-              >
-                <p>
-                  <strong>
-                    {commandResult.success ? "✅ 성공" : "❌ 실패"}
-                  </strong>
-                  : {commandResult.message}
-                </p>
-                {commandResult.data && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer font-medium">
-                      응답 상세 정보
-                    </summary>
-                    <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
-                      {JSON.stringify(commandResult.data, null, 2)}
-                    </pre>
-                  </details>
-                )}
-              </div>
             )}
           </div>
 
-          {/* 물품 이동 명령 컨트롤 영역 */}
-          {isPickPlaceMode && (
-            <div className="w-full md:w-4/12 mt-4 md:mt-0">
+          {/* 오른쪽: 표시 영역 */}
+          <div style={{ flex: '1', paddingLeft: '1rem', overflowY: 'auto' }}>
+            {isPickPlaceMode ? (
               <div className="bg-gray-100 p-4 rounded">
                 <h3 className="text-lg font-bold mb-4">📦 물품 이동 명령</h3>
 
@@ -1167,8 +1078,6 @@ const LOCATION_GROUPS = {
                     >
                       전체
                     </button>
-
-                    {/* 출발지로 적합한 그룹만 표시 (창고와 기타 위치) */}
                     <button
                       onClick={() =>
                         setFromLocation(LOCATION_GROUPS.storage[0].id)
@@ -1225,11 +1134,8 @@ const LOCATION_GROUPS = {
                     disabled={isLoading || operationStatus.inProgress}
                   >
                     <option value="">출발지 선택</option>
-
-                    {/* 창고 (제품별 자동 필터링) */}
                     <optgroup label="창고 위치">
                       {getLocationOptions("storage")
-                        // 제품에 따라 적절한 창고 위치만 표시
                         .filter(
                           (loc) =>
                             (product === "쿠크다스" &&
@@ -1243,7 +1149,6 @@ const LOCATION_GROUPS = {
                         ))}
                     </optgroup>
 
-                    {/* 진열대 */}
                     <optgroup label="진열대 위치">
                       {getLocationOptions("shelves").map((loc) => (
                         <option key={loc.id} value={loc.id}>
@@ -1252,7 +1157,6 @@ const LOCATION_GROUPS = {
                       ))}
                     </optgroup>
 
-                    {/* 기타 위치 */}
                     <optgroup label="기타 위치">
                       {getLocationOptions("other").map((loc) => (
                         <option key={loc.id} value={loc.id}>
@@ -1266,7 +1170,6 @@ const LOCATION_GROUPS = {
                 {/* 목적지 선택 */}
                 <div className="mb-4">
                   <label className="block text-gray-700 mb-2">목적지 (To):</label>
-
                   {/* 목적지 그룹 탭 */}
                   <div className="flex mb-2 border-b">
                     <button
@@ -1331,7 +1234,6 @@ const LOCATION_GROUPS = {
                   >
                     <option value="">목적지 선택</option>
 
-                    {/* 진열대 */}
                     <optgroup label="진열대 위치">
                       {getLocationOptions("shelves").map((loc) => (
                         <option key={loc.id} value={loc.id}>
@@ -1340,10 +1242,8 @@ const LOCATION_GROUPS = {
                       ))}
                     </optgroup>
 
-                    {/* 창고 (제품별 자동 필터링) */}
                     <optgroup label="창고 위치">
                       {getLocationOptions("storage")
-                        // 제품에 따라 적절한 창고 위치만 표시
                         .filter(
                           (loc) =>
                             (product === "쿠크다스" &&
@@ -1357,7 +1257,6 @@ const LOCATION_GROUPS = {
                         ))}
                     </optgroup>
 
-                    {/* 기타 위치 */}
                     <optgroup label="기타 위치">
                       {getLocationOptions("other").map((loc) => (
                         <option key={loc.id} value={loc.id}>
@@ -1367,17 +1266,6 @@ const LOCATION_GROUPS = {
                     </optgroup>
                   </select>
                 </div>
-
-                {/* 명령 요약 */}
-                {fromLocation && toLocation && !operationStatus.inProgress && (
-                  <div className="mb-4 p-3 bg-blue-50 rounded text-blue-800">
-                    <p className="font-medium">🔄 명령 요약:</p>
-                    <p>
-                      {product} 물품을 {fromLocation} 위치에서 가져와
-                    </p>
-                    <p>{toLocation} 위치로 이동합니다.</p>
-                  </div>
-                )}
 
                 {/* 명령 전송 버튼 */}
                 <button
@@ -1399,151 +1287,112 @@ const LOCATION_GROUPS = {
                 >
                   {isLoading ? "명령 전송 중..." : "명령 전송"}
                 </button>
-
-                {/* 위치 좌표 정보 */}
-                <div className="mt-4 border-t pt-4">
-                  <h4 className="font-bold mb-2">선택한 위치 정보:</h4>
-
-                  {fromLocation && (
-                    <div className="mb-2">
-                      <p className="text-sm">
-                        <strong>출발지:</strong>{" "}
-                        {LOCATIONS.find((loc) => loc.id === fromLocation)?.name} (
-                        {fromLocation})
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        X:{" "}
-                        {LOCATIONS.find(
-                          (loc) => loc.id === fromLocation
-                        )?.x.toFixed(2)}
-                        , Y:{" "}
-                        {LOCATIONS.find(
-                          (loc) => loc.id === fromLocation
-                        )?.y.toFixed(2)}
-                        , θ:{" "}
-                        {LOCATIONS.find((loc) => loc.id === fromLocation)?.theta}°
-                      </p>
+                
+                {/* 범례 - 물품 이동 모드에서만 표시 */}
+                <div className="mt-4 bg-gray-100 p-4 rounded">
+                  <h4 className="font-bold mb-2">📍 맵 범례:</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                      <span>현재 로봇 위치</span>
                     </div>
-                  )}
-
-                  {toLocation && (
-                    <div>
-                      <p className="text-sm">
-                        <strong>목적지:</strong>{" "}
-                        {LOCATIONS.find((loc) => loc.id === toLocation)?.name} (
-                        {toLocation})
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        X:{" "}
-                        {LOCATIONS.find(
-                          (loc) => loc.id === toLocation
-                        )?.x.toFixed(2)}
-                        , Y:{" "}
-                        {LOCATIONS.find(
-                          (loc) => loc.id === toLocation
-                        )?.y.toFixed(2)}
-                        , θ:{" "}
-                        {LOCATIONS.find((loc) => loc.id === toLocation)?.theta}°
-                      </p>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                      <span>진열대 위치</span>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 범례 */}
-              <div className="mt-4 bg-gray-100 p-4 rounded">
-                <h4 className="font-bold mb-2">📍 맵 범례:</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                    <span>현재 로봇 위치</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                    <span>진열대 위치</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                    <span>쿠크다스 창고</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                    <span>몽쉘 창고</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-yellow-600 rounded-full mr-2"></div>
-                    <span>기타 위치</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
-                    <span>선택된 출발지</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-green-600 rounded-full mr-2"></div>
-                    <span>선택된 목적지</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-gray-800 rounded-full mr-2"></div>
-                    <span>장애물</span>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                      <span>쿠크다스 창고</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                      <span>몽쉘 창고</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-yellow-600 rounded-full mr-2"></div>
+                      <span>기타 위치</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+                      <span>선택된 출발지</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-green-600 rounded-full mr-2"></div>
+                      <span>선택된 목적지</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-gray-800 rounded-full mr-2"></div>
+                      <span>장애물</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div>
+                {/* 맵핑 모드일 때 오른쪽 상단에 맵핑 컨트롤 배치 */}
+                <div className="mb-4">
+                  {/* 맵핑 모드 컨트롤 */}
+                  <MapControls
+                    isAutoMapping={isAutoMapping}
+                    isLoading={isLoading}
+                    isMappingComplete={isMappingComplete}
+                    useInflatedMap={useInflatedMap}
+                    startAutoMapping={startAutoMapping}
+                    stopAutoMapping={stopAutoMapping}
+                    toggleMapType={toggleMapType}
+                  />
+                  
+                  {/* 맵핑 상태 메시지 */}
+                  {isAutoMapping && (
+                    <div className="mt-2 p-2 bg-blue-100 text-blue-800 rounded">
+                      🔄 오토 맵핑이 진행 중입니다...
+                    </div>
+                  )}
+
+                  {isMappingComplete && (
+                    <div className="mt-2 p-2 bg-green-100 text-green-800 rounded">
+                      ✅ 맵핑이 완료되었습니다!{" "}
+                      {useInflatedMap ? "인플레이티드 맵" : "기본 맵"}을 사용 중입니다.
+                    </div>
+                  )}
+                </div>
+
+                {/* 맵 정보 표시 */}
+                <div className="mt-4 bg-gray-100 p-4 rounded">
+                  <h3 className="text-lg font-semibold mb-2">📍 맵 정보</h3>
+                  <MapInfo
+                    position={position}
+                    pixelPosition={pixelPosition}
+                    mapData={useInflatedMap ? inflatedMapData : finalMapData || mapData}
+                    useInflatedMap={useInflatedMap}
+                  />
+                </div>
+                
+                {/* 이동 경로 */}
+                <div className="mt-4 bg-gray-100 p-4 rounded">
+                  <h3 className="text-lg font-semibold mb-2">🛤 이동 경로</h3>
+                  <div className="max-h-[300px] overflow-y-auto bg-gray-50 p-2 rounded">
+                    {displayPath.length > 0 ? (
+                      <ul className="list-disc pl-5">
+                        {displayPath.map((point, index) => (
+                          <li key={index} className="text-sm">
+                            위치 {path.length - displayPath.length + index + 1}: X={point.x.toFixed(2)}, Y=
+                            {point.y.toFixed(2)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-500">경로 기록이 없습니다.</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                  총 {path.length}개의 경로 포인트 중 최근 {displayPath.length}개를 표시합니다.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* 경로 기록 (맵핑 모드에서만 표시) */}
-        {!isPickPlaceMode && (
-          <div className="mt-4">
-            <h3 className="text-lg font-semibold">🛤 이동 경로</h3>
-            <div className="max-h-[150px] overflow-y-auto bg-gray-50 p-2 rounded">
-              {displayPath.length > 0 ? (
-                <ul className="list-disc pl-5">
-                  {displayPath.map((point, index) => (
-                    <li key={index} className="text-sm">
-                      위치 {path.length - displayPath.length + index + 1}: X={point.x.toFixed(2)}, Y=
-                      {point.y.toFixed(2)}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500">경로 기록이 없습니다.</p>
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              총 {path.length}개의 경로 포인트 중 최근 {displayPath.length}개를 표시합니다.
-            </p>
-          </div>
-        )}
-
-        {/* 도움말 (Pick & Place 모드일 때만 표시) */}
-        {isPickPlaceMode && (
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="text-lg font-bold mb-2">📝 사용 방법</h3>
-            <ol className="list-decimal ml-5 space-y-2">
-              <li>물품 종류(쿠크다스 또는 몽쉘)를 선택합니다.</li>
-              <li>
-                출발지(From) 위치를 선택합니다. 물품 종류에 따라 적절한 창고
-                위치가 필터링됩니다.
-              </li>
-              <li>목적지(To) 위치를 선택합니다.</li>
-              <li>명령 전송 버튼을 클릭하여 로봇에게 명령을 전송합니다.</li>
-              <li>
-                로봇이 작업을 수행하는 동안 맵에서 현재 위치와 상태를 실시간으로
-                확인할 수 있습니다.
-              </li>
-              <li>
-                물건을 집거나 놓을 때 맵 데이터가 실시간으로 업데이트되어 변화를
-                확인할 수 있습니다.
-              </li>
-            </ol>
-            <p className="mt-4 text-sm text-gray-600">
-              <strong>참고:</strong> 출발지와 목적지의 방향(θ)은 로봇이 해당
-              위치에 접근할 때 취해야 할 방향을 나타냅니다. 이 값은 자동으로
-              설정되며 수정할 필요가 없습니다.
-            </p>
-          </div>
-        )}
       </div>
     </Layout>
   );
