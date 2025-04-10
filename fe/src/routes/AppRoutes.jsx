@@ -1,32 +1,32 @@
-import React, { Suspense, lazy, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useAuthStore } from "../stores/authStore";
-import ErrorBoundary from "../components/ErrorBoundary";
-import MainPage from "../pages/MainPage";
-import LoginPage from "../pages/LoginPage";
-import RegisterPage from "../pages/RegisterPage";
-import MapPage from "../pages/MapPage";
-import RobotPage from "../pages/RobotPage";
-import LogPage from "../pages/LogPage";
-import SettingsPage from "../pages/SettingsPage";
-import AnnouncementDetail from "../components/board/AnnouncementDetail";
-import AnnouncementList from "../components/board/AnnouncementList";
-import AnnouncementForm from "../components/board/AnnouncementForm";
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
+import ErrorBoundary from '../components/ErrorBoundary';
+import MainPage from '../pages/MainPage';
+import LoginPage from '../pages/LoginPage';
+import RegisterPage from '../pages/RegisterPage';
+import MapPage from '../pages/MapPage';
+import RobotPage from '../pages/RobotPage';
+import LogPage from '../pages/LogPage';
+import SettingsPage from '../pages/SettingsPage';
+import AnnouncementDetail from '../components/board/AnnouncementDetail';
+import AnnouncementList from '../components/board/AnnouncementList';
+import AnnouncementForm from '../components/board/AnnouncementForm';
 
 // 지연 로딩을 사용한 페이지 컴포넌트 임포트
-const LoginPageComponent = lazy(() => import("../pages/LoginPage"));
-const RegisterPageComponent = lazy(() => import("../pages/RegisterPage"));
-const MainPageComponent = lazy(() => import("../pages/MainPage"));
-const MapPageComponent = lazy(() => import("../pages/MapPage"));
-const RobotPageComponent = lazy(() => import("../pages/RobotPage"));
-const LogPageComponent = lazy(() => import("../pages/LogPage"));
-const SettingsPageComponent = lazy(() => import("../pages/SettingsPage"));
-const WorkPageComponent = lazy(() => import("../pages/WorkPage"));
+const LoginPageComponent = lazy(() => import('../pages/LoginPage'));
+const RegisterPageComponent = lazy(() => import('../pages/RegisterPage'));
+const MainPageComponent = lazy(() => import('../pages/MainPage'));
+const MapPageComponent = lazy(() => import('../pages/MapPage'));
+const RobotPageComponent = lazy(() => import('../pages/RobotPage'));
+const LogPageComponent = lazy(() => import('../pages/LogPage'));
+const SettingsPageComponent = lazy(() => import('../pages/SettingsPage'));
+const WorkPageComponent = lazy(() => import('../pages/WorkPage'));
 const AnnouncementDetailComponent = lazy(() =>
-  import("../components/board/AnnouncementDetail")
+  import('../components/board/AnnouncementDetail')
 );
 const AnnouncementListComponent = lazy(() =>
-  import("../components/board/AnnouncementList")
+  import('../components/board/AnnouncementList')
 );
 
 // 로딩 컴포넌트
