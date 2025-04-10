@@ -964,7 +964,7 @@ const LOCATION_GROUPS = {
         {/* 최상단: 모드 전환 버튼 */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">
-            {isPickPlaceMode ? "🤖 로봇 물품 이동 명령" : "📍 실시간 로봇 위치 보기"}
+            {isPickPlaceMode ? "🤖 로봇 컨트롤러" : "📍 로봇 모니터링"}
           </h2>
           
           <button
@@ -975,7 +975,7 @@ const LOCATION_GROUPS = {
                 : "bg-blue-500 text-white hover:bg-blue-600"
             }`}
           >
-            {isPickPlaceMode ? "🔙 맵핑 모드로 전환" : "📦 물품 이동 모드로 전환"}
+            {isPickPlaceMode ? "🔙 컨트롤러 모드로 전환" : "📦 모니터링 모드로 전환"}
           </button>
         </div>
 
