@@ -1,98 +1,198 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout/Layout';
+import { useAuthStore } from '../stores/authStore';
+import api from '../utils/api';
 
 function LogPage() {
-  // 로그 데이터 예시 (실제로는 API에서 가져올 것입니다)
-  const [logs, setLogs] = useState([
-    { id: 1, timestamp: '2023-06-15 14:23:45', level: 'INFO', message: '로봇 #1 작업 시작', robot: '로봇 #1' },
-    { id: 2, timestamp: '2023-06-15 14:25:12', level: 'WARNING', message: '로봇 #2 배터리 부족 (30%)', robot: '로봇 #2' },
-    { id: 3, timestamp: '2023-06-15 14:30:45', level: 'ERROR', message: '로봇 #3 연결 끊김', robot: '로봇 #3' },
-    { id: 4, timestamp: '2023-06-15 14:35:22', level: 'INFO', message: '로봇 #1 작업 완료', robot: '로봇 #1' },
-    { id: 5, timestamp: '2023-06-15 14:40:18', level: 'INFO', message: '로봇 #2 충전 시작', robot: '로봇 #2' },
-  ]);
-  
-  // 로그 레벨에 따른 스타일 클래스
-  const getLevelClass = (level) => {
-    switch(level) {
-      case 'INFO':
-        return 'bg-blue-100 text-blue-800';
-      case 'WARNING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'ERROR':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const [inventoryLogs, setInventoryLogs] = useState([]);
+  const [inventoryList, setInventoryList] = useState([]);
+  const [newItem, setNewItem] = useState({
+    item_name: '',
+    quantity: '',
+    min_threshold: '',
+    angle: ''
+  });
+  const [alertMsgMap, setAlertMsgMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const { token } = useAuthStore();
+
+  // API 1: 전체 재고 목록 조회
+  const fetchInventoryList = async () => {
+    try {
+      const res = await api.get('/inventory', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setInventoryList(res.data);
+    } catch (err) {
+      console.error('재고 목록 조회 실패:', err);
+      alert('재고 정보를 불러오지 못했습니다.');
     }
   };
+
+  // API 2: 재고 가감 및 로봇 명령
+  const updateStock = async (itemId, amount) => {
+    try {
+      const res = await api.post(`/inventory/${itemId}/adjust?amount=${amount}`, null, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const updated = res.data;
+      setInventoryList(prev => prev.map(item => (item.id === updated.id ? updated : item)));
+
+      setAlertMsgMap(prev => ({
+        ...prev,
+        [itemId]: updated.quantity <= updated.min_threshold
+          ? `⚠️ ${updated.item_name} 재고 부족! (${updated.quantity})`
+          : ''
+      }));
+
+      // API 3: 재고가 0이면 로봇 명령 전송
+      if (updated.quantity === 0) {
+        await api.post('/robot/pick-place', {
+          from: { x: 1.5, y: 2.5, angle: 1.57 },
+          to: { x: 8.0, y: 3.2, angle: 0.0 },
+          product_id: String(updated.id),
+          display_spot: 7
+        }, { headers: { Authorization: `Bearer ${token}` } });
+
+        alert('🤖 로봇 명령이 전송되었습니다!');
+      }
+
+      fetchInventoryLogs(); // 이력 갱신
+    } catch (err) {
+      console.error('재고 조정 실패:', err);
+      alert('재고 조정 중 오류가 발생했습니다.');
+    }
+  };
+
+  // API 4: 새 아이템 추가
+  const handleAddInventory = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/inventory', {
+        ...newItem,
+        quantity: parseInt(newItem.quantity),
+        min_threshold: parseInt(newItem.min_threshold),
+        position: { x: -49.30, y: -63.09, angle: -90 },
+        display_position: { x: -49.83, y: -62.60, angle: -90 }
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      alert('✅ 재고가 등록되었습니다.');
+      setNewItem({ item_name: '', quantity: '', min_threshold: '', angle: '' });
+      fetchInventoryList();
+      fetchInventoryLogs();
+    } catch (err) {
+      console.error('재고 등록 실패:', err);
+      alert('재고 등록에 실패했습니다.');
+    }
+  };
+
+  // 재고 이력 조회
+  const fetchInventoryLogs = async () => {
+    try {
+      const response = await api.get('/inventory/logs', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setInventoryLogs(response.data);
+    } catch (error) {
+      console.error('이력 조회 실패:', error);
+      alert('이력 정보를 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchInventoryList();
+      fetchInventoryLogs();
+    }
+  }, [token]);
+
+  if (loading) return <div>🔄 로딩 중...</div>;
 
   return (
     <Layout>
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">시스템 로그</h1>
-        <p className="mb-6">로봇 및 시스템 활동에 대한 로그를 확인할 수 있습니다.</p>
-        
-        {/* 필터링 옵션 */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          <select className="border rounded px-3 py-1 bg-white">
-            <option value="">모든 로봇</option>
-            <option value="로봇 #1">로봇 #1</option>
-            <option value="로봇 #2">로봇 #2</option>
-            <option value="로봇 #3">로봇 #3</option>
-          </select>
-          
-          <select className="border rounded px-3 py-1 bg-white">
-            <option value="">모든 레벨</option>
-            <option value="INFO">INFO</option>
-            <option value="WARNING">WARNING</option>
-            <option value="ERROR">ERROR</option>
-          </select>
-          
-          <button className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
-            필터 적용
+        <h1 className="text-2xl font-bold mb-6">📦 재고 관리 및 이력</h1>
+
+        {/* 새 아이템 등록 폼 */}
+        <form onSubmit={handleAddInventory} className="mb-8 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <input name="item_name" placeholder="상품명" value={newItem.item_name}
+              onChange={(e) => setNewItem(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+              className="p-2 border rounded" required />
+            <input type="number" name="quantity" placeholder="초기 수량"
+              value={newItem.quantity} onChange={(e) => setNewItem(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+              className="p-2 border rounded" required />
+            <input type="number" name="min_threshold" placeholder="최소 수량"
+              value={newItem.min_threshold} onChange={(e) => setNewItem(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+              className="p-2 border rounded" required />
+            <input type="number" name="angle" placeholder="창고 각도" step="0.1"
+              value={newItem.angle} onChange={(e) => setNewItem(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+              className="p-2 border rounded" required />
+          </div>
+          <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            ➕ 새 상품 등록
           </button>
-          
-          <button className="bg-gray-300 text-gray-800 px-3 py-1 rounded hover:bg-gray-400">
-            초기화
-          </button>
+        </form>
+
+        {/* 실시간 재고 현황 */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">🔍 실시간 재고 현황</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {inventoryList.map(item => (
+              <div key={item.id} className="p-4 bg-white rounded-lg shadow-md">
+                <h3 className="font-bold mb-2">{item.item_name}</h3>
+                <p>현재 수량: {item.quantity}</p>
+                <p>안전 재고 기준 수량: {item.min_threshold}</p>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => updateStock(item.id, -25)}
+                    className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">
+                    ➖ 감소
+                  </button>
+                  <button onClick={() => updateStock(item.id, 25)}
+                    className="px-3 py-1 bg-green-100 text-green-600 rounded hover:bg-green-200">
+                    ➕ 증가
+                  </button>
+                </div>
+                {alertMsgMap[item.id] && (
+                  <div className="mt-2 p-2 bg-yellow-100 text-yellow-700 rounded-md">
+                    ⚠️ 재고 부족 경고
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        
-        {/* 로그 테이블 */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="py-2 px-4 border text-left">시간</th>
-                <th className="py-2 px-4 border text-left">로봇</th>
-                <th className="py-2 px-4 border text-left">레벨</th>
-                <th className="py-2 px-4 border text-left">메시지</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map(log => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border">{log.timestamp}</td>
-                  <td className="py-2 px-4 border">{log.robot}</td>
-                  <td className="py-2 px-4 border">
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${getLevelClass(log.level)}`}>
-                      {log.level}
-                    </span>
-                  </td>
-                  <td className="py-2 px-4 border">{log.message}</td>
+
+        {/* 재고 변동 이력 */}
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <h2 className="text-xl font-semibold mb-4">📜 재고 변동 이력</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-2 text-left">시간</th>
+                  <th className="p-2 text-left">상품명</th>
+                  <th className="p-2 text-left">변동량</th>
+                  <th className="p-2 text-left">최종 수량</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* 페이지네이션 */}
-        <div className="mt-4 flex justify-center">
-          <nav className="flex items-center">
-            <button className="px-3 py-1 border rounded-l hover:bg-gray-100">&lt;</button>
-            <button className="px-3 py-1 border-t border-b bg-blue-500 text-white">1</button>
-            <button className="px-3 py-1 border-t border-b hover:bg-gray-100">2</button>
-            <button className="px-3 py-1 border-t border-b hover:bg-gray-100">3</button>
-            <button className="px-3 py-1 border rounded-r hover:bg-gray-100">&gt;</button>
-          </nav>
+              </thead>
+              <tbody>
+                {inventoryLogs.map(log => (
+                  <tr key={log.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">{new Date(log.timestamp).toLocaleString()}</td>
+                    <td className="p-2">{log.item_name}</td>
+                    <td className={`p-2 ${log.change_amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {log.change_amount > 0 ? `+${log.change_amount}` : log.change_amount}
+                    </td>
+                    <td className="p-2">{log.current_quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </Layout>
