@@ -137,8 +137,8 @@ def scan_callback(msg):
 
     R = np.array(msg.ranges)
 
-    x = R * np.cos(np.linspace(0, 2 * np.pi, 360))
-    y = R * np.sin(np.linspace(0, 2 * np.pi, 360))
+    x = R * np.cos(np.linspace(0, 2 * np.pi, 360) - np.pi / 2)
+    y = R * np.sin(np.linspace(0, 2 * np.pi, 360) - np.pi / 2)
     z = np.zeros_like(x)
 
     xyz = np.concatenate(
