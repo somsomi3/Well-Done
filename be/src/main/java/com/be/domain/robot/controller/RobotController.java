@@ -407,7 +407,11 @@ public class RobotController {
 
         if (success) {
             log.info("물건 집기 성공: 상품 ID {}, 출발 위치 {}", productId, fromId);
-            storageService.autoReplenishFromStorage(Long.parseLong(productId));
+            try {
+                storageService.autoReplenishFromStorage(Long.parseLong(productId));
+            } catch (Exception e) {
+            log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
+            }
         } else {
             log.info("물건 집기 실패: 상품 ID {}, 출발 위치 {}", productId, fromId);
         }
@@ -434,9 +438,12 @@ public class RobotController {
         String toId = (String) data.get("to_id");
 
         if (success) {
-            log.info("전시 완료: 상품 ID {}, 진열 위치 {}", productId, toId);
-            // 여기서 자동 보충 트리거
-            storageService.autoReplenishFromStorage(Long.parseLong(productId));
+            log.info("전시 성공: 상품 ID {}, 진열 위치 {}", productId, toId);
+            try {
+                storageService.autoReplenishFromStorage(Long.parseLong(productId));
+            } catch (Exception e) {
+                log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
+            }
         } else {
             log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, toId);
         }
