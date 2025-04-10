@@ -243,7 +243,7 @@ const PickPlacePage = () => {
           }
         }
         // 물건 놓기 완료 이벤트
-        else if (data.type === "place_complete") {
+        else if (typeof data === 'object' && data.type === "place_complete") {
           console.log("물건 놓기 완료:", data);
 
           if (data.success) {
@@ -530,8 +530,8 @@ const PickPlacePage = () => {
           theta: toLoc.theta, // 각도(degrees)
         },
         product_id: product,
-        from_id: fromLocation.toLowerCase(),
-        to_id: toLocation.toLowerCase(),
+        from_id: fromLocation.toUpperCase(),
+        to_id: toLocation.toUpperCase(),
       };
 
       // 현재 작업 정보 저장
