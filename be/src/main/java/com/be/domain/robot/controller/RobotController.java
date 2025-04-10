@@ -407,11 +407,11 @@ public class RobotController {
 
         if (success) {
             log.info("물건 집기 성공: 상품 ID {}, 출발 위치 {}", productId, fromId);
-            try {
-                storageService.autoReplenishFromStorage(productId);
-            } catch (Exception e) {
-            log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
-            }
+//            try {
+//                storageService.autoReplenishFromStorage(productId);
+//            } catch (Exception e) {
+//            log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
+//            }
         } else {
             log.info("물건 집기 실패: 상품 ID {}, 출발 위치 {}", productId, fromId);
         }
@@ -439,11 +439,11 @@ public class RobotController {
 
         if (success) {
             log.info("전시 성공: 상품 ID {}, 진열 위치 {}", productId, toId);
-            try {
-                storageService.autoReplenishFromStorage(productId);
-            } catch (Exception e) {
-                log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
-            }
+//            try {
+//                storageService.autoReplenishFromStorage(productId);
+//            } catch (Exception e) {
+//                log.error("자동 재보충 중 오류 발생: {}", e.getMessage(), e);
+//            }
         } else {
             log.info("전시 실패: 상품 ID {}, 진열 위치 {}", productId, toId);
         }
