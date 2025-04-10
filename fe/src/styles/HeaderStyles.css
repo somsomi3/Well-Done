@@ -2,15 +2,15 @@
 
 /* 헤더 컨테이너 스타일 */
 .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #3B82F6; /* 파란색 배경 */
-    color: white;
-    height: 10vh; /* 헤더 높이를 뷰포트 높이의 10%로 설정 */
-    padding: 0 1.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #3B82F6;
+  color: white;
+  height: 64px; /* 고정 높이 설정 */
+  padding: 0 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
   
   /* 로고 영역 스타일 */
   .header-logo {
