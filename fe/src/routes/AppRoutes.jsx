@@ -125,7 +125,7 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <Navigate to="/board" replace />
+                  <Navigate to='/board' replace />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
