@@ -69,7 +69,7 @@ const PublicRoute = ({ children }) => {
       setIsRedirecting(true);
       // 약간의 지연을 주어 네비게이션 제한 문제를 방지
       setTimeout(() => {
-        navigate('/main', { replace: true });
+        navigate('/board', { replace: true });
       }, 100);
     }
   }, [isAuthenticated, navigate, isRedirecting]);
@@ -109,12 +109,32 @@ function AppRoutes() {
           />
 
           {/* 보호된 라우트 - 인증이 필요함 */}
-          <Route
+          {/* <Route
             path="/main"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
                   <MainPageComponent />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          /> */}
+          <Route
+            path="/main"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <Navigate to="/board" replace />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/board"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementListComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -161,33 +181,33 @@ function AppRoutes() {
           />
 
           <Route
-            path="/announcements"
-            element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <AnnouncementListComponent />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/announcements/:id"
-            element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <AnnouncementDetailComponent />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/announcements/write"
+            path="/board/write"
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
                   <AnnouncementForm />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/board/edit/:id"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementForm />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/board/:id"
+            element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AnnouncementDetailComponent />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
