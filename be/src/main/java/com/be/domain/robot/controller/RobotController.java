@@ -153,7 +153,7 @@ public class RobotController {
     @PostMapping("/local-path")
     public ResponseEntity<?> receiveLocalPath(@RequestBody Map<String, Object> data) {
         // 데이터 로깅 (필요시 주석 해제)
-         log.info("로컬 경로 데이터 수신: {}", data);
+//         log.info("로컬 경로 데이터 수신: {}", data);
 
         // 최신 데이터 저장
         this.latestLocalPath = data;
@@ -216,7 +216,7 @@ public class RobotController {
 
     @PostMapping("/map")
     public ResponseEntity<?> receiveMap(@RequestBody Map<String, Object> data) {
-        log.info("맵 데이터 수신: {}", data);
+//        log.info("맵 데이터 수신: {}", data);
 
         // 1. 맵 info
         Map<String, Object> info = (Map<String, Object>) data.get("info");
