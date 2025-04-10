@@ -47,7 +47,7 @@ const ProtectedRoute = ({ children }) => {
       setIsRedirecting(true);
       // 약간의 지연을 주어 네비게이션 제한 문제를 방지
       setTimeout(() => {
-        navigate("/login", { replace: true });
+        navigate('/login', { replace: true });
       }, 100);
     }
   }, [isAuthenticated, navigate, isRedirecting]);
@@ -70,7 +70,7 @@ const PublicRoute = ({ children }) => {
       setIsRedirecting(true);
       // 약간의 지연을 주어 네비게이션 제한 문제를 방지
       setTimeout(() => {
-        navigate("/board", { replace: true });
+        navigate('/board', { replace: true });
       }, 100);
     }
   }, [isAuthenticated, navigate, isRedirecting]);
@@ -125,7 +125,7 @@ function AppRoutes() {
             element={
               <ProtectedRoute>
                 <ErrorBoundary>
-                  <Navigate to='/board' replace />
+                  <Navigate to="/board" replace />
                 </ErrorBoundary>
               </ProtectedRoute>
             }
