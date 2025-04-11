@@ -1,0 +1,42 @@
+@import 'tailwindcss/base';
+
+body {
+  background-color: white;
+}
+
+.app-title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #3B82F6;
+}
+
+.auth-container {
+  @apply flex justify-end items-end min-h-screen p-4;
+  background-image: url('./assets/bgimage.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.auth-form {
+  @apply bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-md;
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+@media (min-width: 640px) {
+  .auth-container {
+    @apply p-8;
+  }
+}
+
+@media (min-width: 768px) {
+  .auth-container {
+    @apply p-12;
+  }
+}
+
+@media (min-width: 1024px) {
+  .auth-container {
+    @apply p-16;
+  }
+}

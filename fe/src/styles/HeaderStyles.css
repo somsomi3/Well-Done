@@ -1,0 +1,130 @@
+/* HeaderStyles.css */
+
+/* 헤더 컨테이너 스타일 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #3B82F6;
+  color: white;
+  height: 64px; /* 고정 높이 설정 */
+  padding: 0 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+  
+  /* 로고 영역 스타일 */
+  .header-logo {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+  
+  .logo-image {
+    height: 2.5rem;
+    margin-right: 0.75rem;
+  }
+  
+  .app-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+  }
+  
+  /* 네비게이션 영역 스타일 */
+  .header-nav {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 0.5rem;
+  }
+  
+  /* 액션 영역 스타일 */
+  .header-actions {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 1rem;
+  }
+  
+  /* 사용자 정보 스타일 */
+  .user-info {
+    display: flex;
+    align-items: center;
+    height: 75%;
+    padding: 0 0.75rem;
+  }
+  
+  .username {
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+  
+  /* 아이콘 버튼 스타일 */
+  .icon-button {
+    width: auto !important;
+    padding: 0 0.5rem !important;
+  }
+  
+  .icon-button svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  /* 로그인 버튼 스타일 */
+  .login-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 75%;
+    padding: 0 1rem;
+    background-color: white;
+    color: #3B82F6;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .login-button:hover {
+    background-color: #f8fafc;
+  }
+  
+  /* 반응형 스타일 */
+  @media (max-width: 768px) {
+    .header {
+      padding: 0 1rem;
+    }
+    
+    .app-title {
+      font-size: 1.25rem;
+    }
+    
+    .header-nav {
+      gap: 0.25rem;
+    }
+    
+    .header-actions {
+      gap: 0.5rem;
+    }
+  }
+  
+  @media (max-width: 640px) {
+    .header {
+      padding: 0 0.75rem;
+    }
+    
+    .logo-image {
+      height: 2rem;
+      margin-right: 0.5rem;
+    }
+    
+    .app-title {
+      font-size: 1rem;
+    }
+    
+    .username {
+      display: none; /* 모바일에서는 사용자명 숨김 */
+    }
+  }
+  
