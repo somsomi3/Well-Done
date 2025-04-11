@@ -18,79 +18,112 @@ npm install tailwindcss @tailwindcss/vite
 https://tailwindcss.com/docs/installation/using-vite
 
 ## 3단계: 프로젝트 실행 및 기본 구조 설정
-### 1. 프로젝트 실행
-npm run dev
+### 1. npm 설치
+npm install
 
-### 2. 기초 폴더구조 생성
-mkdir -p src/{components,pages,hooks,utils,assets,services,store}
-
-## 4단계: Atomic design 적용
-### 1. 폴더 구조 생성
-mkdir -p src/components/{atoms,molecules,organisms,templates,pages}
-
-### 2. 아토믹 디자인 가이드
-atoms: 기본 UI 요소 (버튼, 인풋 등)
-
-molecules: 여러 atoms의 조합 (폼 입력 등)
-
-organisms: 복잡한 UI 구성 요소 (폼, 헤더 등)
-
-templates: 페이지 레이아웃 템플릿
-
-### 3. 폴더 구조 예시
-src/
-├── assets/                 # 이미지, 폰트 등 정적 파일
-├── components/             # Atomic Design 컴포넌트
-│   ├── atoms/              # 기본 UI 요소 (버튼, 인풋, 레이블 등)
-│   │   ├── Button/
-│   │   │   ├── Button.tsx
-│   │   │   └── Button.css
-│   │   ├── Input/
-│   │   ├── Label/
-│   │   └── ...
-│   ├── molecules/          # 원자의 조합 (라벨이 있는 인풋, 검색바 등)
-│   │   ├── FormInput/
-│   │   ├── SearchBar/
-│   │   └── ...
-│   ├── organisms/          # 분자의 조합 (폼, 헤더, 사이드바 등)
-│   │   ├── LoginForm/
-│   │   ├── Header/
-│   │   ├── Sidebar/
-│   │   └── ...
-│   ├── templates/          # 페이지 레이아웃 템플릿
-│   │   ├── MainTemplate/
-│   │   ├── AuthTemplate/
-│   │   └── ...
-│   └── pages/              # 실제 페이지 컴포넌트
-│       ├── auth/
-│       │   ├── LoginPage.tsx
-│       │   └── RegisterPage.tsx
-│       ├── main/
-│       │   └── MainPage.tsx
-│       ├── notice/
-│       │   ├── NoticePage.tsx
-│       │   └── NoticeCreatePage.tsx
-│       ├── map/
-│       │   └── MapPage.tsx
-│       ├── robot/
-│       │   └── RobotPage.tsx
-│       └── inventory/
-│           └── InventoryPage.tsx
-├── hooks/                  # 커스텀 훅
-├── store/                  # Zustand 스토어
-│   ├── authStore.ts
-│   ├── robotStore.ts
-│   ├── inventoryStore.ts
-│   └── ...
-├── services/               # API 서비스
-│   ├── api.ts
-│   ├── authService.ts
-│   ├── robotService.ts
-│   └── ...
-├── utils/                  # 유틸리티 함수
-├── types/                  # 타입 정의
-├── routes/                 # 라우트 설정
-│   └── index.tsx
-├── App.tsx
-├── main.tsx
-└── index.css
+### 2. 폴더구조 및 파일 생성성
+```
+C:.
+│  App.css
+│  App.jsx
+│  index.css
+│  main.jsx
+│
+├─assets
+│      bgimage.png
+│      logo.png
+│
+├─components
+│  │  AlertModal.jsx
+│  │  ErrorBoundary.jsx
+│  │  LoginForm.jsx
+│  │  Logout.jsx
+│  │  RegisterForm.jsx
+│  │
+│  ├─atoms
+│  │  ├─NavItem
+│  │  │      NavItem.css
+│  │  │      NavItem.jsx
+│  │  │
+│  │  └─Toast
+│  │          Toast.css
+│  │          Toast.jsx
+│  │
+│  ├─board
+│  │      AnnouncementDetail.css
+│  │      AnnouncementDetail.jsx
+│  │      AnnouncementForm.css
+│  │      AnnouncementForm.jsx
+│  │      AnnouncementList.css
+│  │      AnnouncementList.jsx
+│  │
+│  ├─Inventory
+│  │      InventoryForm.jsx
+│  │      InventoryHistory.jsx
+│  │      InventoryItem.jsx
+│  │      InventoryList.jsx
+│  │
+│  ├─Layout
+│  │      Footer.jsx
+│  │      Header.jsx
+│  │      Layout.jsx
+│  │
+│  ├─Map
+│  │      MapCanvas.jsx
+│  │      MapControls.jsx
+│  │      MapInfo.jsx
+│  │
+│  ├─Robot
+│  │      RobotCard.jsx
+│  │      RobotDetailsModal.jsx
+│  │
+│  └─templates
+│          .gitkeep
+│
+├─configs
+│      env.js
+│
+├─hooks
+│      useAuth.js
+│      useInventory.js
+│      useLocation.js
+│      useToast.js
+│
+├─pages
+│      InventoryDetailPage.jsx
+│      InventoryPage.jsx
+│      LoginPage.jsx
+│      LogPage.jsx
+│      MainPage.jsx
+│      MapPage.jsx
+│      MapPageOld.jsx
+│      RegisterPage.jsx
+│      RobotPage.jsx
+│      SettingsPage.jsx
+│      WorkPage.jsx
+│
+├─routes
+│      AppRoutes.jsx
+│
+├─services
+│      .gitkeep
+│      errorService.js
+│      inventoryService.js
+│
+├─stores
+│      authStore.js
+│      inventoryStore.js
+│      toastStore.js
+│
+├─styles
+│      AuthForm.css
+│      HeaderStyles.css
+│      InventoryStyles.css
+│      RobotPage.module.css
+│      RobotStyles.css
+│
+└─utils
+        api.js
+        mapUtils.js
+        robotData.js
+```
