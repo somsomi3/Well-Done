@@ -41,6 +41,7 @@ setup(
             "object_detector = warehouse_bot.perception.object_detector:main",
             "ex_calib = warehouse_bot.perception.ex_calib:main",
             "mode_manager_node = warehouse_bot.mode_control.mode_manager_node:main",
+            "trace_path_node = warehouse_bot.trace_path.trace_path_node:main",
         ],
     },
 )
