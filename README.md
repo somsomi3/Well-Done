@@ -1,6 +1,3 @@
-![header](https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=10&height=200&text=Well-Done's%20GITLAB&fontSize=50&animation=twinkling&fontAlign=68&fontAlignY=36)
-# README
-
 # 🍁창고형 매장을 위한 물품 재고관리 및 자율주행 서비스 **웰던**
 
 ---
@@ -19,24 +16,156 @@
 
 ## 🚩 서비스 한줄 소개
 
-창고형 매장을 위한 물품 재고관리 및 자율주행 서비스
+자율주행 로봇과 웹 서비스를 연동한 실시간 재고 관리 및 물류 자동화 서비스
 
 ---
 
 ## 📌 개요
 
-Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하는 서비스입니다.
-시뮬레이터 내의 자율주행과 인식기술을 활용하여, 재고를 효율적으로 관리합니다.
-재고 관리 및 최적 경로를 제공하며, 전체 매장의 관리 위한 세부정보를 제공합니다.
+Well-Done은 창고형 매장에서 발생하는 재고 관리와 물류 이동을 자동화하기 위한 서비스입니다.
+ROS2 기반 시뮬레이터와 웹 서비스를 연결하여, 로봇의 상태 및 위치를 실시간으로 확인하고 제어할 수 있습니다.
 
 ---
 
-## 🌱 프로젝트 설명 및 목표
+## 🌱 프로젝트 목표
 
-- 웰던은 창고형 매장에서 사용자의 편의를 향상시키며, 효율성을 향상 시키는 서비스입니다.
-- 시뮬레이터 내에서 터틀봇이 이동할최적경로를 계산하고, YOLO를 통해 물건을 인식할 수 있습니다.
-- 웹 페이지에서 로봇 경로를 실시간으로 시각화할 수 있으며, 로봇의 상태도 확인할 수 있습니다.
-- 재고 가감이 생길 경우, 시뮬레이터를 통해 재고관리 자동화를 확인할 수 있습니다.
+🤖 시뮬레이터에서 로봇의 자율주행을 구현
+📷YOLO 기반 객체 인식을 통해 창고 내 물품을 식별
+🧠 백엔드에서 로봇 위치 및 재고 데이터를 가공 + Redis에 저장하여 실시간 처리
+📊 사용자 웹 페이지에서 로봇 경로 및 재고 현황을 시각화하여 제공
+
+---
+
+## 🚀 주요 기능
+
+### 1. 자율주행 기반 창고 탐색 및 이동
+
+로봇이 창고를 스스로 탐색하고 목적지까지 이동
+
+환경에 따라 경로를 자동으로 변경
+
+### 2. 물품 인식 및 위치 파악
+
+창고 내 물품을 인식하고 위치를 확인
+
+로봇 작업 대상 물품을 자동으로 식별
+
+### 3.자동 재고 보충 및 물류 이동
+
+재고 부족 시 로봇이 물품을 자동으로 이동
+
+물품 집기 및 배치를 자동으로 수행
+
+### 4.실시간 로봇 상태 및 위치 확인
+
+로봇의 위치, 상태, 이동 경로를 실시간으로 확인
+
+현재 작업 진행 상황을 즉시 파악 가능
+
+### 5.창고 맵 및 재고 시각화
+
+웹 화면에서 창고 구조와 로봇 경로를 시각화
+
+재고 상태를 직관적으로 확인 가능
+
+---
+
+## **🧪 주요 기술**
+
+### 1.ROS2 기반 자율주행 및 SLAM
+
+- ROS2 기반 SLAM을 통해 환경을 탐색하고 실시간 맵 생성
+- Frontier 탐색 알고리즘을 활용하여 미개척 영역 자동 탐색
+- A* 기반 경로 생성 및 장애물 회피 로직 적용
+- 로봇이 스스로 창고 환경을 인식하고 최적 경로로 이동 가능
+
+### 2.YOLO 기반 물품 인식 및 위치 파악
+
+- YOLOv8을 활용하여 창고 내 물품을 실시간 인식
+- 객체 중심 좌표 추출을 통해 로봇 작업 대상 위치 계산
+- 물품 식별 자동화로 재고 관리 정확도 향상
+
+### 3.ROS Bridge 기반 데이터 연동
+
+- ROS 메시지를 JSON 형태로 변환하여 Backend와 연동
+- REST API 기반으로 ROS ↔ Web 시스템 통합
+- 이기종 시스템(ROS ↔ Web) 연결 핵심 구조
+
+### 4.Redis 기반 실시간 데이터 처리
+
+- ROS → Backend → Frontend 데이터 흐름 구조 설계
+- Redis를 활용하여 로봇 위치 및 맵 데이터를 실시간 캐싱
+- WebSocket 기반으로 클라이언트에 즉시 데이터 전달
+- 실시간 데이터 처리 성능 개선
+
+---
+
+## 🌐 시스템 아키텍처
+
+![Web App Reference Architecture.png](./readme_assets/Web_App_Reference_Architecture.png)
+
+```markdown
+┌──────────────────────────────┐
+│         User (Client)        │
+└─────────────┬────────────────┘
+              │
+              ▼
+┌──────────────────────────────┐
+│       React Frontend         │
+│  - UI / Visualization        │
+└─────────────┬────────────────┘
+              │ WebSocket / REST API
+              ▼
+┌──────────────────────────────┐
+│       Spring Backend         │
+│  - Business Logic            │
+│  - Redis (Cache)             │
+│  - JWT Authentication        │
+└─────────────┬────────────────┘
+              │ REST API (/api/robot)
+              ▼
+┌──────────────────────────────┐
+│        ROS Bridge Server     │
+│     (Flask + rclpy)          │
+└─────────────┬────────────────┘
+              │ ROS Topic
+              ▼
+┌──────────────────────────────┐
+│       ROS2 Simulator         │
+│   (SLAM / Navigation / AI)   │
+└──────────────────────────────┘
+```
+
+---
+
+## 📡 통신 구조
+
+### 1️⃣ ROS ↔ Backend (ROS Bridge)
+
+- ROS Topic 데이터를 ROS Bridge에서 수신 후 JSON 형태로 변환
+- REST API를 통해 Spring Backend로 전달
+- Backend에서 받은 사용자 명령을 ROS Topic으로 publish
+
+👉 ROS와 Web 시스템 간 데이터 변환 및 중계 역할 수행
+
+### 2️⃣ Backend ↔ Frontend
+
+### WebSocket (실시간 데이터)
+
+- 로봇 상태, 위치, 맵 데이터를 실시간으로 전송
+- polling 방식 대신 push 기반 통신으로 지연 최소화
+
+### REST API (요청/응답)
+
+- 사용자 요청(재고 조회, 명령 요청 등)을 처리
+- 클라이언트 ↔ 서버 간 일반 데이터 통신 담당
+
+👉 실시간 처리(WebSocket)와 요청 처리(REST API) 분리
+
+### 3️⃣ 인증 및 보안
+
+- JWT 기반 인증을 통해 사용자 요청 검증
+- REST API 요청 시 토큰을 포함하여 인증 처리
 
 ---
 
@@ -52,7 +181,11 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 
 ### **Database & Cache**
 
-- MySQL, Redis
+- MySQL: 사용자, 재고, 로봇 경로 등의 영속 데이터 저장
+- Redis:
+로봇 위치 및 맵 데이터 등 실시간 데이터 캐싱
+DB 부하를 줄이기 위한 임시 저장소 역할
+WebSocket 전송을 위한 빠른 데이터 접근 지원
 
 ### **Infrastructure & DevOps**
 
@@ -65,105 +198,11 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 - **IMU (Inertial Measurement Unit)**: 자세 추정 및 오도메트리 보정
 - **Odometry (속도 기반 위치 추정)**: IMU + 선속도/각속도를 통해 상대 위치 계산
 - **SLAM (Simultaneous Localization and Mapping)**: 자율 매핑을 위한 동시적 위치 추정 및 지도 작성
+
 - **YOLOv8 (Object Detection)**: 실시간 물체 인식 및 중심 좌표 추출
 - **OpenCV**: 이미지 처리 및 라이다-카메라 정렬, 시각화에 사용
 - **RViz2**: 로봇 상태, 맵, 경로 등의 시각화 툴
-- RCLPY: ROS의 메시지를 json으로 변환해주는 라이브러리
-
----
-
-## 🚀 주요 기능
-
-### 📍 자율 주행 및 초기 매핑 기능
-
-- 로봇은 **SLAM 기반**으로 환경을 스스로 탐색하고 지도를 생성합니다.
-- **Frontier 탐색 알고리즘**을 기반으로 미개척 영역을 목표 지점으로 설정하여 이동합니다.
-- 장애물이 근처에 있는 지점은 목표로 삼지 않으며, 도달 실패 시 새로운 프론티어를 재탐색합니다.
-- **맵 커버리지가 90% 이상**이고 변화율이 낮으면 매핑을 종료합니다.
-- 매핑 중 언제든지 **중단 명령**을 수신할 수 있으며, 정지 시점의 맵 데이터를 포함하여 백엔드에 전송됩니다.
-
----
-
-### 📍 프론트 재고 → 창고 물품 교환
-
-- 전시대의 재고가 0이 되면, 랙(EMP1, EMP2 등)의 빈 파레트를 가져가서 창고(LST1~10, RST1~10)에서 물건과 교환합니다.
-- `PickPlaceCommand` 메시지를 통해 `from_id` (빈 파레트 위치), `to_id` (창고 물품 위치)를 지정합니다.
-- FSM 기반 **pick-and-place 구조**를 통해 픽업, 정렬, 이동, 배치 흐름이 자동으로 수행됩니다.
-- 물체 배치 시 로봇 현재 위치와 목적지 좌표 간 거리(**put_distance**)를 동적으로 계산하여 정밀 제어합니다.
-- 모든 동작 완료 시 `/place_done` 메시지로 **성공 여부 및 맵 정보**를 백엔드에 전달합니다.
-
----
-
-### 📍 랙 내 물품 위치 교환
-
-- 동일한 랙 안 또는 다른 랙에 있는 두 물품의 위치를 **서로 바꿉니다**.
-- 임시로 `EMP1`에 첫 번째 물건을 저장한 뒤, 두 번째 물건을 꺼내서 첫 번째 위치로 이동시킵니다.
-- 이후 `EMP1`에 임시 저장한 첫 번째 물건을 다시 두 번째 자리로 배치합니다.
-- 각 단계에서 **pick, place, 정밀 정렬 FSM**이 순차적으로 수행되며, 상태 메시지를 통해 동기화됩니다.
-
----
-
-### 📍 정밀 정렬 기능 (Precise Alignment)
-
-- 물건을 정확히 들어올리고 놓기 위해 **3단계 FSM 기반 정렬**을 수행합니다.
-    1. 목표 방향으로 회전
-    2. 일정 거리 전진
-    3. 최종 목표 각도로 정밀 회전
-- 정렬 허용 오차는 **5도 이내**로 설정되어 있으며, 전진 시 **속도 상한선 (예: 0.2 m/s)** 을 적용하여 과속을 방지합니다.
-- 정렬 완료 여부는 `/alignment_done` 토픽을 통해 FSM에 전달됩니다.
-
----
-
-### 📍 경로 생성 및 추적 기능
-
-- A\*기반 글로벌 경로를 생성하고, 지역 경로는 주변 장애물을 고려하여 실시간으로 계산됩니다.
-- `path_tracking` 노드는 `/odom`과 `/local_path`를 기반으로 실제 경로를 추적하며, 장애물 감지 시 **회피 FSM**이 작동합니다.
-- 목표 지점에 도달하면 `/goal_reached` 메시지를, 실패 시 `/goal_failed` 메시지를 퍼블리시하여 상위 FSM에 알립니다.
-
----
-
-## 🛴 통신 방식
-
-### 📍 ROS Bridge
-
-- **ROS2 실행을 위한 환경 변수 설정**
-
-    `call C:\dev\ros2_eloquent\setup.bat`
-
-- **워크스페이스에서 설치된 패키지를 사용하도록 설정**
-
-    `call C:\Users\SSAFY\Desktop\temp\S12P21E102\sim\ros2_ws\install\local_setup.bat`
-
-- **로스 브릿지 실행**
-
-    `python -m RosBridge_Modulized.main`
-
-### 📍 WebSocket
-
-- 실시간 통신
-
-### 📍 Rest API
-
-- 1. **리소스 식별 (Resource Identification);; 이게 핵심**
-    - **URI (Uniform Resource Identifier)**: RESTful API에서는 각 리소스를 **URI**로 식별합니다. 리소스는 **명사**로 표현하며, 가능한 한 **복수형**으로 사용합니다.
-    - **리소스는 고유하게 식별 가능해야 합니다**. 예를 들어, `users`는 여러 사용자를 나타내고, `users/{userId}`는 특정 사용자를 나타냅니다.
-- 2.  HTTP 메서드 사용 (HTTP Methods)
-    - RESTful API에서는 **HTTP 메서드**를 **동사**로 사용하여 리소스에 대해 어떤 작업을 할지 정의합니다.
-        - **GET**: 리소스를 조회 (Read)
-        - **POST**: 새로운 리소스를 생성 (Create)
-        - **PUT**: 기존 리소스를 업데이트 (Update)
-        - **DELETE**: 리소스를 삭제 (Delete)
-        - **PATCH**: 리소스의 부분 업데이트
-    - 각 HTTP 메서드는 **적절한 작업을 수행**하도록 해야 하며, HTTP 상태 코드를 통해 요청 결과를 클라이언트에게 명확하게 전달합니다. 예를 들어:
-        - `200 OK`: 성공적인 요청
-        - `201 Created`: 리소스가 성공적으로 생성됨
-        - `400 Bad Request`: 잘못된 요청
-        - `404 Not Found`: 리소스가 존재하지 않음
-        - `500 Internal Server Error`: 서버 에러
-- 3. 무상태성 (Statelessness)
-    - **상태 저장하지 않기**: RESTful API는 **무상태(stateless)**를 지향합니다. 즉, **서버가 클라이언트의 상태를 저장하지 않으며, 클라이언트가 각 요청마다 필요한 모든 정보를 포함하여 보냅니다**.
-    - **상태 저장이 없으면 서버가 클라이언트의 이전 요청을 기억할 필요가 없으므로 서버가 더 효율적으로 동작할 수 있습니다**.
-    - 클라이언트는 **각 요청에서 모든 필요한 정보(예: 인증 토큰)를 포함하여 보내야** 하며, 서버는 이를 기반으로 요청을 처리합니다.
+- **RCLPY**: ROS의 메시지를 json으로 변환해주는 라이브러리
 
 ---
 
@@ -189,34 +228,36 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 
 ### 김동현 [Back-End, Infra]
 
-- 사내 공지 구현
-- 인프라 구축
+- 사내 공지 구현 및 API 개발
+- Docker, AWS EC2 기반 인프라 구축 및 배포 환경 구성
 
 ### 전민경 [Back-End]
 
-- Spring Security 구현
-- WebSocket 시그널링 서버 구축
-- Redis 구현
+- Spring Security 기반 JWT 인증 구현
+- WebSocket 기반 실시간 통신 구조 설계 및 구현
+- ROS에서 전달된 데이터를 가공하여 클라이언트에 전달
+- Redis를 활용한 실시간 로봇 데이터 관리
 
 ### 🦾Simulate
 
 ### 이현석 [Simulate, Back-End]
 
-- ROS Bridge 구현
-- 시뮬레이터 맵 제작
+- ROS Bridge 구현을 통한 ROS ↔ Backend 연동
+- 시뮬레이터 맵 설계 및 구현
 
 ### 정한균 [Simulate]
 
-- 시뮬레이터 SLAM 구현
-- 시뮬레이터 자율 주행 알고리즘 구현
+- SLAM 기반 자율주행 및 맵 생성 기능 구현
+- 경로 탐색 및 자율 주행 알고리즘 개발
 - 시뮬레이터 물품 운반 알고리즘 구현
 
 ### 🎨 Front-End
 
 ### 유지웅 [Front-End]
 
-- 기본 웹 페이지 생성
-
+- React 기반 웹 페이지 UI 구성 및 화면 설계
+- 로봇 상태 및 재고 정보를 시각화하는 화면 구현
+  
 ---
 
 ## 🏛️ ERD
@@ -225,11 +266,6 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 
 ---
 
-## 🌐 시스템 아키텍처
-
-![Web App Reference Architecture.png](./readme_assets/Web_App_Reference_Architecture.png)
-
----
 
 ## 📂 프로젝트 구조
 
@@ -245,30 +281,22 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 │              │
 │              ├─common
 │              │  ├─aop
-│              │  │      .gitkeep
 │              │  │
 │              │  ├─auth
-│              │  │  │  .gitkeep
 │              │  │  │
 │              │  │  ├─model
-│              │  │  │      .gitkeep
 │              │  │  │
 │              │  │  └─service
-│              │  │          .gitkeep
 │              │  │
 │              │  ├─exception
-│              │  │  │  .gitkeep
 │              │  │  │
 │              │  │  └─handler
-│              │  │          .gitkeep
 │              │  │
 │              │  ├─model
 │              │  │  └─response
-│              │  │          .gitkeep
 │              │  │          BaseResponseBody.java
 │              │  │
 │              │  └─util
-│              │          .gitkeep
 │              │
 │              ├─config
 │              │  │  .gitkeep
@@ -311,7 +339,6 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 │              │
 │              ├─db
 │              │  ├─entity
-│              │  │      .gitkeep
 │              │  │      BaseEntity.java
 │              │  │      Coordinate.java
 │              │  │      Inventory.java
@@ -323,7 +350,6 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 │              │  │      User.java
 │              │  │
 │              │  ├─repository
-│              │  │      .gitkeep
 │              │  │      InventoryHistoryRepository.java
 │              │  │      InventoryRepository.java
 │              │  │      RobotPathRepository.java
@@ -333,7 +359,6 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 │              │  │      UserRepository.java
 │              │  │
 │              │  └─service
-│              │          .gitkeep
 │              │          AuthService.java
 │              │          InventoryDataLoader.java
 │              │          StorageDataLoader.java
@@ -343,30 +368,25 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 │                  │  │  WebSocketAuthInterceptor.java
 │                  │  │
 │                  │  ├─controller
-│                  │  │      .gitkeep
 │                  │  │      AdminController.java
 │                  │  │      AuthController.java
 │                  │  │      UserController.java
 │                  │  │
 │                  │  ├─dto
-│                  │  │      .gitkeep
 │                  │  │      LoginRequestDto.java
 │                  │  │      LoginResponseDto.java
 │                  │  │      UserDto.java
 │                  │  │
 │                  │  ├─request
-│                  │  │      .gitkeep
 │                  │  │      LoginRequest.java
 │                  │  │      RegisterRequest.java
 │                  │  │      UpdateUserRequest.java
 │                  │  │
 │                  │  ├─response
-│                  │  │      .gitkeep
 │                  │  │      LoginResponse.java
 │                  │  │      RegisterResponse.java
 │                  │  │
 │                  │  ├─service
-│                  │  │      .gitkeep
 │                  │  │      TokenBlackListService.java
 │                  │  │      TokenBlackListServiceImpl.java
 │                  │  │
@@ -409,13 +429,10 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 │                  │  │      StockAlertDto.java
 │                  │  │
 │                  │  ├─request
-│                  │  │      .gitkeep
 │                  │  │
 │                  │  ├─response
-│                  │  │      .gitkeep
 │                  │  │
 │                  │  └─service
-│                  │          .gitkeep
 │                  │          InventoryHistoryService.java
 │                  │          InventoryService.java
 │                  │
@@ -430,16 +447,12 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
 │                  │  │      RobotController.java
 │                  │  │
 │                  │  ├─dto
-│                  │  │      .gitkeep
 │                  │  │
 │                  │  ├─request
-│                  │  │      .gitkeep
 │                  │  │
 │                  │  ├─response
-│                  │  │      .gitkeep
 │                  │  │
 │                  │  └─service
-│                  │          .gitkeep
 │                  │          RedisService.java
 │                  │          RobotLocationService.java
 │                  │          RobotService.java
@@ -468,6 +481,7 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
                     BeApplicationTests.java
 
 ```
+
 
 ### Front-end
 
@@ -577,7 +591,7 @@ Well-Done은 창고형 매장에서 물품을 효율적으로 관리, 이동하�
         robotData.js
 ```
 
-### ROS2
+### ROS2 & Simulator
 
 ```
 📦 프로젝트 루트
